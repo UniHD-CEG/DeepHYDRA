@@ -380,22 +380,23 @@ def get_scores_thresholded_by_category(pred_tdbscan,
                 f'\tRecall: {recall:.3f}')
 
 
-def print_results(label: np.array):
+def print_results(label: np.array,
+                        seed: int):
 
     preds_clustering =\
         load_numpy_array('predictions/clustering.npy')
     preds_tranad =\
-        load_numpy_array('predictions/tranad.npy')
+        load_numpy_array(f'predictions/tranad_seed_{seed}.npy')
     preds_tranad_train =\
-        load_numpy_array('predictions/tranad_train.npy')
+        load_numpy_array(f'predictions/tranad_train_seed_{seed}.npy')
     preds_l2_dist_train_mse =\
-        load_numpy_array('predictions/l2_dist_train_mse.npy')
+        load_numpy_array(f'predictions/l2_dist_train_mse_seed_{seed}.npy')
     preds_l2_dist_mse =\
-        load_numpy_array('predictions/l2_dist_mse.npy')
+        load_numpy_array(f'predictions/l2_dist_mse_seed_{seed}.npy')
     preds_l2_dist_train_smse =\
-        load_numpy_array('predictions/l2_dist_train_smse.npy')
+        load_numpy_array(f'predictions/l2_dist_train_smse_seed_{seed}.npy')
     preds_l2_dist_smse =\
-        load_numpy_array('predictions/l2_dist_smse.npy')
+        load_numpy_array(f'predictions/l2_dist_smse_seed_{seed}.npy')
 
     spot_train_size = int(len(preds_l2_dist_mse)*0.1)
 
@@ -496,6 +497,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Uneduced HLT Dataset Evaluation')
 
     parser.add_argument('--data-dir', type=str, default='../../datasets/hlt')
+    parser.add_argument('--seed', type=int)
   
     args = parser.parse_args()
 
@@ -504,4 +506,4 @@ if __name__ == '__main__':
 
     labels_np = labels_pd.to_numpy()
 
-    print_results(labels_np)
+    print_results(labels_np, args.seed)

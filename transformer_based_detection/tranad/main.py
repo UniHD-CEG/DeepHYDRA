@@ -59,7 +59,6 @@ def load_dataset(dataset):
 
             loader.append(np.load(os.path.join(folder, f'{file}.npy')))
 
-
     else:
 
             train_set = HLTDataset('train', False,
@@ -103,7 +102,7 @@ def load_dataset(dataset):
     return train_loader, test_loader, labels
 
 def save_model(model, optimizer, scheduler, epoch, accuracy_list):
-    folder = f'checkpoints/{args.model}_{args.dataset}/'
+    folder = f'checkpoints/{args.model}_{args.dataset}_{augmentation_string}_seed_{int(args.seed)}/'
     os.makedirs(folder, exist_ok=True)
     file_path = f'{folder}/model.ckpt'
     torch.save({
@@ -448,9 +447,9 @@ if __name__ == '__main__':
 
     augmentations = []
 
-    augmentation_string = ''
-
     if args.apply_augmentations:
+
+        augmentation_string = ''
         
         for augmentation in args.augmentations:
             augmentation = augmentation.replace(' ', '')
@@ -470,10 +469,13 @@ if __name__ == '__main__':
 
             augmentations.append((aug_type, factors))
         
-    args.augmentations = augmentations
+        augmentation_string = f'_rel_size_{args.augmented_dataset_size_relative}'\
+                                            f'_ratio_{args.augmented_data_ratio:.2f}'
+        
+    else:
+        augmentation_string = '_no_augment'
 
-    augmentation_string += f'_rel_size_{args.augmented_dataset_size_relative}'\
-                                        f'_ratio_{args.augmented_data_ratio:.2f}'
+    args.augmentations = augmentations
 
     train_loader, test_loader, labels = load_dataset(args.dataset)
     if args.model in ['MERLIN']:
@@ -550,18 +552,19 @@ if __name__ == '__main__':
     result, _, latencies = pot_eval(lossTfinal, lossFinal, labelsFinal)
 
     if args.dataset == 'HLT':
-        _save_numpy_array(lossTfinal, f'../../evaluation/reduced_detection/predictions/tranad_train_seed_{args.seed}.npy')
-        _save_numpy_array(lossTfinal, '../../evaluation/combined_detection/predictions/tranad_train.npy')
-        _save_numpy_array(lossFinal, f'../../evaluation/reduced_detection/predictions/tranad_{args.seed}.npy')
+        _save_numpy_array(lossTfinal, f'../../evaluation/reduced_detection/predictions/tranad_train_seed_{int(args.seed)}.npy')
+        _save_numpy_array(lossTfinal, f'../../evaluation/combined_detection/predictions/tranad_train_seed_{int(args.seed)}.npy')
+        _save_numpy_array(lossFinal, f'../../evaluation/reduced_detection/predictions/tranad_seed_{int(args.seed)}.npy')
 
         parameter_dict = {"window_size": 10}
 
-        with open(f'checkpoints/{args.model}_{args.dataset}/model_parameters.json', 'w') as parameter_dict_file:
+        with open(f'checkpoints/{args.model}_{args.dataset}_{augmentation_string}_seed_{int(args.seed)}/model_parameters.json', 'w') as parameter_dict_file:
             json.dump(parameter_dict,
                         parameter_dict_file)
 
     else:
-        metrics_to_save = [result['ROC/AUC'],
+        metrics_to_save = [int(args.seed),
+                                result['ROC/AUC'],
                                 result['f1'],
                                 result['MCC'],
                                 result['precision'],

@@ -115,7 +115,6 @@ def remove_undetectable_anomalies(data: np.array,
             if (label[row, col] > 0) and\
                     (np.allclose(data[row, :], 0, atol=0.5)):
                 label[row, col] = 0
-                print(f'Found undetectable anomaly at ({row}, {col})')
     return label
 
 

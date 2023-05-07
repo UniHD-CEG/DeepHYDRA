@@ -173,12 +173,13 @@ def get_scores(pred_train, pred_test, true, q=1e-3, level=0.8):
     return pred
 
 
-def print_results(label: np.array):
+def print_results(label: np.array,
+                        seed: int):
 
-    preds_l2_dist_train_mse = load_numpy_array('predictions/l2_dist_train_mse.npy')
-    preds_l2_dist_mse = load_numpy_array('predictions/l2_dist_mse.npy')
-    preds_l2_dist_train_smse = load_numpy_array('predictions/l2_dist_train_smse.npy')
-    preds_l2_dist_smse = load_numpy_array('predictions/l2_dist_smse.npy')
+    preds_l2_dist_train_mse = load_numpy_array(f'predictions/l2_dist_train_mse._seed_{seed}.npy')
+    preds_l2_dist_mse = load_numpy_array(f'predictions/l2_dist_mse_seed_{seed}.npy')
+    preds_l2_dist_train_smse = load_numpy_array(f'predictions/l2_dist_train_smse_seed_{seed}.npy')
+    preds_l2_dist_smse = load_numpy_array(f'predictions/l2_dist_smse_seed_{seed}.npy')
 
     spot_train_size = int(len(preds_l2_dist_mse)*0.1)
     
@@ -195,8 +196,15 @@ def print_results(label: np.array):
 
 if __name__ == '__main__':
 
-    labels_np = np.load('../../datasets/smd/machine-1-1_labels.npy')
+    parser = argparse.ArgumentParser(description='machine-1-1 Evaluation')
 
+    parser.add_argument('--data-dir', type=str, default='../../datasets/smd')
+    parser.add_argument('--seed', type=int)
+
+    args = parser.parse_args()
+
+    labels_np = np.load(f'{args.data_dir}/machine-1-1_labels.npy')
+    
     labels_np = np.add.reduce(labels_np, axis=1)
     labels_np = np.where(labels_np >= 1, 1, 0)
     labels_np = labels_np.astype(np.uint8)
@@ -206,4 +214,5 @@ if __name__ == '__main__':
 
     labels_np = labels_np[label_begin:label_end]
 
-    print_results(labels_np)
+    print_results(labels_np,
+                    args.seed)

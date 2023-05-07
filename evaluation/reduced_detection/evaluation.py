@@ -265,26 +265,27 @@ def get_scores_thresholded(pred, true):
             f'Recall: {recall:.3f}')
 
 
-def print_results(label: np.array):
+def print_results(label: np.array,
+                        seed: int):
 
     label = np.any(label, axis=1).astype(np.uint8)
 
     preds_l2_dist_train_mse_no_augment =\
-        load_numpy_array('predictions/l2_dist_train_mse_no_augment.npy')
+        load_numpy_array(f'predictions/l2_dist_train_mse_no_augment_seed_{seed}.npy')
     preds_l2_dist_mse_no_augment =\
-        load_numpy_array('predictions/l2_dist_mse_no_augment.npy')
+        load_numpy_array(f'predictions/l2_dist_mse_no_augment_seed_{seed}.npy')
     preds_l2_dist_train_smse_no_augment =\
-        load_numpy_array('predictions/l2_dist_train_smse_no_augment.npy')
+        load_numpy_array(f'predictions/l2_dist_train_smse_no_augment_seed_{seed}.npy')
     preds_l2_dist_smse_no_augment =\
-        load_numpy_array('predictions/l2_dist_smse_no_augment.npy')
+        load_numpy_array(f'predictions/l2_dist_smse_no_augment_seed_{seed}.npy')
     preds_l2_dist_train_mse =\
-        load_numpy_array('predictions/l2_dist_train_mse.npy')
+        load_numpy_array(f'predictions/l2_dist_train_mse_seed_{seed}.npy')
     preds_l2_dist_mse =\
-        load_numpy_array('predictions/l2_dist_mse.npy')
+        load_numpy_array(f'predictions/l2_dist_mse_seed_{seed}.npy')
     preds_l2_dist_train_smse =\
-        load_numpy_array('predictions/l2_dist_train_smse.npy')
+        load_numpy_array(f'predictions/l2_dist_train_smse_seed_{seed}.npy')
     preds_l2_dist_smse =\
-        load_numpy_array('predictions/l2_dist_smse.npy')
+        load_numpy_array(f'predictions/l2_dist_smse_seed_{seed}.npy')
 
     spot_train_size = int(len(preds_l2_dist_mse)*0.1)
 
@@ -330,6 +331,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Reduced HLT Dataset Evaluation')
 
     parser.add_argument('--data-dir', type=str, default='../../datasets/hlt')
+    parser.add_argument('--seed', type=int)
   
     args = parser.parse_args()
 
@@ -340,4 +342,5 @@ if __name__ == '__main__':
 
     labels_np = np.greater_equal(labels_np, 1)
 
-    print_results(labels_np)
+    print_results(labels_np,
+                    args.seed)

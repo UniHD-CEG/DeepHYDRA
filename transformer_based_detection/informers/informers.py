@@ -81,9 +81,10 @@ if __name__ == '__main__':
     Exp = ExpInformer
 
     augmentations = []
-    augmentation_string = ''
 
     if args.apply_augmentations:
+
+        augmentation_string = ''
         
         for augmentation in args.augmentations:
             augmentation = augmentation.replace(' ', '')
@@ -105,8 +106,11 @@ if __name__ == '__main__':
         
         args.augmentations = augmentations
 
-    augmentation_string += f'_rel_size_{args.augmented_dataset_size_relative}'\
-                                        f'_ratio_{args.augmented_data_ratio:.2f}'
+        augmentation_string = f'_rel_size_{args.augmented_dataset_size_relative}'\
+                                            f'_ratio_{args.augmented_data_ratio:.2f}'
+        
+    else:
+        augmentation_string = '_no_augment'
 
     setting = f'{args.loss.lower()}_{augmentation_string.lower()}'
 
@@ -128,22 +132,16 @@ if __name__ == '__main__':
 
     subfolder = 'reduced_detection' if args.data == 'HLT' else 'smd'
 
-    postfix = ''
-
-    if args.apply_augmentations:
-        if args.augmented_data_ratio != 0:
-            postfix = ''
-        else:
-            postfix = '_no_augment'
+    augmentation_string = augmentation_string if (augmentation_string == '_no_augment') else ''
 
     np.save(f'{output_dir}/{subfolder}/predictions/'
-                f'l2_dist_train_{args.loss.lower()}{postfix}_{args.seed}.npy',
-                                                        l2_distances_all_train)
+                f'l2_dist_train_{args.loss.lower()}{augmentation_string}_seed_{int(args.seed)}.npy',
+                                                                                l2_distances_all_train)
     
     if args.data == 'HLT':
         np.save(f'{output_dir}/combined_detection/predictions/'
-                    f'l2_dist_train_{args.loss.lower()}{postfix}_{args.seed}.npy',
-                                                            l2_distances_all_train)
+                    f'l2_dist_train_{args.loss.lower()}{augmentation_string}_seed_{int(args.seed)}.npy',
+                                                                                    l2_distances_all_train)
 
     # Load and preprocess test set results
 
@@ -156,8 +154,8 @@ if __name__ == '__main__':
     l2_distances_all_test = np.mean((preds_all_test[:, :] - trues_all_test[:, :])**2, 1)
 
     np.save(f'{output_dir}/{subfolder}/predictions/'
-                f'l2_dist_{args.loss.lower()}{postfix}_{args.seed}.npy',
-                                                    l2_distances_all_test)
+                f'l2_dist_{args.loss.lower()}{augmentation_string}_seed_{int(args.seed)}.npy',
+                                                                            l2_distances_all_test)
     
     parameter_dict = {"model": "informer",
                             "data": args.data,

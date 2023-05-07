@@ -259,12 +259,12 @@ def plot_results(data: np.array,
     preds_method_4 = load_numpy_array('predictions/method_4.npy')
     preds_merlin = load_numpy_array('predictions/merlin.npy')
     preds_clustering = load_numpy_array('predictions/clustering.npy')
-    preds_tranad = load_numpy_array('predictions/tranad.npy')
-    preds_tranad_train = load_numpy_array('predictions/tranad_train.npy')
-    preds_l2_dist_train_mse = load_numpy_array('predictions/l2_dist_train_mse.npy')
-    preds_l2_dist_mse = load_numpy_array('predictions/l2_dist_mse.npy')
-    preds_l2_dist_train_smse = load_numpy_array('predictions/l2_dist_train_smse.npy')
-    preds_l2_dist_smse = load_numpy_array('predictions/l2_dist_smse.npy')
+    preds_tranad = load_numpy_array('predictions/tranad_seed.npy')
+    preds_tranad_train = load_numpy_array(f'predictions/tranad_train_seed..npy')
+    preds_l2_dist_train_mse = load_numpy_array(f'predictions/l2_dist_train_mse_seed.npy')
+    preds_l2_dist_mse = load_numpy_array(f'predictions/l2_dist_mse_seed.npy')
+    preds_l2_dist_train_smse = load_numpy_array(f'predictions/l2_dist_train_smse_seed.npy')
+    preds_l2_dist_smse = load_numpy_array(f'predictions/l2_dist_smse_seed.npy')
 
     preds_method_3 = np.any(preds_method_3, axis=1).astype(np.uint8)
     preds_method_4 = np.any(preds_method_4, axis=1).astype(np.uint8)
@@ -357,15 +357,10 @@ def plot_results(data: np.array,
     MEDIUM_SIZE = 13
     BIGGER_SIZE = 13
 
-    xlims = [(250, 500),
-                (600, 800),
+    xlims = [(600, 800),
                 (850, 1070),
                 (1300, 1400),
-                (1800, 2000),
-                (2000, 2400),
-                (3300, 3800),
-                (6000, 8500),
-                (14000, 15000)]
+                (2000, 2400)]
     
     plt.rc('font', size=SMALL_SIZE)
     plt.rc('axes', titlesize=BIGGER_SIZE)
@@ -432,7 +427,7 @@ def plot_results(data: np.array,
                                 height=0.8)
 
         plt.tight_layout()
-        plt.savefig(f'plots/prediction_comparison_{index}.png')
+        plt.savefig(f'plots/prediction_comparison_{index}_seed_{seed}.png')
 
 
 if __name__ == '__main__':
@@ -460,4 +455,5 @@ if __name__ == '__main__':
 
     labels_np = np.greater_equal(labels_np, 1)
 
-    plot_results(hlt_data_np, labels_np)
+    plot_results(hlt_data_np,
+                    labels_np)
