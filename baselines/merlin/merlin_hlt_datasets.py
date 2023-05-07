@@ -73,10 +73,6 @@ def preds_from_discords(discords: np.array,
 
                 if max(actual_start_with_tol, pred_start) <\
                                         min(actual_end, pred_end):
-                    # print('Found correct pred at '
-                    #         f'({discord}, {column})\t'
-                    #         f'distance: {actual_start - pred_start}')
-
                     assert actual_start != actual_end
 
                     preds[actual_start:actual_end, column] = 1
@@ -159,14 +155,10 @@ def expand_labels(label,
             for start_old, end_old in zip(anomalous_run_starts,
                                             anomalous_run_ends):
                 
-                # print(f'Old anomaly interval: [{start_old} {end_old}]')
-
                 start_new = max(0, start_old - expansion_pre)
                 end_new = min(len(label), end_old + expansion_post)
 
                 label[start_new:end_new, col] = label[start_old, col]
-
-                # print(f'New anomaly interval: [{start_new} {end_new}]')
 
     else:
         raise ValueError('Only 1d and 2d label arrays are supported')
@@ -241,26 +233,26 @@ def run_merlin(data: np.ndarray,
 
     columns = data.shape[-1]
 
-    # discords_all = []
-    # distances_all = []
-    # lengths_all = []
+    discords_all = []
+    distances_all = []
+    lengths_all = []
 
-    # for channel in trange(columns):
-    #     discords, distances, lengths = merlin(data[:, channel],
-    #                                                 l_min, l_max,
-    #                                                 sanitize=near_constant_fix)
+    for channel in trange(columns):
+        discords, distances, lengths = merlin(data[:, channel],
+                                                    l_min, l_max,
+                                                    sanitize=near_constant_fix)
 
-    #     discords_all.append(discords)
-    #     distances_all.append(distances)
-    #     lengths_all.append(lengths)
+        discords_all.append(discords)
+        distances_all.append(distances)
+        lengths_all.append(lengths)
 
-    # discords_all = np.column_stack(discords_all)
-    # distances_all = np.column_stack(distances_all)
-    # lengths_all = np.column_stack(lengths_all)
+    discords_all = np.column_stack(discords_all)
+    distances_all = np.column_stack(distances_all)
+    lengths_all = np.column_stack(lengths_all)
 
-    # save_numpy_array(distances_all, 'distances.npy')
-    # save_numpy_array(discords_all, 'discords.npy')
-    # save_numpy_array(lengths_all, 'lengths.npy')
+    save_numpy_array(distances_all, 'distances.npy')
+    save_numpy_array(discords_all, 'discords.npy')
+    save_numpy_array(lengths_all, 'lengths.npy')
 
     distances_all = load_numpy_array('distances.npy')
     discords_all = load_numpy_array('discords.npy')
@@ -277,10 +269,6 @@ def run_merlin(data: np.ndarray,
 
         pred_column = pred[:, column]
         label_column = label[:, column]
-
-        # pred_column = adjust_predicts(pred_column,
-        #                                 label_column,
-        #                                 0.1)
 
         auroc = roc_auc_score(label_column, pred_column)
         f1 = f1_score(label_column, pred_column)
@@ -310,21 +298,6 @@ def run_merlin(data: np.ndarray,
         included_indices = np.where(mccs > threshold)[0]
 
         pred_reduced = pred[:, included_indices]
-
-        # label_reduced = label[:, included_indices]
-
-        # pred_adjusted = np.zeros_like(pred_reduced)
-
-        # for column in range(pred_reduced.shape[-1]):
-            # pred_column = pred_reduced[:, column]
-            # label_column = label_reduced[:, column]
-
-            # pred_adjusted[:, column] =\
-            #     adjust_predicts(pred_column,
-            #                         label_column,
-            #                         0.1)
-
-        # pred_reduced = np.any(pred_adjusted, axis=1).astype(np.uint8)
 
         pred_reduced = np.any(pred_reduced, axis=1).astype(np.uint8)
         label_reduced = np.any(label, axis=1).astype(np.uint8)
@@ -383,14 +356,13 @@ def get_preds_best_threshold(data: np.ndarray,
                 f'\tPrecision: {precision:.3f}'
                 f'\tRecall: {recall:.3f}')
 
-
     included_indices = np.where(mccs > threshold)[0]
 
     pred_reduced = np.zeros_like(pred)
     pred_reduced[:, included_indices] =\
                     pred[:, included_indices]
 
-    save_numpy_array(pred_reduced, 'preds_hlt_merlin.npy')
+    save_numpy_array(pred_reduced, '../../evaluation/combined_detection/predictions/merlin.npy')
 
 
 if __name__ == '__main__':
@@ -398,9 +370,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='MERLIN HLT Test')
 
     parser.add_argument('--dataset', type=str, default=\
-                            '../../../datasets/hlt/unreduced_hlt_test_set_x.h5')
+                            '../../datasets/hlt/unreduced_hlt_test_set_x.h5')
     parser.add_argument('--labels', type=str, default=\
-                            '../../../datasets/hlt/unreduced_hlt_test_set_y.h5')
+                            '../../datasets/hlt/unreduced_hlt_test_set_y.h5')
                                 
     parser.add_argument('--l-min', type=int, default=8)
     parser.add_argument('--l-max', type=int, default=96)
@@ -442,4 +414,4 @@ if __name__ == '__main__':
 
     get_preds_best_threshold(hlt_data_np,
                                     labels_np,
-                                    0.75)
+                                    0.725)

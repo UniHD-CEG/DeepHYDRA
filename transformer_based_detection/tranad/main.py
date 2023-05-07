@@ -550,8 +550,9 @@ if __name__ == '__main__':
     result, _, latencies = pot_eval(lossTfinal, lossFinal, labelsFinal)
 
     if args.dataset == 'HLT':
-        _save_numpy_array(lossTfinal, '../../evaluation/reduced_detection/tranad_train_smd.npy')
-        _save_numpy_array(lossFinal, '../../evaluation/reduced_detection/tranad_smd.npy')
+        _save_numpy_array(lossTfinal, '../../evaluation/reduced_detection/predictions/tranad_train.npy')
+        _save_numpy_array(lossTfinal, '../../evaluation/combined_detection/predictions/tranad_train.npy')
+        _save_numpy_array(lossFinal, '../../evaluation/reduced_detection/predictions/tranad.npy')
 
         parameter_dict = {"window_size": 10}
 

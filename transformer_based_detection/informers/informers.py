@@ -155,7 +155,7 @@ if __name__ == '__main__':
 
     l2_distances_all_test = np.mean((preds_all_test[:, :] - trues_all_test[:, :])**2, 1)
 
-    np.save(f'{output_dir}/{subfolder}/'
+    np.save(f'{output_dir}/{subfolder}/predictions/'
                 f'l2_dist_{args.loss.lower()}{postfix}.npy',
                                         l2_distances_all_test)
     

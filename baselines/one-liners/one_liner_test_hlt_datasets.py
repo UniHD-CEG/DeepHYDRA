@@ -13,7 +13,6 @@ from sklearn.metrics import roc_auc_score,\
                                 recall_score,\
                                 matthews_corrcoef
 
-import plotext as plt
 from tqdm.auto import trange
 
 run_endpoints = [1404,
@@ -524,7 +523,7 @@ def run_with_best_parameters_method_3(data: np.array,
             adjust_predicts(data_channel,
                                 labels_channel, b)
 
-    save_numpy_array(preds_all, 'preds_method_3_hlt.npy')
+    save_numpy_array(preds_all, '../../evaluation/combined_detection/predictions/method_3.npy')
 
 
 def run_with_best_parameters_method_4(data: np.array,
@@ -557,7 +556,7 @@ def run_with_best_parameters_method_4(data: np.array,
                                                 labels[:, included_indices],
                                                 parameters[included_indices, :])
 
-    save_numpy_array(preds_all, 'preds_method_4_hlt.npy')
+    save_numpy_array(preds_all, '../../evaluation/combined_detection/predictions/method_4.npy')
 
 
 if __name__ == '__main__':
@@ -592,9 +591,9 @@ if __name__ == '__main__':
     cols_without_anomalies = np.argwhere(anomalies_per_col == 0)
 
     parameter_exploration(hlt_data_np,
-                                labels_np,
-                                k_lower=args.k_lower,
-                                k_upper=args.k_upper)
+                            labels_np,
+                            k_lower=args.k_lower,
+                            k_upper=args.k_upper)
 
     test_thresholds_method_3(hlt_data_np,
                                     labels_np)
@@ -604,7 +603,7 @@ if __name__ == '__main__':
 
     run_with_best_parameters_method_3(hlt_data_np,
                                                 labels_np,
-                                                0.5)
+                                                0.45)
 
     run_with_best_parameters_method_4(hlt_data_np,
                                                 labels_np,

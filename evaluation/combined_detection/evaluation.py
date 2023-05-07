@@ -380,15 +380,8 @@ def get_scores_thresholded_by_category(pred_tdbscan,
                 f'\tRecall: {recall:.3f}')
 
 
-def print_results(data: np.array,
-                    label: np.array):
+def print_results(label: np.array):
 
-    preds_method_3 =\
-        load_numpy_array('predictions/method_3.npy')
-    preds_method_4 =\
-        load_numpy_array('predictions/method_4.npy')
-    preds_merlin =\
-        load_numpy_array('predictions/merlin.npy')
     preds_clustering =\
         load_numpy_array('predictions/clustering.npy')
     preds_tranad =\
@@ -404,23 +397,9 @@ def print_results(data: np.array,
     preds_l2_dist_smse =\
         load_numpy_array('predictions/l2_dist_smse.npy')
 
-    preds_method_3 = np.any(preds_method_3, axis=1).astype(np.uint8)
-    preds_method_4 = np.any(preds_method_4, axis=1).astype(np.uint8)
-    preds_merlin = np.any(preds_merlin, axis=1).astype(np.uint8)
-
     spot_train_size = int(len(preds_l2_dist_mse)*0.1)
 
     # Fix alignment
-    
-    preds_method_3 =\
-        np.pad(preds_method_3,
-                (1, 0), 'constant',
-                constant_values=(0,))
-    
-    preds_method_4 =\
-        np.pad(preds_method_4,
-                (1, 0), 'constant',
-                constant_values=(0,))
     
     preds_l2_dist_mse =\
         np.pad(preds_l2_dist_mse[1:],
@@ -523,25 +502,15 @@ def print_results(data: np.array,
 
 if __name__ == '__main__':
 
-    parser = argparse.ArgumentParser(description='HLT Comparison Plot Generator')
+    parser = argparse.ArgumentParser(description='Uneduced HLT Dataset Evaluation')
 
     parser.add_argument('--data-dir', type=str, default='../../../datasets/hlt')
   
     args = parser.parse_args()
-
-    hlt_data_pd = pd.read_hdf(args.data_dir +\
-                                    '/unreduced_hlt_test_set_x.h5')
-
-    hlt_data_pd.iloc[run_endpoints[-2]:-1,
-                            channels_to_delete_last_run] = 0
-
-    hlt_data_pd.fillna(0, inplace=True)
-
-    hlt_data_np = hlt_data_pd.to_numpy()
 
     labels_pd = pd.read_hdf(args.data_dir +\
                             '/unreduced_hlt_test_set_y.h5')
 
     labels_np = labels_pd.to_numpy()
 
-    print_results(hlt_data_np, labels_np)
+    print_results(labels_np)

@@ -530,8 +530,6 @@ def run_with_best_parameters_method_3(data: np.array,
             adjust_predicts(data_channel,
                                 labels_channel, b)
 
-    save_numpy_array(preds_all, 'preds_method_3_hlt_reduced.npy')
-
 
 def run_with_best_parameters_method_4(data: np.array,
                                         labels: np.array,
@@ -562,8 +560,6 @@ def run_with_best_parameters_method_4(data: np.array,
                 method_4_combined(abs_diff_normalized[:, included_indices],
                                                 labels[:, included_indices],
                                                 parameters[included_indices, :])
-
-    save_numpy_array(preds_all, 'preds_method_4_hlt_reduced.npy')
 
 
 if __name__ == '__main__':
@@ -603,8 +599,8 @@ if __name__ == '__main__':
 
     run_with_best_parameters_method_3(hlt_data_np,
                                                 labels_np,
-                                                0.5)
+                                                0.675)
 
     run_with_best_parameters_method_4(hlt_data_np,
                                                 labels_np,
-                                                0.475)
+                                                0.625)
