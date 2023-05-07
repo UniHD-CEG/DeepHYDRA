@@ -1,4 +1,24 @@
 #!/usr/bin/env python3
+
+# 
+# Modifications copyright (C) 2023 CERN for the benefit of the ATLAS collaboration
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# The anomaly injection code ist based in 
+# https://github.com/datamllab/tods/blob/benchmark/benchmark/synthetic/Generator/multivariate_generator.py
+# the accompanying repository for the paper "TODS: An Automated Time Series Outlier Detection System".
+
 import math
 import re
 import argparse
@@ -83,6 +103,20 @@ def create_channel_names(median_labels, stdev_labels):
                                 stdev_labels))
 
     return labels
+
+
+def remove_undetectable_anomalies(data: np.array,
+                                        label: np.array):
+
+    rows, cols = data.shape
+
+    for row in range(rows):
+        for col in range(cols):
+            if (label[row, col] > 0) and\
+                    (np.allclose(data[row, :], 0, atol=0.5)):
+                label[row, col] = 0
+                print(f'Found undetectable anomaly at ({row}, {col})')
+    return label
 
 
 class MultivariateDataGenerator:
@@ -652,11 +686,15 @@ if __name__ == '__main__':
     # Save unreduced test set for testing of combined DBSCAN/Transformer-based
     # detection pipeline
 
+    labels = remove_undetectable_anomalies(
+                np.nan_to_num(anomaly_generator_test.get_dataset_np(), copy=False),
+                                                anomaly_generator_test.get_labels_np())
+
     test_set_x_df = pd.DataFrame(anomaly_generator_test.get_dataset_np(),
                                     anomaly_generator_test.get_timestamps_pd(),
                                     test_set_x_df.columns)
 
-    test_set_y_df = pd.DataFrame(anomaly_generator_test.get_labels_np(),
+    test_set_y_df = pd.DataFrame(labels,
                                     anomaly_generator_test.get_timestamps_pd(),
                                     test_set_x_df.columns)
 

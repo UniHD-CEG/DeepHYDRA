@@ -629,7 +629,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='SMD One-Liner Test')
 
-    parser.add_argument('--data-dir', type=str, default='../../../../../smd/processed')
+    parser.add_argument('--data-dir', type=str, default='../../datasets/smd')
     parser.add_argument('--k-lower', type=int, default=2)
     parser.add_argument('--k-upper', type=int, default=16)
   

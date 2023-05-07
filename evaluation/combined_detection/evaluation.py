@@ -276,7 +276,7 @@ def get_scores_tranad(pred_train, pred_test, true, q=1e-3, level=0.02):
     ret = s.run(dynamic=False)  # run
     # print(len(ret['alarms']))
     # print(len(ret['thresholds']))
-    pot_th = np.mean(ret['thresholds']) * 0.7
+    pot_th = np.mean(ret['thresholds']) * 0.3
     # pot_th = np.percentile(score, 100 * lm[0])
     # np.percentile(score, 100 * lm[0])
 
@@ -424,8 +424,8 @@ def print_results(label: np.array):
     get_scores_thresholded(preds_clustering,
                                         label)
     
-    metric_comparison_by_categories(preds_clustering,
-                                                label)
+    # metric_comparison_by_categories(preds_clustering,
+    #                                             label)
 
     print('TranAD:')
 
@@ -443,11 +443,11 @@ def print_results(label: np.array):
     
     get_scores_thresholded(preds_strada_tranad,
                                             label)
-    
-    get_scores_thresholded_by_category(preds_clustering,
-                                        preds_tranad_by_category,
-                                        label)
 
+    # get_scores_thresholded_by_category(preds_clustering,
+    #                                     preds_tranad_by_category,
+    #                                     label)
+    
     print('Informer-MSE:')
 
     preds_l2_dist_mse,\
@@ -465,9 +465,9 @@ def print_results(label: np.array):
     get_scores_thresholded(preds_strada_mse,
                                         label)
     
-    get_scores_thresholded_by_category(preds_clustering,
-                                        preds_l2_dist_mse_by_category,
-                                        label)
+    # get_scores_thresholded_by_category(preds_clustering,
+    #                                     preds_l2_dist_mse_by_category,
+    #                                     label)
 
     print('Informer-SMSE:')
 
@@ -486,9 +486,9 @@ def print_results(label: np.array):
     get_scores_thresholded(preds_strada_smse,
                                         label)
 
-    get_scores_thresholded_by_category(preds_clustering,
-                                        preds_l2_dist_smse_by_category,
-                                        label)
+    # get_scores_thresholded_by_category(preds_clustering,
+    #                                     preds_l2_dist_smse_by_category,
+    #                                     label)
 
 
 if __name__ == '__main__':

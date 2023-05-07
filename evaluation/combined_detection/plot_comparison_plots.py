@@ -218,7 +218,7 @@ def get_scores_tranad(pred_train, pred_test, true, q=1e-3, level=0.02):
     ret = s.run(dynamic=False)  # run
     # print(len(ret['alarms']))
     # print(len(ret['thresholds']))
-    pot_th = np.mean(ret['thresholds']) * 0.6
+    pot_th = np.mean(ret['thresholds']) * 0.3
     # pot_th = np.percentile(score, 100 * lm[0])
     # np.percentile(score, 100 * lm[0])
 
@@ -304,7 +304,7 @@ def plot_results(data: np.array,
 
     _, _, _, _, thresh_mse =\
         get_scores(preds_l2_dist_train_mse[:spot_train_size],
-                                                preds_l2_dist_mse, label, 0.007)
+                                                preds_l2_dist_mse, label, 0.0025)
     
     preds_l2_dist_mse = preds_l2_dist_mse >= thresh_mse
 
@@ -426,18 +426,20 @@ def plot_results(data: np.array,
                                 length,
                                 left=start,
                                 color=colors[method],
+                                edgecolor='k',
+                                linewidth=0.1,
                                 label=method,
-                                height=0.9)
+                                height=0.8)
 
         plt.tight_layout()
-        plt.savefig(f'plots/prediction_comparison_spot_{index}.png')
+        plt.savefig(f'plots/prediction_comparison_{index}.png')
 
 
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='HLT Dataset Comparison Plot Generator')
 
-    parser.add_argument('--data-dir', type=str, default='../../../datasets/hlt')
+    parser.add_argument('--data-dir', type=str, default='../../datasets/hlt')
   
     args = parser.parse_args()
 

@@ -563,7 +563,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='HLT One-Liner Test')
 
-    parser.add_argument('--data-dir', type=str, default='../../../datasets/hlt')
+    parser.add_argument('--data-dir', type=str, default='../../datasets/hlt')
     parser.add_argument('--k-lower', type=int, default=2)
     parser.add_argument('--k-upper', type=int, default=16)
   
