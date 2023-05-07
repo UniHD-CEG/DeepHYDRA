@@ -113,7 +113,7 @@ if __name__ == '__main__':
     if args.augmented_data_ratio == 0:
         augmentation_string = 'no_augment'
 
-    augment_label = '_no_augment' if augmentation_string == 'no_augment' else '_'
+    augment_label = '_no_augment_' if augmentation_string == 'no_augment' else '_'
 
     setting = f'{args.data.lower()}_{args.loss.lower()}_{augmentation_string}_seed_{int(args.seed)}'
 

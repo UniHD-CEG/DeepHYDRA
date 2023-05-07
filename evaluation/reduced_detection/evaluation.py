@@ -129,11 +129,14 @@ def adjust_predicts(score, label,
         return predict
 
 
-def get_scores(pred_train,
+def get_scores(model_name,
+                seed,
+                pred_train,
                 pred_test,
                 true,
                 q=1e-3,
-                level=0.8):
+                level=0.8,
+                to_csv=False):
     """
     Run POT method on given score.
     Args:
@@ -171,27 +174,40 @@ def get_scores(pred_train,
 
     pred = adjust_predicts(pred, true, 0.1)
 
-    precision_max_f1_score,\
-        recall_max_f1_score,\
-        max_f1_score, _ = precision_recall_fscore_support(true,
-                                                            pred,
-                                                            average='binary')
+    precision,\
+        recall,\
+        f1, _ = precision_recall_fscore_support(true, pred,
+                                                 average='binary')
 
-    mcc_max_f1_score =\
-        matthews_corrcoef(true, pred)
+    mcc = matthews_corrcoef(true, pred)
 
     auroc = roc_auc_score(true, pred)
 
     print(f'AUROC: {auroc:.3f}\t'
-            f'F1: {max_f1_score:.3f}\t'
-            f'MCC: {mcc_max_f1_score:.3f}\t'
-            f'Precision: {precision_max_f1_score:.3f}\t'
-            f'Recall: {recall_max_f1_score:.3f}')
+            f'F1: {f1:.3f}\t'
+            f'MCC: {mcc:.3f}\t'
+            f'Precision: {precision:.3f}\t'
+            f'Recall: {recall:.3f}')
+    
+    if to_csv:
+        save_to_csv(model_name,
+                        seed,
+                        auroc,
+                        f1, mcc,
+                        precision,
+                        recall)
 
     return pred
 
 
-def get_scores_tranad(pred_train, pred_test, true, q=1e-3, level=0.02):
+def get_scores_tranad(model_name,
+                            seed,
+                            pred_train,
+                            pred_test,
+                            true,
+                            q=1e-3,
+                            level=0.02,
+                            to_csv=False):
     """
     Run POT method on given score.
     Args:
@@ -225,48 +241,58 @@ def get_scores_tranad(pred_train, pred_test, true, q=1e-3, level=0.02):
 
     pred = adjust_predicts(pred, true, 0.1)
 
-    precision_max_f1_score,\
-        recall_max_f1_score,\
-        max_f1_score, _ = precision_recall_fscore_support(true,
-                                                            pred,
-                                                            average='binary')
+    precision,\
+        recall,\
+        f1, _ = precision_recall_fscore_support(true, pred,
+                                                    average='binary')
 
-    mcc_max_f1_score =\
-        matthews_corrcoef(true, pred)
+    mcc = matthews_corrcoef(true, pred)
 
     auroc = roc_auc_score(true, pred)
 
     print(f'AUROC: {auroc:.3f}\t'
-            f'F1: {max_f1_score:.3f}\t'
-            f'MCC: {mcc_max_f1_score:.3f}\t'
-            f'Precision: {precision_max_f1_score:.3f}\t'
-            f'Recall: {recall_max_f1_score:.3f}')
+            f'F1: {f1:.3f}\t'
+            f'MCC: {mcc:.3f}\t'
+            f'Precision: {precision:.3f}\t'
+            f'Recall: {recall:.3f}')
+    
+    if to_csv:
+        save_to_csv(model_name,
+                        seed,
+                        auroc,
+                        f1, mcc,
+                        precision,
+                        recall)
 
     return pred
 
 
-def get_scores_thresholded(pred, true):
+def save_to_csv(model_name: str,
+                        seed: int,
+                        auroc: np.float64,
+                        f1: np.float64,
+                        mcc: np.float64,
+                        precision: np.float64,
+                        recall: np.float64):
+    
+    metrics_to_save = [seed,
+                        auroc,
+                        f1, mcc,
+                        precision,
+                        recall]
 
-    precision,\
-        recall,\
-        f1_score, _ = precision_recall_fscore_support(true,
-                                                        pred,
-                                                        average='binary')
+    metrics_to_save = np.atleast_2d(metrics_to_save)
 
-    mcc =\
-        matthews_corrcoef(true, pred)
-
-    auroc = roc_auc_score(true, pred)
-
-    print(f'AUROC: {auroc:.3f}\t'
-            f'F1: {f1_score:.3f}\t'
-            f'MCC: {mcc:.3f}\t'
-            f'Precision: {precision:.3f}\t'
-            f'Recall: {recall:.3f}')
+    metrics_to_save_pd = pd.DataFrame(data=metrics_to_save)
+    metrics_to_save_pd.to_csv(f'results_reduced_detection_{model_name}.csv',
+                                                                    mode='a+',
+                                                                    header=False,
+                                                                    index=False)
 
 
 def print_results(label: np.array,
-                        seed: int):
+                        seed: int,
+                        to_csv: bool):
 
     label = np.any(label, axis=1).astype(np.uint8)
 
@@ -294,36 +320,41 @@ def print_results(label: np.array,
     offset = 16
 
     preds_l2_dist_mse_no_augment =\
-        get_scores(preds_l2_dist_train_mse_no_augment[:spot_train_size],
+        get_scores('informer_mse_no_augment', seed,
+                        preds_l2_dist_train_mse_no_augment[:spot_train_size],
                         preds_l2_dist_mse_no_augment,
-                        label[offset:len(preds_l2_dist_mse_no_augment) + offset], 0.1, 0.8)
+                        label[offset:len(preds_l2_dist_mse_no_augment) + offset], 0.1, 0.8, to_csv)
+
 
     print('Informer-SMSE - No Augmentation:')
 
     offset = 64
 
     preds_l2_dist_smse_no_augment =\
-        get_scores(preds_l2_dist_train_smse_no_augment[:spot_train_size],
+        get_scores('informer_smse_no_augment', seed,
+                        preds_l2_dist_train_smse_no_augment[:spot_train_size],
                         preds_l2_dist_smse_no_augment,
-                        label[offset:len(preds_l2_dist_smse_no_augment) + offset], 0.005, 0.8)
+                        label[offset:len(preds_l2_dist_smse_no_augment) + offset], 0.005, 0.8, to_csv)
     
     print('Informer-MSE:')
 
     offset = 16
 
     preds_l2_dist_mse =\
-        get_scores(preds_l2_dist_train_mse[:spot_train_size],
+        get_scores('informer_mse', seed,
+                        preds_l2_dist_train_mse[:spot_train_size],
                         preds_l2_dist_mse,
-                        label[offset:len(preds_l2_dist_mse) + offset], 0.007, 0.8)
+                        label[offset:len(preds_l2_dist_mse) + offset], 0.007, 0.8, to_csv)
 
     print('Informer-SMSE:')
 
     offset = 64
 
     preds_l2_dist_smse =\
-        get_scores(preds_l2_dist_train_smse[:spot_train_size],
+        get_scores('informer_smse', seed,
+                        preds_l2_dist_train_smse[:spot_train_size],
                         preds_l2_dist_smse,
-                        label[offset:len(preds_l2_dist_smse) + offset], 0.008, 0.8)
+                        label[offset:len(preds_l2_dist_smse) + offset], 0.008, 0.8, to_csv)
     
 
 if __name__ == '__main__':
@@ -332,6 +363,7 @@ if __name__ == '__main__':
 
     parser.add_argument('--data-dir', type=str, default='../../datasets/hlt')
     parser.add_argument('--seed', type=int)
+    parser.add_argument('--to-csv', action='store_true', default=False)
   
     args = parser.parse_args()
 
@@ -343,4 +375,5 @@ if __name__ == '__main__':
     labels_np = np.greater_equal(labels_np, 1)
 
     print_results(labels_np,
-                    args.seed)
+                    args.seed,
+                    args.to_csv)

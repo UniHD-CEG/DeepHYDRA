@@ -128,10 +128,10 @@ class BenchmarkAnomalyRegistry(AnomalyRegistry):
 
         if model_name == 'Informer-MSE':
             pred_transformer_np = np.pad(pred_transformer_np, (16, 1))
-            _save_numpy_array(pred_transformer_np, f'{output_dir}/l2_dist_mse_{seed}.npy')
+            _save_numpy_array(pred_transformer_np, f'{output_dir}/l2_dist_mse_seed_{seed}.npy')
         elif model_name == 'Informer-SMSE':
             pred_transformer_np = np.pad(pred_transformer_np, (64, 1))
-            _save_numpy_array(pred_transformer_np, f'{output_dir}/l2_dist_smse_{seed}.npy')
+            _save_numpy_array(pred_transformer_np, f'{output_dir}/l2_dist_smse_seed_{seed}.npy')
         elif model_name == 'TranAD':
             pred_transformer_np = np.pad(pred_transformer_np, (9, 0))
-            _save_numpy_array(pred_transformer_np, f'{output_dir}/tranad_{seed}.npy')
+            _save_numpy_array(pred_transformer_np, f'{output_dir}/tranad_seed_{seed}.npy')

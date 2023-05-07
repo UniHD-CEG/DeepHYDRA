@@ -72,8 +72,6 @@ def load_dataset(dataset):
 
             folder = f'./checkpoints/{args.model}_{args.dataset}_{augmentation_string}_seed_{int(args.seed)}/'
 
-            print(folder)
-
             os.makedirs(folder, exist_ok=True)
             train_set.pickle_scaler(f'{folder}/scaler.pkl')
 
@@ -106,8 +104,6 @@ def load_dataset(dataset):
 
 def save_model(model, optimizer, scheduler, epoch, accuracy_list):
     folder = f'checkpoints/{args.model}_{args.dataset}_{augmentation_string}_seed_{int(args.seed)}/'
-
-    print(folder)
 
     os.makedirs(folder, exist_ok=True)
     file_path = f'{folder}/model.ckpt'
@@ -484,8 +480,6 @@ if __name__ == '__main__':
 
     args.augmentations = augmentations
 
-    augment_label = '_no_augment' if augmentation_string == 'no_augment' else '_'
-
     train_loader, test_loader, labels = load_dataset(args.dataset)
     if args.model in ['MERLIN']:
         eval(f'run_{args.model.lower()}(test_loader, labels, args.dataset)')
@@ -562,7 +556,7 @@ if __name__ == '__main__':
 
     if args.dataset == 'HLT':
 
-        augment_label = augmentation_string if augmentation_string == 'no_augment' else ''
+        augment_label = '_no_augment_' if augmentation_string == 'no_augment' else '_'
 
         _save_numpy_array(lossTfinal, f'../../evaluation/reduced_detection/predictions/tranad_train{augment_label}seed_{int(args.seed)}.npy')
         _save_numpy_array(lossTfinal, f'../../evaluation/combined_detection/predictions/tranad_train{augment_label}seed_{int(args.seed)}.npy')
