@@ -290,7 +290,7 @@ def print_results(label: np.array):
 
     print('Informer-MSE - No Augmentation:')
 
-    offset = 64
+    offset = 16
 
     preds_l2_dist_mse_no_augment =\
         get_scores(preds_l2_dist_train_mse_no_augment[:spot_train_size],
@@ -299,6 +299,8 @@ def print_results(label: np.array):
 
     print('Informer-SMSE - No Augmentation:')
 
+    offset = 64
+
     preds_l2_dist_smse_no_augment =\
         get_scores(preds_l2_dist_train_smse_no_augment[:spot_train_size],
                         preds_l2_dist_smse_no_augment,
@@ -306,7 +308,7 @@ def print_results(label: np.array):
     
     print('Informer-MSE:')
 
-    offset = 64
+    offset = 16
 
     preds_l2_dist_mse =\
         get_scores(preds_l2_dist_train_mse[:spot_train_size],
@@ -314,6 +316,8 @@ def print_results(label: np.array):
                         label[offset:len(preds_l2_dist_mse) + offset], 0.007, 0.8)
 
     print('Informer-SMSE:')
+
+    offset = 64
 
     preds_l2_dist_smse =\
         get_scores(preds_l2_dist_train_smse[:spot_train_size],
@@ -325,12 +329,12 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Reduced HLT Dataset Evaluation')
 
-    parser.add_argument('--data-dir', type=str, default='../../../datasets/hlt')
+    parser.add_argument('--data-dir', type=str, default='../../datasets/hlt')
   
     args = parser.parse_args()
 
     labels_pd = pd.read_hdf(args.data_dir +\
-                            '/unreduced_hlt_test_set_y.h5')
+                            '/reduced_hlt_test_set_y.h5')
 
     labels_np = labels_pd.to_numpy()
 

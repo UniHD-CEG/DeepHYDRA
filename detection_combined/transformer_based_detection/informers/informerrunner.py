@@ -155,7 +155,7 @@ class InformerRunner():
 
                     self._logger.info('Transformer-based detection '
                                         'encountered anomaly at timestamp '
-                                        f'{self._anomaly_start_l2} '
+                                        f'{self._anomaly_start} '
                                         'using L2 dist')
 
                 self._anomaly_duration += 1

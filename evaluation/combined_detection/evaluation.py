@@ -411,15 +411,6 @@ def print_results(label: np.array):
                         (0, 1), 'constant',
                         constant_values=(0,))
     
-    preds_l2_dist_mse_tuned =\
-        np.pad(preds_l2_dist_mse_tuned[1:],
-                            (0, 1), 'constant',
-                            constant_values=(0,))
-    
-    preds_l2_dist_smse_tuned =\
-        np.pad(preds_l2_dist_smse_tuned[1:],
-                            (0, 1), 'constant',
-                            constant_values=(0,))
     
     label_reduced =\
         np.any(np.greater_equal(label, 1), axis=1).astype(np.uint8)
@@ -462,14 +453,14 @@ def print_results(label: np.array):
     preds_l2_dist_mse,\
         preds_l2_dist_mse_by_category =\
             get_scores(preds_l2_dist_train_mse[:spot_train_size],
-                                                preds_l2_dist_mse_tuned,
+                                                preds_l2_dist_mse,
                                                 label, 0.0025)
 
     print('STRADA-MSE:')
 
     preds_strada_mse =\
         np.logical_or(preds_clustering,
-                        preds_l2_dist_mse_tuned)
+                        preds_l2_dist_mse)
     
     get_scores_thresholded(preds_strada_mse,
                                         label)
@@ -504,7 +495,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Uneduced HLT Dataset Evaluation')
 
-    parser.add_argument('--data-dir', type=str, default='../../../datasets/hlt')
+    parser.add_argument('--data-dir', type=str, default='../../datasets/hlt')
   
     args = parser.parse_args()
 

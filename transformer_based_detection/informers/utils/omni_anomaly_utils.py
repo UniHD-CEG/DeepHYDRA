@@ -2,7 +2,7 @@ import os
 
 import numpy as np
 
-prefix = '../../../datasets/machine-1-1/'
+prefix = '../../datasets/smd/'
 
 
 def get_data_dim(dataset):

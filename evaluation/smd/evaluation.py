@@ -195,9 +195,7 @@ def print_results(label: np.array):
 
 if __name__ == '__main__':
 
-    parser = argparse.ArgumentParser(description='SMD machine-1-1 evaluation')
-
-    labels_np = np.load('machine-1-1_labels.npy')
+    labels_np = np.load('../../datasets/smd/machine-1-1_labels.npy')
 
     labels_np = np.add.reduce(labels_np, axis=1)
     labels_np = np.where(labels_np >= 1, 1, 0)
