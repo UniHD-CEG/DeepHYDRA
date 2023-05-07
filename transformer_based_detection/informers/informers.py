@@ -137,13 +137,13 @@ if __name__ == '__main__':
             postfix = '_no_augment'
 
     np.save(f'{output_dir}/{subfolder}/predictions/'
-                f'l2_dist_train_{args.loss.lower()}{postfix}.npy',
-                                                l2_distances_all_train)
+                f'l2_dist_train_{args.loss.lower()}{postfix}_{args.seed}.npy',
+                                                        l2_distances_all_train)
     
     if args.data == 'HLT':
         np.save(f'{output_dir}/combined_detection/predictions/'
-                    f'l2_dist_train_{args.loss.lower()}{postfix}.npy',
-                                                l2_distances_all_train)
+                    f'l2_dist_train_{args.loss.lower()}{postfix}_{args.seed}.npy',
+                                                            l2_distances_all_train)
 
     # Load and preprocess test set results
 
@@ -156,8 +156,8 @@ if __name__ == '__main__':
     l2_distances_all_test = np.mean((preds_all_test[:, :] - trues_all_test[:, :])**2, 1)
 
     np.save(f'{output_dir}/{subfolder}/predictions/'
-                f'l2_dist_{args.loss.lower()}{postfix}.npy',
-                                        l2_distances_all_test)
+                f'l2_dist_{args.loss.lower()}{postfix}_{args.seed}.npy',
+                                                    l2_distances_all_test)
     
     parameter_dict = {"model": "informer",
                             "data": args.data,
