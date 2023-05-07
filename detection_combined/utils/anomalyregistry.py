@@ -92,7 +92,8 @@ class BenchmarkAnomalyRegistry(AnomalyRegistry):
 
     def evaluate(self,
                     pred_transformer_np: np.array,
-                    model_name: str) -> None:
+                    model_name: str,
+                    seed: int) -> None:
 
         true_pd = pd.read_hdf(self.label_dir +\
                                     '/unreduced_hlt_test_set_y.h5')
@@ -127,10 +128,10 @@ class BenchmarkAnomalyRegistry(AnomalyRegistry):
 
         if model_name == 'Informer-MSE':
             pred_transformer_np = np.pad(pred_transformer_np, (16, 1))
-            _save_numpy_array(pred_transformer_np, f'{output_dir}/l2_dist_mse.npy')
+            _save_numpy_array(pred_transformer_np, f'{output_dir}/l2_dist_mse_{seed}.npy')
         elif model_name == 'Informer-SMSE':
             pred_transformer_np = np.pad(pred_transformer_np, (64, 1))
-            _save_numpy_array(pred_transformer_np, f'{output_dir}/l2_dist_smse.npy')
+            _save_numpy_array(pred_transformer_np, f'{output_dir}/l2_dist_smse_{seed}.npy')
         elif model_name == 'TranAD':
             pred_transformer_np = np.pad(pred_transformer_np, (9, 0))
-            _save_numpy_array(pred_transformer_np, f'{output_dir}/tranad.npy')
+            _save_numpy_array(pred_transformer_np, f'{output_dir}/tranad_{seed}.npy')

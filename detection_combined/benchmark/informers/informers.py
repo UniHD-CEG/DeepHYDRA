@@ -76,6 +76,8 @@ if __name__ == '__main__':
     parser.add_argument('--dbscan-min-samples', type=int, default=4)
     parser.add_argument('--dbscan-duration-threshold', type=int, default=4)
 
+    parser.add_argument('--seed', type=int)
+
     args = parser.parse_args()
 
     time_now_string = dt.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
@@ -161,4 +163,6 @@ if __name__ == '__main__':
                 '/model_parameters.json', 'r') as parameter_dict_file:
         parameter_dict = json.load(parameter_dict_file)
 
-        benchmark_anomaly_registry.evaluate(preds, args.model)
+        benchmark_anomaly_registry.evaluate(preds,
+                                                args.model,
+                                                args.seed)

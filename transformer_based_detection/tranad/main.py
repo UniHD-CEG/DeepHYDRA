@@ -70,7 +70,10 @@ def load_dataset(dataset):
                                         augmented_data_ratio=\
                                                 args.augmented_data_ratio)
 
-            folder = f'./checkpoints/{args.model}_{args.dataset}{augmentation_string}_seed_{int(args.seed)}/'
+            folder = f'./checkpoints/{args.model}_{args.dataset}_{augmentation_string}_seed_{int(args.seed)}/'
+
+            print(folder)
+
             os.makedirs(folder, exist_ok=True)
             train_set.pickle_scaler(f'{folder}/scaler.pkl')
 
@@ -102,7 +105,10 @@ def load_dataset(dataset):
     return train_loader, test_loader, labels
 
 def save_model(model, optimizer, scheduler, epoch, accuracy_list):
-    folder = f'checkpoints/{args.model}_{args.dataset}{augmentation_string}_seed_{int(args.seed)}/'
+    folder = f'checkpoints/{args.model}_{args.dataset}_{augmentation_string}_seed_{int(args.seed)}/'
+
+    print(folder)
+
     os.makedirs(folder, exist_ok=True)
     file_path = f'{folder}/model.ckpt'
     torch.save({
@@ -119,7 +125,7 @@ def load_model(modelname, dims):
     model = model_class(dims).double()
     optimizer = torch.optim.AdamW(model.parameters() , lr=model.lr, weight_decay=1e-5)
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 5, 0.9)
-    fname = f'checkpoints/{args.model}_{args.dataset}/model.ckpt'
+    fname = f'checkpoints/{args.model}_{args.dataset}_{augmentation_string}_seed_{int(args.seed)}/model.ckpt'
 
     if os.path.exists(fname) and (not args.retrain or args.test):
 
@@ -469,13 +475,16 @@ if __name__ == '__main__':
 
             augmentations.append((aug_type, factors))
         
-        augmentation_string = f'_rel_size_{args.augmented_dataset_size_relative}'\
+        augmentation_string += f'_rel_size_{args.augmented_dataset_size_relative}'\
                                             f'_ratio_{args.augmented_data_ratio:.2f}'
         
-    else:
-        augmentation_string = '_no_augment'
+
+    if args.augmented_data_ratio == 0:
+        augmentation_string = 'no_augment'
 
     args.augmentations = augmentations
+
+    augment_label = '_no_augment' if augmentation_string == 'no_augment' else '_'
 
     train_loader, test_loader, labels = load_dataset(args.dataset)
     if args.model in ['MERLIN']:
@@ -552,9 +561,12 @@ if __name__ == '__main__':
     result, _, latencies = pot_eval(lossTfinal, lossFinal, labelsFinal)
 
     if args.dataset == 'HLT':
-        _save_numpy_array(lossTfinal, f'../../evaluation/reduced_detection/predictions/tranad_train_seed_{int(args.seed)}.npy')
-        _save_numpy_array(lossTfinal, f'../../evaluation/combined_detection/predictions/tranad_train_seed_{int(args.seed)}.npy')
-        _save_numpy_array(lossFinal, f'../../evaluation/reduced_detection/predictions/tranad_seed_{int(args.seed)}.npy')
+
+        augment_label = augmentation_string if augmentation_string == 'no_augment' else ''
+
+        _save_numpy_array(lossTfinal, f'../../evaluation/reduced_detection/predictions/tranad_train{augment_label}seed_{int(args.seed)}.npy')
+        _save_numpy_array(lossTfinal, f'../../evaluation/combined_detection/predictions/tranad_train{augment_label}seed_{int(args.seed)}.npy')
+        _save_numpy_array(lossFinal, f'../../evaluation/reduced_detection/predictions/tranad{augment_label}seed_{int(args.seed)}.npy')
 
         parameter_dict = {"window_size": 10}
 

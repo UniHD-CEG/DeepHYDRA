@@ -69,11 +69,12 @@ if __name__ == '__main__':
     parser.add_argument('--output-dir', type=str, default='./results/')
     parser.add_argument('--log-level', type=str, default='info')
     parser.add_argument('--log-dir', type=str, default='./log/')
-
     
     parser.add_argument('--dbscan-eps', type=float, default=3)
     parser.add_argument('--dbscan-min-samples', type=int, default=4)
     parser.add_argument('--dbscan-duration-threshold', type=int, default=4)
+
+    parser.add_argument('--seed', type=int)
 
     args = parser.parse_args()
 
@@ -154,4 +155,5 @@ if __name__ == '__main__':
         parameter_dict = json.load(parameter_dict_file)
 
         benchmark_anomaly_registry.evaluate(predictions,
-                                                    'TranAD')
+                                                    'TranAD',
+                                                    args.seed)
