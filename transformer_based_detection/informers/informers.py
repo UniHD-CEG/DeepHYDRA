@@ -112,7 +112,7 @@ if __name__ == '__main__':
     else:
         augmentation_string = '_no_augment'
 
-    setting = f'{args.loss.lower()}_{augmentation_string.lower()}'
+    setting = f'{args.loss.lower()}_{augmentation_string.lower()}_seed_{int(args.seed)}'
 
     # Set experiments
     exp = Exp(args)

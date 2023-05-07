@@ -70,7 +70,7 @@ def load_dataset(dataset):
                                         augmented_data_ratio=\
                                                 args.augmented_data_ratio)
 
-            folder = f'./checkpoints/{args.model}_{args.dataset}'
+            folder = f'./checkpoints/{args.model}_{args.dataset}{augmentation_string}_seed_{int(args.seed)}/'
             os.makedirs(folder, exist_ok=True)
             train_set.pickle_scaler(f'{folder}/scaler.pkl')
 
@@ -102,7 +102,7 @@ def load_dataset(dataset):
     return train_loader, test_loader, labels
 
 def save_model(model, optimizer, scheduler, epoch, accuracy_list):
-    folder = f'checkpoints/{args.model}_{args.dataset}_{augmentation_string}_seed_{int(args.seed)}/'
+    folder = f'checkpoints/{args.model}_{args.dataset}{augmentation_string}_seed_{int(args.seed)}/'
     os.makedirs(folder, exist_ok=True)
     file_path = f'{folder}/model.ckpt'
     torch.save({
