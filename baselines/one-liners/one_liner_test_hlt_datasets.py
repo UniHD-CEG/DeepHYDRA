@@ -24,14 +24,6 @@ channels_to_delete_last_run = [1357,
                                 3685,
                                 3184]
 
-base_data_anomaly_starts = [247,
-                                465,
-                                4272]
-
-base_data_anomaly_ends = [264,
-                            465,
-                            4277]
-
 
 def save_numpy_array(array: np.array,
                         filename: str):    
@@ -571,6 +563,10 @@ if __name__ == '__main__':
 
     hlt_data_pd = pd.read_hdf(args.data_dir +\
                                     '/unreduced_hlt_test_set_x.h5')
+
+    # This removes a few actual anomalous dropouts in the last run.
+    # These are very easy to detect, so we remove them to not
+    # overshadow the the more subtle injected anomalies
 
     hlt_data_pd.iloc[run_endpoints[-2]:-1,
                             channels_to_delete_last_run] = 0

@@ -1,10 +1,7 @@
 #!/usr/bin/env python3
 
-import math
-import re
 import argparse
 import sys
-import time
 import datetime as dt
 import json
 import logging
@@ -12,7 +9,6 @@ import logging
 
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 from tqdm import tqdm
 from tqdm.contrib import tzip
 from tqdm.contrib.logging import logging_redirect_tqdm
@@ -101,6 +97,10 @@ if __name__ == '__main__':
 
     hlt_data_pd = pd.read_hdf(args.data_dir +\
                                     '/unreduced_hlt_test_set_x.h5')
+
+    # This removes a few actual anomalous dropouts in the last run.
+    # These are very easy to detect, so we remove them to not
+    # overshadow the the more subtle injected anomalies
 
     hlt_data_pd.iloc[run_endpoints[-2]:-1,
                             channels_to_delete_last_run] = np.nan

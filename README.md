@@ -1,13 +1,18 @@
 # STRADA
-This is the official implementation of the STRADA algorithm presented in the paper STRADA: A Synergising Transformer and DBSCAN-Based Approach to Time-Series Anomaly Detection in Dynamically-Configured Systems.
+This is the official implementation of the STRADA algorithm presented in the paper "STRADA: A Synergising Transformer and DBSCAN-Based Approach to Time-Series Anomaly Detection in Dynamically-Configured Systems".
 
 ## Creation of conda environments
 The folder envs/ contains the conda environments for the different models.
-You can create the environments with the following command:
+You can create the conda environments with the following command:
 
 ```shell
 conda create --name <env_name> --file <file>
 ```
+In the respective conda environments, install the Python packages not installed via conda with
+```shell
+pip install -r <env_name>_python_requirements.txt
+```
+This is a bit messy, and we will probably streamline this in the future.
 
 ## Getting/creating the datasets
 For the machine-1-1 dataset, extract the files in the archive datasets/smd/machine-1-1.tar.gz.
