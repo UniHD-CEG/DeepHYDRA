@@ -23,14 +23,6 @@ channels_to_delete_last_run = [1357,
                                 3685,
                                 3184]
 
-base_data_anomaly_starts = [247,
-                                465,
-                                4272]
-
-base_data_anomaly_ends = [264,
-                            465,
-                            4277]
-
 
 def load_numpy_array(filename: str):
     with open(filename, 'rb') as output_file:

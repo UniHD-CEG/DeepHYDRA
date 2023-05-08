@@ -685,9 +685,10 @@ if __name__ == '__main__':
     # Save unreduced test set for testing of combined DBSCAN/Transformer-based
     # detection pipeline
 
-    labels = remove_undetectable_anomalies(
-                np.nan_to_num(anomaly_generator_test.get_dataset_np(), copy=False),
-                                                anomaly_generator_test.get_labels_np())
+    dataset_without_nan = np.nan_to_num(anomaly_generator_test.get_dataset_np())
+
+    labels = remove_undetectable_anomalies(dataset_without_nan,
+                                            anomaly_generator_test.get_labels_np())
 
     test_set_x_df = pd.DataFrame(anomaly_generator_test.get_dataset_np(),
                                     anomaly_generator_test.get_timestamps_pd(),
@@ -696,7 +697,6 @@ if __name__ == '__main__':
     test_set_y_df = pd.DataFrame(labels,
                                     anomaly_generator_test.get_timestamps_pd(),
                                     test_set_x_df.columns)
-
 
     test_set_x_df.to_hdf(f'{args.dataset_dir}/unreduced_hlt_test_set_x.h5',
                             key='unreduced_hlt_test_set_x',
