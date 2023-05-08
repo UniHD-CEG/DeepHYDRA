@@ -4,11 +4,8 @@ import sys
 
 import numpy as np
 import pandas as pd
-from sklearn.metrics import roc_auc_score,\
-                                precision_recall_fscore_support,\
-                                matthews_corrcoef
-
 import matplotlib.pyplot as plt
+from tqdm import tqdm
 
 sys.path.append('.')
 
@@ -122,7 +119,7 @@ def adjust_predicts(score, label,
         return predict
 
 
-def get_scores(pred_train, pred_test, true, q=1e-3, level=0.8):
+def get_thresholded(pred_train, pred_test, true, q=1e-3, level=0.8):
     """
     Run POT method on given score.
     Args:
@@ -146,13 +143,10 @@ def get_scores(pred_train, pred_test, true, q=1e-3, level=0.8):
     # initialization step
     spot.initialize(level=level,
                     min_extrema=False,
-                    verbose=True)
+                    verbose=False)
 
     # run
     ret = spot.run()
-
-    print(len(ret['alarms']))
-    print(len(ret['thresholds']))
 
     pred = np.zeros_like(pred_test, dtype=np.uint8)
 
@@ -160,31 +154,10 @@ def get_scores(pred_train, pred_test, true, q=1e-3, level=0.8):
 
     pred = adjust_predicts(pred, true, 0.1)
 
-    precision_max_f1_score,\
-        recall_max_f1_score,\
-        max_f1_score, _ = precision_recall_fscore_support(true,
-                                                            pred,
-                                                            average='binary')
-
-    mcc_max_f1_score =\
-        matthews_corrcoef(true, pred)
-
-    auroc = roc_auc_score(true, pred)
-
-    print(f'AUROC: {auroc:.3f}\t'
-            f'F1: {max_f1_score:.3f}\t'
-            f'MCC: {mcc_max_f1_score:.3f}\t'
-            f'Precision: {precision_max_f1_score:.3f}\t'
-            f'Recall: {recall_max_f1_score:.3f}')
-
-    return max_f1_score,\
-            precision_max_f1_score,\
-            recall_max_f1_score,\
-            mcc_max_f1_score,\
-            ret['thresholds']
+    return pred
 
 
-def get_scores_tranad(pred_train, pred_test, true, q=1e-3, level=0.02):
+def get_thresholded_tranad(pred_train, pred_test, true, q=1e-3, level=0.02):
     """
     Run POT method on given score.
     Args:
@@ -204,13 +177,13 @@ def get_scores_tranad(pred_train, pred_test, true, q=1e-3, level=0.02):
         try:
             s = SPOT(q)  # SPOT object
             s.fit(pred_train, pred_test)  # data import
-            s.initialize(level=lms, min_extrema=False, verbose=True)  # initialization step
+            s.initialize(level=lms, min_extrema=False, verbose=False)  # initialization step
         except: lms = lms * 0.999
         else: break
     ret = s.run(dynamic=False)  # run
     # print(len(ret['alarms']))
     # print(len(ret['thresholds']))
-    pot_th = np.mean(ret['thresholds']) * 0.3
+    pot_th = np.mean(ret['thresholds']) * 0.6
     # pot_th = np.percentile(score, 100 * lm[0])
     # np.percentile(score, 100 * lm[0])
 
@@ -218,28 +191,7 @@ def get_scores_tranad(pred_train, pred_test, true, q=1e-3, level=0.02):
 
     pred = adjust_predicts(pred, true, 0.1)
 
-    precision_max_f1_score,\
-        recall_max_f1_score,\
-        max_f1_score, _ = precision_recall_fscore_support(true,
-                                                            pred,
-                                                            average='binary')
-
-    mcc_max_f1_score =\
-        matthews_corrcoef(true, pred)
-
-    auroc = roc_auc_score(true, pred)
-
-    print(f'AUROC: {auroc:.3f}\t'
-            f'F1: {max_f1_score:.3f}\t'
-            f'MCC: {mcc_max_f1_score:.3f}\t'
-            f'Precision: {precision_max_f1_score:.3f}\t'
-            f'Recall: {recall_max_f1_score:.3f}')
-
-    return max_f1_score,\
-            precision_max_f1_score,\
-            recall_max_f1_score,\
-            mcc_max_f1_score,\
-            ret['thresholds']
+    return pred
 
 
 def plot_results(data: np.array,
@@ -251,12 +203,12 @@ def plot_results(data: np.array,
     preds_method_4 = load_numpy_array('predictions/method_4.npy')
     preds_merlin = load_numpy_array('predictions/merlin.npy')
     preds_clustering = load_numpy_array('predictions/clustering.npy')
-    preds_tranad = load_numpy_array('predictions/tranad_seed.npy')
-    preds_tranad_train = load_numpy_array(f'predictions/tranad_train_seed..npy')
-    preds_l2_dist_train_mse = load_numpy_array(f'predictions/l2_dist_train_mse_seed.npy')
-    preds_l2_dist_mse = load_numpy_array(f'predictions/l2_dist_mse_seed.npy')
-    preds_l2_dist_train_smse = load_numpy_array(f'predictions/l2_dist_train_smse_seed.npy')
-    preds_l2_dist_smse = load_numpy_array(f'predictions/l2_dist_smse_seed.npy')
+    preds_tranad = load_numpy_array('predictions/tranad_seed_7.npy')
+    preds_tranad_train = load_numpy_array(f'predictions/tranad_train_seed_7.npy')
+    preds_l2_dist_train_mse = load_numpy_array(f'predictions/l2_dist_train_mse_seed_192.npy')
+    preds_l2_dist_mse = load_numpy_array(f'predictions/l2_dist_mse_seed_192.npy')
+    preds_l2_dist_train_smse = load_numpy_array(f'predictions/l2_dist_train_smse_seed_85.npy')
+    preds_l2_dist_smse = load_numpy_array(f'predictions/l2_dist_smse_seed_85.npy')
 
     preds_method_3 = np.any(preds_method_3, axis=1).astype(np.uint8)
     preds_method_4 = np.any(preds_method_4, axis=1).astype(np.uint8)
@@ -265,6 +217,8 @@ def plot_results(data: np.array,
     spot_train_size = int(len(preds_l2_dist_mse)*0.1)
 
     # Fix alignment
+
+    pbar = tqdm(total=4, desc='Preprocessing')
 
     preds_l2_dist_mse =\
         np.pad(preds_l2_dist_mse[1:], (0, 1),
@@ -285,37 +239,44 @@ def plot_results(data: np.array,
                             'constant',
                             constant_values=(0,))
     
-    _, _, _, _, thresh_tranad =\
-        get_scores_tranad(preds_tranad_train,
-                            preds_tranad, label, 0.01)
+    preds_clustering =\
+        adjust_predicts(preds_clustering,
+                                label, 0.1)
     
-    preds_tranad = preds_tranad >= thresh_tranad
+    pbar.update(1)
+
+    preds_tranad =\
+        get_thresholded_tranad(preds_tranad_train,
+                            preds_tranad, label, 0.01)
 
     preds_strada_tranad = np.logical_or(preds_clustering,
                                                 preds_tranad)
 
-    _, _, _, _, thresh_mse =\
-        get_scores(preds_l2_dist_train_mse[:spot_train_size],
+    pbar.update(1)
+
+    preds_l2_dist_mse =\
+        get_thresholded(preds_l2_dist_train_mse[:spot_train_size],
                                                 preds_l2_dist_mse, label, 0.0025)
-    
-    preds_l2_dist_mse = preds_l2_dist_mse >= thresh_mse
 
     preds_strada_mse = np.logical_or(preds_clustering,
                                         preds_l2_dist_mse)
 
-    _, _, _, _, thresh_smse =\
-        get_scores(preds_l2_dist_train_smse[:spot_train_size],
+    pbar.update(1)
+
+    preds_l2_dist_smse =\
+        get_thresholded(preds_l2_dist_train_smse[:spot_train_size],
                                                 preds_l2_dist_smse, label, 0.008)
     
-    preds_l2_dist_smse = preds_l2_dist_smse >= thresh_smse
-
     preds_strada_smse = np.logical_or(preds_clustering,
                                         preds_l2_dist_smse)
+
+    pbar.update(1)
+    pbar.close()
 
     preds_all = {   '1L-Method 3': preds_method_3,
                     '1L-Method 4': preds_method_4,
                     'MERLIN': preds_merlin,
-                    'DBSCAN': preds_clustering,
+                    'T-DBSCAN': preds_clustering,
                     'Informer-MSE': preds_l2_dist_mse,
                     'Informer-SMSE': preds_l2_dist_smse,
                     'TranAD': preds_tranad,
@@ -323,10 +284,13 @@ def plot_results(data: np.array,
                     'STRADA-SMSE': preds_strada_smse,
                     'STRADA-TranAD': preds_strada_tranad}
 
+    # These colors are specifically chosen to improve
+    # accessibility for readers with colorblindness
+
     colors = {  '1L-Method 3': '#D81B60',
                 '1L-Method 4': '#1E88E5',
                 'MERLIN': '#FFC107',
-                'DBSCAN': '#004D40',
+                'T-DBSCAN': '#004D40',
                 'Informer-MSE': '#C43F42',
                 'Informer-SMSE': '#6F8098',
                 'TranAD': '#D4FC14',
@@ -337,7 +301,7 @@ def plot_results(data: np.array,
     positions = {   '1L-Method 3': 0,
                     '1L-Method 4': 1,
                     'MERLIN': 2,
-                    'DBSCAN': 3,
+                    'T-DBSCAN': 3,
                     'Informer-MSE': 4,
                     'Informer-SMSE': 5,
                     'TranAD': 6,
@@ -350,9 +314,9 @@ def plot_results(data: np.array,
     BIGGER_SIZE = 13
 
     xlims = [(600, 800),
-                (850, 1070),
-                (1300, 1400),
-                (2000, 2400)]
+                (2000, 2400),
+                (6000, 8500),
+                (14000, 15000)]
     
     plt.rc('font', size=SMALL_SIZE)
     plt.rc('axes', titlesize=BIGGER_SIZE)
@@ -361,9 +325,9 @@ def plot_results(data: np.array,
     plt.rc('ytick', labelsize=SMALL_SIZE)
     plt.rc('legend', fontsize=SMALL_SIZE)
     plt.rc('figure', titlesize=BIGGER_SIZE)
-    
 
-    for index, (xlim_lower, xlim_upper) in enumerate(xlims):
+    for index, (xlim_lower, xlim_upper) in enumerate(tqdm(xlims,
+                                                    desc='Plotting')):
 
         fig, (ax_data, ax_pred) = plt.subplots(2, 1, figsize=(10, 6), dpi=300)
 
@@ -377,7 +341,6 @@ def plot_results(data: np.array,
         ax_data.set_ylim(-1, 100)
 
         ax_data.grid()
-
 
         ax_data.plot(data,
                         linewidth=0.9,
@@ -414,12 +377,12 @@ def plot_results(data: np.array,
                                 left=start,
                                 color=colors[method],
                                 edgecolor='k',
-                                linewidth=0.1,
+                                linewidth=0.7,
                                 label=method,
-                                height=0.8)
+                                height=0.85)
 
         plt.tight_layout()
-        plt.savefig(f'plots/prediction_comparison_{index}_seed_{seed}.png')
+        plt.savefig(f'plots/prediction_comparison_{index}.png')
 
 
 if __name__ == '__main__':

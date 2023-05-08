@@ -53,7 +53,7 @@ def save_to_csv(model_name: str,
     metrics_to_save = np.atleast_2d(metrics_to_save)
 
     metrics_to_save_pd = pd.DataFrame(data=metrics_to_save)
-    metrics_to_save_pd.to_csv(f'results_reduced_detection_{model_name}.csv',
+    metrics_to_save_pd.to_csv(f'results_combined_detection_{model_name}.csv',
                                                                     mode='a+',
                                                                     header=False,
                                                                     index=False)
@@ -159,10 +159,10 @@ def metric_comparison_by_categories(pred,
 
     preds_adjusted_per_category = []
 
-    # print('By Category:')
+    print('By Category:')
 
     for category, flag in anomaly_categories.items():
-        # print(category)
+        print(category)
 
         mask = np.where(true_reduced & flag, 1, 0)
         mask = np.logical_or(mask,
@@ -191,12 +191,12 @@ def metric_comparison_by_categories(pred,
 
         mcc = matthews_corrcoef(true_masked,
                                     pred_masked)
-# 
-#         print(f'AUROC: {auroc:.3f}'
-#                 f'\tF1: {f1:.3f}'
-#                 f'\tMCC: {mcc:.3f}'
-#                 f'\tPrecision: {precision:.3f}'
-#                 f'\tRecall: {recall:.3f}')
+
+        print(f'AUROC: {auroc:.3f}'
+                f'\tF1: {f1:.3f}'
+                f'\tMCC: {mcc:.3f}'
+                f'\tPrecision: {precision:.3f}'
+                f'\tRecall: {recall:.3f}')
 
     return preds_adjusted_per_category
 
@@ -314,7 +314,7 @@ def get_scores_tranad(model_name,
     ret = s.run(dynamic=False)  # run
     # print(len(ret['alarms']))
     # print(len(ret['thresholds']))
-    pot_th = np.mean(ret['thresholds'])*10
+    pot_th = np.mean(ret['thresholds'])*0.3
     # pot_th = np.percentile(score, 100 * lm[0])
     # np.percentile(score, 100 * lm[0])
 
@@ -445,8 +445,7 @@ def print_results(label: np.array,
                         to_csv: bool):
 
     preds_clustering =\
-        load_numpy_array('../../../hlt-anomaly-detection-experimentation/evaluation/combined_detection/predictions/clustering.npy')
-        # load_numpy_array('predictions/clustering.npy')
+        load_numpy_array('predictions/clustering.npy')
     preds_tranad =\
         load_numpy_array(f'predictions/tranad_seed_{seed}.npy')
     preds_tranad_train =\
@@ -490,8 +489,8 @@ def print_results(label: np.array,
                                 label,
                                 to_csv)
     
-    # metric_comparison_by_categories(preds_clustering,
-    #                                             label)
+    metric_comparison_by_categories(preds_clustering,
+                                                label)
 
     print('TranAD:')
 
@@ -501,7 +500,7 @@ def print_results(label: np.array,
                                     seed,
                                     preds_tranad_train,
                                     preds_tranad,
-                                    label, 0.0001, 0.02,
+                                    label, 0.01, 0.02,
                                     to_csv)
     
     print('STRADA-TranAD:')
@@ -516,9 +515,9 @@ def print_results(label: np.array,
                                     label,
                                     to_csv)
 
-    # get_scores_thresholded_by_category(preds_clustering,
-    #                                     preds_tranad_by_category,
-    #                                     label)
+    get_scores_thresholded_by_category(preds_clustering,
+                                        preds_tranad_by_category,
+                                        label)
     
     print('Informer-MSE:')
 
@@ -542,9 +541,9 @@ def print_results(label: np.array,
                                     label,
                                     to_csv)
     
-    # get_scores_thresholded_by_category(preds_clustering,
-    #                                     preds_l2_dist_mse_by_category,
-    #                                     label)
+    get_scores_thresholded_by_category(preds_clustering,
+                                        preds_l2_dist_mse_by_category,
+                                        label)
 
     print('Informer-SMSE:')
 
@@ -568,9 +567,9 @@ def print_results(label: np.array,
                                     label,
                                     to_csv)
 
-    # get_scores_thresholded_by_category(preds_clustering,
-    #                                     preds_l2_dist_smse_by_category,
-    #                                     label)
+    get_scores_thresholded_by_category(preds_clustering,
+                                        preds_l2_dist_smse_by_category,
+                                        label)
 
 
 if __name__ == '__main__':

@@ -22,6 +22,29 @@ def load_numpy_array(filename: str):
         return np.load(output_file)
 
 
+def save_to_csv(model_name: str,
+                        seed: int,
+                        auroc: np.float64,
+                        f1: np.float64,
+                        mcc: np.float64,
+                        precision: np.float64,
+                        recall: np.float64):
+    
+    metrics_to_save = [seed,
+                        auroc,
+                        f1, mcc,
+                        precision,
+                        recall]
+
+    metrics_to_save = np.atleast_2d(metrics_to_save)
+
+    metrics_to_save_pd = pd.DataFrame(data=metrics_to_save)
+    metrics_to_save_pd.to_csv(f'results_{model_name}.csv',
+                                                    mode='a+',
+                                                    header=False,
+                                                    index=False)
+
+
 def get_anomalous_runs(x):
     '''
     Find runs of consecutive items in an array.
@@ -115,7 +138,14 @@ def adjust_predicts(score, label,
         return predict
 
 
-def get_scores(pred_train, pred_test, true, q=1e-3, level=0.8):
+def get_scores(model_name,
+                    seed,
+                    pred_train,
+                    pred_test,
+                    true,
+                    q=1e-3,
+                    level=0.8,
+                    to_csv=False):
     """
     Run POT method on given score.
     Args:
@@ -153,45 +183,56 @@ def get_scores(pred_train, pred_test, true, q=1e-3, level=0.8):
 
     pred = adjust_predicts(pred, true, 0.1)
 
-    precision_max_f1_score,\
-        recall_max_f1_score,\
-        max_f1_score, _ = precision_recall_fscore_support(true,
-                                                            pred,
-                                                            average='binary')
+    precision,\
+        recall,\
+        f1, _ = precision_recall_fscore_support(true,
+                                                pred,
+                                                average='binary')
 
-    mcc_max_f1_score =\
-        matthews_corrcoef(true, pred)
+    mcc = matthews_corrcoef(true, pred)
 
     auroc = roc_auc_score(true, pred)
 
     print(f'AUROC: {auroc:.3f}\t'
-            f'F1: {max_f1_score:.3f}\t'
-            f'MCC: {mcc_max_f1_score:.3f}\t'
-            f'Precision: {precision_max_f1_score:.3f}\t'
-            f'Recall: {recall_max_f1_score:.3f}')
+            f'F1: {f1:.3f}\t'
+            f'MCC: {mcc:.3f}\t'
+            f'Precision: {precision:.3f}\t'
+            f'Recall: {recall:.3f}')
+    
+    if to_csv:
+        save_to_csv(model_name,
+                        seed,
+                        auroc,
+                        f1,
+                        mcc,
+                        precision,
+                        recall)
 
     return pred
 
 
 def print_results(label: np.array,
-                        seed: int):
+                        seed: int,
+                        to_csv: bool):
 
-    preds_l2_dist_train_mse = load_numpy_array(f'predictions/l2_dist_train_mse._seed_{seed}.npy')
-    preds_l2_dist_mse = load_numpy_array(f'predictions/l2_dist_mse_seed_{seed}.npy')
-    preds_l2_dist_train_smse = load_numpy_array(f'predictions/l2_dist_train_smse_seed_{seed}.npy')
-    preds_l2_dist_smse = load_numpy_array(f'predictions/l2_dist_smse_seed_{seed}.npy')
+    preds_l2_dist_train_mse = load_numpy_array(f'predictions/l2_dist_train_mse_no_augment_seed_{seed}.npy')
+    preds_l2_dist_mse = load_numpy_array(f'predictions/l2_dist_mse_no_augment_seed_{seed}.npy')
+    preds_l2_dist_train_smse = load_numpy_array(f'predictions/l2_dist_train_smse_no_augment_seed_{seed}.npy')
+    preds_l2_dist_smse = load_numpy_array(f'predictions/l2_dist_smse_no_augment_seed_{seed}.npy')
 
     spot_train_size = int(len(preds_l2_dist_mse)*0.1)
     
     print('Informer-MSE:')
 
-    preds_l2_dist_mse = get_scores(preds_l2_dist_train_mse[:spot_train_size],
-                                                preds_l2_dist_mse, label, 0.00000001)
+    preds_l2_dist_mse = get_scores('informer_mse', seed,
+                                    preds_l2_dist_train_mse[:spot_train_size],
+                                    preds_l2_dist_mse, label, 0.00000001, 0.8, to_csv)
 
     print('Informer-SMSE:')
 
-    preds_l2_dist_smse = get_scores(preds_l2_dist_train_smse[:spot_train_size],
-                                                preds_l2_dist_smse, label, 0.00000001)
+    preds_l2_dist_smse = get_scores('informer_smse', seed,
+                                        preds_l2_dist_train_smse[:spot_train_size],
+                                        preds_l2_dist_smse, label, 0.00000001, 0.8, to_csv)
     
 
 if __name__ == '__main__':
@@ -200,6 +241,7 @@ if __name__ == '__main__':
 
     parser.add_argument('--data-dir', type=str, default='../../datasets/smd')
     parser.add_argument('--seed', type=int)
+    parser.add_argument('--to-csv', action='store_true', default=False)
 
     args = parser.parse_args()
 
@@ -215,4 +257,5 @@ if __name__ == '__main__':
     labels_np = labels_np[label_begin:label_end]
 
     print_results(labels_np,
-                    args.seed)
+                    args.seed,
+                    args.to_csv)

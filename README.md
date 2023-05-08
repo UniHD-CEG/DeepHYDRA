@@ -24,7 +24,7 @@ This is a bit messy, and we will probably streamline this in the future.
 ## Downloading/Creating the Datasets
 For the machine-1-1 dataset, extract the files in the archive datasets/smd/machine-1-1.tar.gz.
 
-For the HLT datasets, retrieve the original datasets from PLACEHOLDER and place them in the subfolder datasets/hlt.
+For the HLT datasets, retrieve the original datasets from [here](https://zenodo.org/record/7908064) and place them in the subfolder datasets/hlt.
 Afterwards, run the scripts  
 
 ```
