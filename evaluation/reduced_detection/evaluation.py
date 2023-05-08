@@ -296,6 +296,14 @@ def print_results(label: np.array,
 
     label = np.any(label, axis=1).astype(np.uint8)
 
+    preds_tranad_train_no_augment =\
+        load_numpy_array(f'predictions/tranad_train_no_augment_seed_{seed}.npy')
+    preds_tranad_no_augment =\
+        load_numpy_array(f'predictions/tranad_no_augment_seed_{seed}.npy')
+    preds_tranad_train =\
+        load_numpy_array(f'predictions/tranad_train_seed_{seed}.npy')
+    preds_tranad =\
+        load_numpy_array(f'predictions/tranad_seed_{seed}.npy')
     preds_l2_dist_train_mse_no_augment =\
         load_numpy_array(f'predictions/l2_dist_train_mse_no_augment_seed_{seed}.npy')
     preds_l2_dist_mse_no_augment =\
@@ -314,6 +322,26 @@ def print_results(label: np.array,
         load_numpy_array(f'predictions/l2_dist_smse_seed_{seed}.npy')
 
     spot_train_size = int(len(preds_l2_dist_mse)*0.1)
+
+    print('TranAD - No Augmentation:')
+
+    preds_tranad_no_augment,\
+        get_scores_tranad('tranad_no_augment', seed,
+                            preds_tranad_train_no_augment,
+                            preds_tranad_no_augment,
+                            label[:len(preds_l2_dist_mse_no_augment)],
+                            0.01, 0.02, to_csv)
+
+    print('TranAD:')
+
+    preds_tranad,\
+        get_scores_tranad('tranad', seed,
+                            preds_tranad_train,
+                            preds_tranad,
+                            label[:len(preds_l2_dist_mse_no_augment)],
+                            0.01, 0.02, to_csv)
+    
+    exit()
 
     print('Informer-MSE - No Augmentation:')
 
