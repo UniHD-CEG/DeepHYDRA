@@ -22,14 +22,6 @@ run_endpoints = [1404,
                     19296,
                     28948]
 
-base_data_anomaly_starts = [247,
-                                465,
-                                4272]
-
-base_data_anomaly_ends = [264,
-                            465,
-                            4277]
-
 
 def load_numpy_array(filename: str):
     with open(filename, 'rb') as output_file:
@@ -340,8 +332,6 @@ def print_results(label: np.array,
                             preds_tranad,
                             label[:len(preds_l2_dist_mse_no_augment)],
                             0.01, 0.02, to_csv)
-    
-    exit()
 
     print('Informer-MSE - No Augmentation:')
 

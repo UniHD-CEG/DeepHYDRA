@@ -13,7 +13,6 @@ from sklearn.metrics import roc_auc_score,\
                                 recall_score,\
                                 matthews_corrcoef
 
-import plotext as plt
 from tqdm.auto import trange
 
 run_endpoints = [1404,
@@ -24,14 +23,6 @@ run_endpoints = [1404,
 channels_to_delete_last_run = [1357,
                                 3685,
                                 3184]
-
-base_data_anomaly_starts = [247,
-                                465,
-                                4272]
-
-base_data_anomaly_ends = [264,
-                            465,
-                            4277]
 
 
 def save_numpy_array(array: np.array,
