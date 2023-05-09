@@ -172,7 +172,8 @@ videos/
 
 # Datasets and checkpoints 
 
-datasets/
+**/datasets/
+!datasets/
 runs/
 checkpoints/
 
