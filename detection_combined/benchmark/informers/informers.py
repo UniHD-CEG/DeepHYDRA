@@ -104,12 +104,14 @@ if __name__ == '__main__':
 
     hlt_data_pd.iloc[run_endpoints[-2]:-1,
                             channels_to_delete_last_run] = np.nan
+    
+    # hlt_data_pd = hlt_data_pd.iloc[:256, :]
 
     hlt_data_pd.index = _remove_timestamp_jumps(
                             pd.DatetimeIndex(hlt_data_pd.index))
 
     median_std_reducer = MedianStdReducer()
-    
+
     informer_runner = InformerRunner(args.checkpoint_dir)
 
     tpu_labels = list(hlt_data_pd.columns.values)
@@ -120,7 +122,6 @@ if __name__ == '__main__':
                                 args.dbscan_min_samples,
                                 args.dbscan_duration_threshold)
 
-    
     if args.model == 'Informer-SMSE':
         reduced_data_buffer = ReducedDataBuffer(size=65)
 
@@ -157,12 +158,38 @@ if __name__ == '__main__':
             except NonCriticalPredictionException:
                 break
 
-    preds = informer_runner.get_predictions()
+    informer_runner.model.attention_visualizer.render_projection('test_projection.mp4',
+                                                                    'Kevin Franz Stehle',
+                                                                    channels_upper=52,
+                                                                    fps=24,
+                                                                    label_size=20,
+                                                                    title_size=20,
+                                                                    cmap='plasma')
 
-    with open(args.checkpoint_dir +\
-                '/model_parameters.json', 'r') as parameter_dict_file:
-        parameter_dict = json.load(parameter_dict_file)
+    informer_runner.model.attention_visualizer.render_combined('test_combined.mp4',
+                                                                'Kevin Franz Stehle',
+                                                                fps=24,
+                                                                label_size=20,
+                                                                title_size=20,
+                                                                cmap='plasma',
+                                                                fig_facecolor='white',
+                                                                ax_facecolor='white')
 
-        benchmark_anomaly_registry.evaluate(preds,
-                                                args.model,
-                                                args.seed)
+    informer_runner.model.attention_visualizer.render_individual_heads('test_individual.mp4',
+                                                                        'Kevin Franz Stehle',
+                                                                        fps=24,
+                                                                        label_size=20,
+                                                                        title_size=20,
+                                                                        cmap='plasma',
+                                                                        fig_facecolor='white',
+                                                                        ax_facecolor='white')
+
+    # preds = informer_runner.get_predictions()
+
+    # with open(args.checkpoint_dir +\
+    #             '/model_parameters.json', 'r') as parameter_dict_file:
+    #     parameter_dict = json.load(parameter_dict_file)
+
+    #     benchmark_anomaly_registry.evaluate(preds,
+    #                                             args.model,
+    #                                             args.seed)

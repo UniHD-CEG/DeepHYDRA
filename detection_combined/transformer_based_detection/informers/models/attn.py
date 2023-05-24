@@ -164,8 +164,4 @@ class AttentionLayer(nn.Module):
 
         res = self.out_projection(out)
 
-        # print(res.shape)
-        # 
-        # exit()
-
         return res, attn

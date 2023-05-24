@@ -78,7 +78,7 @@ class InformerRunner():
                                 self.parameter_dict['embed'],
                                 self.parameter_dict['freq'],
                                 self.parameter_dict['activation'],
-                                False,
+                                True,
                                 self.parameter_dict['distil'],
                                 self.parameter_dict['mix'],
                                 self.device).float()
@@ -96,11 +96,14 @@ class InformerRunner():
 
         timestamp = data.index[-1]
 
+        viz_data = data.to_numpy()[:self.parameter_dict['seq_len'], :]
+
         preds, _ = self._process_one_batch(self.data_preprocessor,
                                                             data_x,
                                                             data_y,
                                                             data_x_mark,
-                                                            data_y_mark)
+                                                            data_y_mark,
+                                                            viz_data)
                 
         preds = preds.detach().cpu().numpy()
 
@@ -171,7 +174,8 @@ class InformerRunner():
                             batch_x,
                             batch_y,
                             batch_x_mark,
-                            batch_y_mark):
+                            batch_y_mark,
+                            viz_data):
 
         batch_x = batch_x.float().to(self.device)
         batch_y = batch_y.float()
@@ -195,7 +199,8 @@ class InformerRunner():
 
         # Encoder - decoder
 
-        outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)
+        outputs, _ = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark,
+                                                            viz_data=viz_data)
 
         if self.parameter_dict['inverse']:
             outputs = dataset_object.inverse_transform(outputs)
