@@ -21,11 +21,13 @@ device='cuda:0'
 class TranADRunner():
     def __init__(self,
                     checkpoint_dir,
-                    nan_output_tolerance_period: int = 10) -> None:
+                    nan_output_tolerance_period: int = 10,
+                    variant: str = '2018') -> None:
 
         self.checkpoint_dir = checkpoint_dir
         self._nan_output_tolerance_period =\
                         nan_output_tolerance_period
+        self._variant = variant
 
         with open(self.checkpoint_dir +\
                     '/model_parameters.json', 'r') as parameter_dict_file:
@@ -37,8 +39,9 @@ class TranADRunner():
         self.data_preprocessor = DataPreprocessor(self.parameter_dict,
                                                     self.checkpoint_dir)
         
+        feats = 102 if self._variant == '2018' else 104
 
-        self.model = TranAD(102).double().to(device)
+        self.model = TranAD(feats).double().to(device)
         fname = f'{self.checkpoint_dir}/model.ckpt'
 
         checkpoint = torch.load(fname)
@@ -59,7 +62,7 @@ class TranADRunner():
                     model,
                     data):
 
-        feats = 102
+        feats = 102 if self._variant == '2018' else 104
 
         l = nn.MSELoss(reduction = 'none')
         data_x = data

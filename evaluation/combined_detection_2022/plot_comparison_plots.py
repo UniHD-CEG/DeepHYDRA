@@ -5,6 +5,7 @@ import sys
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
 from tqdm import tqdm
 
 sys.path.append('.')
@@ -195,24 +196,21 @@ def get_thresholded_tranad(pred_train, pred_test, true, q=1e-3, level=0.02):
 
 
 def plot_results(data: np.array,
-                    label: np.array):
+                    label: np.array,
+                    timestamps,
+                    tranad_seed: int,
+                    informer_mse_seed: int,
+                    informer_smse_seed: int):
 
     label = np.any(label, axis=1).astype(np.uint8)
 
-    preds_method_3 = load_numpy_array('predictions/method_3.npy')
-    preds_method_4 = load_numpy_array('predictions/method_4.npy')
-    preds_merlin = load_numpy_array('predictions/merlin.npy')
     preds_clustering = load_numpy_array('predictions/clustering.npy')
-    preds_tranad = load_numpy_array('predictions/tranad_seed_7.npy')
-    preds_tranad_train = load_numpy_array(f'predictions/tranad_train_seed_7.npy')
-    preds_l2_dist_train_mse = load_numpy_array(f'predictions/l2_dist_train_mse_seed_192.npy')
-    preds_l2_dist_mse = load_numpy_array(f'predictions/l2_dist_mse_seed_192.npy')
-    preds_l2_dist_train_smse = load_numpy_array(f'predictions/l2_dist_train_smse_seed_85.npy')
-    preds_l2_dist_smse = load_numpy_array(f'predictions/l2_dist_smse_seed_85.npy')
-
-    preds_method_3 = np.any(preds_method_3, axis=1).astype(np.uint8)
-    preds_method_4 = np.any(preds_method_4, axis=1).astype(np.uint8)
-    preds_merlin = np.any(preds_merlin, axis=1).astype(np.uint8)
+    preds_tranad = load_numpy_array(f'predictions/tranad_seed_{tranad_seed}.npy')
+    preds_tranad_train = load_numpy_array(f'predictions/tranad_train_seed_{tranad_seed}.npy')
+    preds_l2_dist_train_mse = load_numpy_array(f'predictions/l2_dist_train_mse_seed_{informer_mse_seed}.npy')
+    preds_l2_dist_mse = load_numpy_array(f'predictions/l2_dist_mse_seed_{informer_mse_seed}.npy')
+    preds_l2_dist_train_smse = load_numpy_array(f'predictions/l2_dist_train_smse_seed_{informer_smse_seed}.npy')
+    preds_l2_dist_smse = load_numpy_array(f'predictions/l2_dist_smse_seed_{informer_smse_seed}.npy')
 
     spot_train_size = int(len(preds_l2_dist_mse)*0.1)
 
@@ -230,15 +228,12 @@ def plot_results(data: np.array,
                                 'constant',
                                 constant_values=(0,))
     
-    preds_method_3 =\
-        np.pad(preds_method_3, (1, 0),
-                            'constant',
-                            constant_values=(0,))
-    preds_method_4 =\
-        np.pad(preds_method_4, (1, 0),
-                            'constant',
-                            constant_values=(0,))
-    
+    # label = label[:16000]
+    # preds_clustering = preds_clustering[:16000, :]
+    # preds_tranad = preds_tranad[:16000, :]
+    # preds_l2_dist_mse = preds_l2_dist_mse[:16000, :]
+    # preds_l2_dist_smse = preds_l2_dist_smse[:16000, :]
+
     preds_clustering =\
         adjust_predicts(preds_clustering,
                                 label, 0.1)
@@ -273,10 +268,7 @@ def plot_results(data: np.array,
     pbar.update(1)
     pbar.close()
 
-    preds_all = {   '1L-Method 3': preds_method_3,
-                    '1L-Method 4': preds_method_4,
-                    'MERLIN': preds_merlin,
-                    'T-DBSCAN': preds_clustering,
+    preds_all = {   'T-DBSCAN': preds_clustering,
                     'Informer-MSE': preds_l2_dist_mse,
                     'Informer-SMSE': preds_l2_dist_smse,
                     'TranAD': preds_tranad,
@@ -287,36 +279,29 @@ def plot_results(data: np.array,
     # These colors are specifically chosen to improve
     # accessibility for readers with colorblindness
 
-    colors = {  '1L-Method 3': '#D81B60',
-                '1L-Method 4': '#1E88E5',
-                'MERLIN': '#FFC107',
-                'T-DBSCAN': '#004D40',
+    colors = {  'T-DBSCAN': '#004D40',
                 'Informer-MSE': '#C43F42',
                 'Informer-SMSE': '#6F8098',
                 'TranAD': '#D4FC14',
-                'STRADA-MSE': '#1CB2C5',
-                'STRADA-SMSE': '#18F964',
-                'STRADA-TranAD': '#1164B3'}
+                'STRADA-MSE': '#D81B60',
+                'STRADA-SMSE': '#1E88E5',
+                'STRADA-TranAD': '#FFC107'}
 
-    positions = {   '1L-Method 3': 0,
-                    '1L-Method 4': 1,
-                    'MERLIN': 2,
-                    'T-DBSCAN': 3,
-                    'Informer-MSE': 4,
-                    'Informer-SMSE': 5,
-                    'TranAD': 6,
-                    'STRADA-MSE': 7,
-                    'STRADA-SMSE': 8,
-                    'STRADA-TranAD': 9}
+    positions = {   'T-DBSCAN': 0,
+                    'Informer-MSE': 1,
+                    'Informer-SMSE': 2,
+                    'TranAD': 3,
+                    'STRADA-MSE': 4,
+                    'STRADA-SMSE': 5,
+                    'STRADA-TranAD': 6}
     
     SMALL_SIZE = 13
     MEDIUM_SIZE = 13
     BIGGER_SIZE = 13
 
-    xlims = [(600, 800),
-                (2000, 2400),
-                (6000, 8500),
-                (14000, 15000)]
+    xlims = [(0, 17000),
+                (200, 2000),
+                (10000, 13500)]
     
     plt.rc('font', size=SMALL_SIZE)
     plt.rc('axes', titlesize=BIGGER_SIZE)
@@ -329,18 +314,26 @@ def plot_results(data: np.array,
     for index, (xlim_lower, xlim_upper) in enumerate(tqdm(xlims,
                                                     desc='Plotting')):
 
-        fig, (ax_data, ax_pred) = plt.subplots(2, 1, figsize=(10, 6), dpi=300)
+        fig, (ax_data, ax_pred) = plt.subplots(2, 1, figsize=(16, 9), dpi=300)
 
         plt.yticks(rotation=30, ha='right')
 
         ax_data.set_title('Data')
         ax_data.set_xlabel('Timestep')
 
+        ax_data.grid()
+
+        ax_data.set_xticks(np.arange(len(timestamps)),
+                                            timestamps,
+                                            rotation=30,
+                                            ha='right')
+        
+        ax_data.xaxis.set_major_locator(plt.MaxNLocator(8))
+
         ax_data.set_xlim(xlim_lower,
                             xlim_upper)
+        
         ax_data.set_ylim(-1, 100)
-
-        ax_data.grid()
 
         ax_data.plot(data,
                         linewidth=0.9,
@@ -353,6 +346,13 @@ def plot_results(data: np.array,
                                     anomaly_ends):
             ax_data.axvspan(start, end, color='red', alpha=0.5)
             ax_pred.axvspan(start, end, color='red', alpha=0.5)
+
+        ax_pred.set_xticks(np.arange(len(timestamps)),
+                                            timestamps,
+                                            rotation=30,
+                                            ha='right')
+        
+        ax_pred.xaxis.set_major_locator(plt.MaxNLocator(8))
 
         ax_pred.set_yticks(list(positions.values()),
                                 list(positions.keys()))
@@ -390,25 +390,32 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='HLT Dataset Comparison Plot Generator')
 
     parser.add_argument('--data-dir', type=str, default='../../datasets/hlt')
+    parser.add_argument('--tranad-seed', type=int)
+    parser.add_argument('--informer-mse-seed', type=int)
+    parser.add_argument('--informer-smse-seed', type=int)
   
     args = parser.parse_args()
 
     hlt_data_pd = pd.read_hdf(args.data_dir +\
-                                    '/unreduced_hlt_test_set_x.h5')
-
-    hlt_data_pd.iloc[run_endpoints[-2]:-1,
-                            channels_to_delete_last_run] = 0
+                                    '/unreduced_hlt_test_set_2022_x.h5')
 
     hlt_data_pd.fillna(0, inplace=True)
 
     hlt_data_np = hlt_data_pd.to_numpy()
 
     labels_pd = pd.read_hdf(args.data_dir +\
-                            '/unreduced_hlt_test_set_y.h5')
+                            '/unreduced_hlt_test_set_2022_y.h5')
 
     labels_np = labels_pd.to_numpy()
+
+    timestamps = labels_pd.index
 
     labels_np = np.greater_equal(labels_np, 1)
 
     plot_results(hlt_data_np,
-                    labels_np)
+                    labels_np,
+                    timestamps.strftime('%d.%m %H:%M'),
+                    args.tranad_seed,
+                    args.informer_mse_seed,
+                    args.informer_smse_seed)
+

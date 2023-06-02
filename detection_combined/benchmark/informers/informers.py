@@ -158,13 +158,39 @@ if __name__ == '__main__':
             except NonCriticalPredictionException:
                 break
 
-    preds = informer_runner.get_predictions()
+    informer_runner.model.attention_visualizer.render_projection('smse_dcm_rate_data_2022_'\
+                                                                        'attention_viz_projection.mp4',
+                                                                    'Kevin Franz Stehle',
+                                                                    channels_upper=52,
+                                                                    fps=24,
+                                                                    label_size=20,
+                                                                    title_size=20,
+                                                                    cmap='plasma')
 
-    with open(args.checkpoint_dir +\
-                '/model_parameters.json', 'r') as parameter_dict_file:
-        parameter_dict = json.load(parameter_dict_file)
+    informer_runner.model.attention_visualizer.render_combined('smse_dcm_rate_data_2022_'\
+                                                                    'attention_viz_combined.mp4',
+                                                                'Kevin Franz Stehle',
+                                                                fps=24,
+                                                                label_size=20,
+                                                                title_size=20,
+                                                                cmap='plasma')
 
-        benchmark_anomaly_registry.evaluate(preds,
-                                                args.model,
-                                                args.variant,
-                                                args.seed)
+    informer_runner.model.attention_visualizer.render_individual_heads('smse_dcm_rate_data_2022_'\
+                                                                            'attention_viz_individual.mp4',
+                                                                        'Kevin Franz Stehle',
+                                                                        fps=24,
+                                                                        label_size=20,
+                                                                        title_size=20,
+                                                                        cmap='plasma')
+
+
+#     preds = informer_runner.get_predictions()
+# 
+#     with open(args.checkpoint_dir +\
+#                 '/model_parameters.json', 'r') as parameter_dict_file:
+#         parameter_dict = json.load(parameter_dict_file)
+# 
+#         benchmark_anomaly_registry.evaluate(preds,
+#                                                 args.model,
+#                                                 args.variant,
+#                                                 args.seed)

@@ -152,55 +152,6 @@ def adjust_predicts(score, label,
         return predict
 
 
-def metric_comparison_by_categories(pred,
-                                        true):
-
-    true_reduced = np.bitwise_or.reduce(true, axis=1)
-
-    preds_adjusted_per_category = []
-
-    print('By Category:')
-
-    for category, flag in anomaly_categories.items():
-        print(category)
-
-        mask = np.where(true_reduced & flag, 1, 0)
-        mask = np.logical_or(mask,
-                    np.where(true_reduced == 0, 1, 0))
-        
-        true_masked = np.ma.masked_where(~mask, true_reduced)
-        pred_masked = np.ma.masked_where(~mask, pred)
-
-        true_masked = np.ma.compressed(true_masked)
-        pred_masked = np.ma.compressed(pred_masked)
-
-        true_masked = np.greater_equal(true_masked, 1).astype(np.uint8)
-
-        pred_masked = adjust_predicts(pred_masked,
-                                        true_masked, 0.1)
-        
-        preds_adjusted_per_category.append(pred_masked)
-        
-        auroc = roc_auc_score(true_masked, pred_masked)
-
-        precision,\
-            recall,\
-            f1, _ = precision_recall_fscore_support(true_masked,
-                                                        pred_masked,
-                                                        average='binary')
-
-        mcc = matthews_corrcoef(true_masked,
-                                    pred_masked)
-
-        print(f'AUROC: {auroc:.3f}'
-                f'\tF1: {f1:.3f}'
-                f'\tMCC: {mcc:.3f}'
-                f'\tPrecision: {precision:.3f}'
-                f'\tRecall: {recall:.3f}')
-
-    return preds_adjusted_per_category
-
-
 def get_scores(model_name,
                 seed,
                 pred_train,
@@ -244,9 +195,6 @@ def get_scores(model_name,
 
     pred[ret['alarms']] = 1
 
-    preds_adjusted_by_category =\
-        metric_comparison_by_categories(pred, true)
-
     pred = adjust_predicts(pred, true_reduced, 0.1)
 
     precision,\
@@ -275,7 +223,7 @@ def get_scores(model_name,
                         precision,
                         recall)
 
-    return pred, preds_adjusted_by_category
+    return pred
 
 
 def get_scores_tranad(model_name,
@@ -320,9 +268,6 @@ def get_scores_tranad(model_name,
 
     pred = pred_test > pot_th
 
-    preds_adjusted_by_category =\
-        metric_comparison_by_categories(pred, true)
-
     pred = adjust_predicts(pred, true_reduced, 0.1)
 
     precision,\
@@ -351,7 +296,7 @@ def get_scores_tranad(model_name,
                         precision,
                         recall)
 
-    return pred, preds_adjusted_by_category
+    return pred
 
 
 def get_scores_thresholded(model_name,
@@ -389,75 +334,26 @@ def get_scores_thresholded(model_name,
                         recall)
 
 
-def get_scores_thresholded_by_category(pred_tdbscan,
-                                        preds_transformer,
-                                        true):
-
-    true_reduced = np.bitwise_or.reduce(true, axis=1)
-
-    print('By Category:')
-
-    for index, (category, flag) in\
-            enumerate(anomaly_categories.items()):
-        
-        pred = preds_transformer[index]
-
-        print(category)
-
-        mask = np.where(true_reduced & flag, 1, 0)
-        mask = np.logical_or(mask,
-                    np.where(true_reduced == 0, 1, 0))
-        
-        true_masked = np.ma.masked_where(~mask, true_reduced)
-        pred_tdbscan_masked =\
-            np.ma.masked_where(~mask, pred_tdbscan)
-
-        true_masked = np.ma.compressed(true_masked)
-        pred_tdbscan_masked = np.ma.compressed(pred_tdbscan_masked)
-
-        true_masked = np.greater_equal(true_masked, 1).astype(np.uint8)
-
-        pred_combined =\
-            np.logical_or(pred_tdbscan_masked,
-                                            pred)
-
-        auroc = roc_auc_score(true_masked, pred_combined)
-
-        precision,\
-            recall,\
-            f1, _ = precision_recall_fscore_support(true_masked,
-                                                        pred_combined,
-                                                        average='binary')
-
-        mcc = matthews_corrcoef(true_masked,
-                                    pred_combined)
-
-        print(f'AUROC: {auroc:.3f}'
-                f'\tF1: {f1:.3f}'
-                f'\tMCC: {mcc:.3f}'
-                f'\tPrecision: {precision:.3f}'
-                f'\tRecall: {recall:.3f}')
-
-
-
 def print_results(label: np.array,
-                        seed: int,
+                        tranad_seed: int,
+                        informer_mse_seed: int,
+                        informer_smse_seed: int,
                         to_csv: bool):
 
     preds_clustering =\
         load_numpy_array('predictions/clustering.npy')
     preds_tranad =\
-        load_numpy_array(f'predictions/tranad_seed_{seed}.npy')
+        load_numpy_array(f'predictions/tranad_seed_{tranad_seed}.npy')
     preds_tranad_train =\
-        load_numpy_array(f'predictions/tranad_train_no_augment_seed_{seed}.npy')
+        load_numpy_array(f'predictions/tranad_train_no_augment_seed_{tranad_seed}.npy')
     preds_l2_dist_train_mse =\
-        load_numpy_array(f'predictions/l2_dist_train_mse_seed_{seed}.npy')
+        load_numpy_array(f'predictions/l2_dist_train_mse_seed_{informer_mse_seed}.npy')
     preds_l2_dist_mse =\
-        load_numpy_array(f'predictions/l2_dist_mse_seed_{seed}.npy')
+        load_numpy_array(f'predictions/l2_dist_mse_seed_{informer_mse_seed}.npy')
     preds_l2_dist_train_smse =\
-        load_numpy_array(f'predictions/l2_dist_train_smse_seed_{seed}.npy')
+        load_numpy_array(f'predictions/l2_dist_train_smse_seed_{informer_smse_seed}.npy')
     preds_l2_dist_smse =\
-        load_numpy_array(f'predictions/l2_dist_smse_seed_{seed}.npy')
+        load_numpy_array(f'predictions/l2_dist_smse_seed_{informer_smse_seed}.npy')
 
     spot_train_size = int(len(preds_l2_dist_mse)*0.1)
 
@@ -473,35 +369,36 @@ def print_results(label: np.array,
                         (0, 1), 'constant',
                         constant_values=(0,))
     
-    
     label_reduced =\
         np.any(np.greater_equal(label, 1), axis=1).astype(np.uint8)
+    
+    print(f'{label_reduced.mean()}\t{label_reduced.min()}\t{label_reduced.max()}')
+    print(f'{preds_clustering.mean()}\t{preds_clustering.min()}\t{preds_clustering.max()}')
 
     preds_clustering =\
         adjust_predicts(preds_clustering,
-                            label_reduced, 0.1)
+                            label_reduced, 0.1).astype(np.uint8)
+    
+    print(f'{preds_clustering.mean()}\t{preds_clustering.min()}\t{preds_clustering.max()}')
+
+    exit()
 
     print('T-DBSCAN:')
 
-    get_scores_thresholded('t_dbscan',
-                                seed,
-                                preds_clustering,
-                                label,
-                                to_csv)
-    
-    metric_comparison_by_categories(preds_clustering,
-                                                label)
+    get_scores_thresholded('t_dbscan', 0,
+                            preds_clustering,
+                            label,
+                            to_csv)
 
     print('TranAD:')
 
-    preds_tranad,\
-        preds_tranad_by_category =\
+    preds_tranad =\
             get_scores_tranad('tranad',
-                                    seed,
-                                    preds_tranad_train,
-                                    preds_tranad,
-                                    label, 0.01, 0.02,
-                                    to_csv)
+                                tranad_seed,
+                                preds_tranad_train,
+                                preds_tranad,
+                                label, 0.01, 0.02,
+                                to_csv)
     
     print('STRADA-TranAD:')
 
@@ -510,20 +407,15 @@ def print_results(label: np.array,
                             preds_tranad)
     
     get_scores_thresholded('strada_tranad',
-                                    seed,
-                                    preds_strada_tranad,
-                                    label,
-                                    to_csv)
-
-    get_scores_thresholded_by_category(preds_clustering,
-                                        preds_tranad_by_category,
-                                        label)
+                                tranad_seed,
+                                preds_strada_tranad,
+                                label,
+                                to_csv)
     
     print('Informer-MSE:')
 
-    preds_l2_dist_mse,\
-        preds_l2_dist_mse_by_category =\
-            get_scores('informer_mse', seed,
+    preds_l2_dist_mse =\
+            get_scores('informer_mse', informer_mse_seed,
                         preds_l2_dist_train_mse[:spot_train_size],
                                                 preds_l2_dist_mse,
                                                 label, 0.0025,
@@ -536,20 +428,15 @@ def print_results(label: np.array,
                         preds_l2_dist_mse)
     
     get_scores_thresholded('strada_mse',
-                                    seed,
-                                    preds_strada_mse,
-                                    label,
-                                    to_csv)
+                            informer_mse_seed,
+                            preds_strada_mse,
+                            label,
+                            to_csv)
     
-    get_scores_thresholded_by_category(preds_clustering,
-                                        preds_l2_dist_mse_by_category,
-                                        label)
-
     print('Informer-SMSE:')
 
-    preds_l2_dist_smse,\
-        preds_l2_dist_smse_by_category =\
-            get_scores('informer_smse', seed,
+    preds_l2_dist_smse =\
+            get_scores('informer_smse', informer_smse_seed,
                         preds_l2_dist_train_smse[:spot_train_size],
                                                 preds_l2_dist_smse,
                                                 label, 0.008,
@@ -562,14 +449,10 @@ def print_results(label: np.array,
                         preds_l2_dist_smse)
 
     get_scores_thresholded('strada_smse',
-                                    seed,
-                                    preds_strada_smse,
-                                    label,
-                                    to_csv)
-
-    get_scores_thresholded_by_category(preds_clustering,
-                                        preds_l2_dist_smse_by_category,
-                                        label)
+                            informer_smse_seed,
+                            preds_strada_smse,
+                            label,
+                            to_csv)
 
 
 if __name__ == '__main__':
@@ -577,16 +460,20 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Unreduced HLT Dataset Evaluation')
 
     parser.add_argument('--data-dir', type=str, default='../../datasets/hlt')
-    parser.add_argument('--seed', type=int)
+    parser.add_argument('--tranad-seed', type=int)
+    parser.add_argument('--informer-mse-seed', type=int)
+    parser.add_argument('--informer-smse-seed', type=int)
     parser.add_argument('--to-csv', action='store_true', default=False)
 
     args = parser.parse_args()
 
     labels_pd = pd.read_hdf(args.data_dir +\
-                            '/unreduced_hlt_test_set_y.h5')
+                            '/unreduced_hlt_test_set_2022_y.h5')
 
     labels_np = labels_pd.to_numpy()
 
     print_results(labels_np,
-                    args.seed,
+                    args.tranad_seed,
+                    args.informer_mse_seed,
+                    args.informer_smse_seed,
                     args.to_csv)

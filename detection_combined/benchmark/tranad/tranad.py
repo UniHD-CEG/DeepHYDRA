@@ -74,6 +74,7 @@ if __name__ == '__main__':
     parser.add_argument('--dbscan-min-samples', type=int, default=4)
     parser.add_argument('--dbscan-duration-threshold', type=int, default=4)
 
+    parser.add_argument('--variant', type=str, choices=['2018', '2022'], default='2018')
     parser.add_argument('--seed', type=int)
 
     args = parser.parse_args()
@@ -96,21 +97,23 @@ if __name__ == '__main__':
                                     datefmt='%Y-%m-%d %H:%M:%S')
 
     hlt_data_pd = pd.read_hdf(args.data_dir +\
-                                    '/unreduced_hlt_test_set_x.h5')
+                                    f'/unreduced_hlt_test_set_{args.variant}_x.h5')
     
     # This removes a few actual anomalous dropouts in the last run.
     # These are very easy to detect, so we remove them to not
     # overshadow the the more subtle injected anomalies
 
-    hlt_data_pd.iloc[run_endpoints[-2]:-1,
-                            channels_to_delete_last_run] = np.nan
+    if args.variant == '2018':
+        hlt_data_pd.iloc[run_endpoints[-2]:-1,
+                                channels_to_delete_last_run] = np.nan
 
     hlt_data_pd.index = _remove_timestamp_jumps(
                             pd.DatetimeIndex(hlt_data_pd.index))
 
     median_std_reducer = MedianStdReducer()
     
-    tranad_runner = TranADRunner(args.checkpoint_dir)
+    tranad_runner = TranADRunner(args.checkpoint_dir,
+                                    variant=args.variant)
 
     tpu_labels = list(hlt_data_pd.columns.values)
 
@@ -160,4 +163,5 @@ if __name__ == '__main__':
 
         benchmark_anomaly_registry.evaluate(predictions,
                                                     'TranAD',
+                                                    args.variant,
                                                     args.seed)

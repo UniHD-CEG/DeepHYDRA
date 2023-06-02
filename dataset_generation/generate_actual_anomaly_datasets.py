@@ -562,13 +562,6 @@ if __name__ == '__main__':
     column_names = test_set_x_df.columns
     timestamps = test_set_x_df.index
 
-    labels = generate_anomaly_labels(tpu_failure_log_df,
-                                                timestamps,
-                                                column_names,
-                                                np.array(tpu_numbers_test),
-                                                prepad=5).to_numpy()
-
-
     test_set_y_df = generate_anomaly_labels(tpu_failure_log_df,
                                                     timestamps,
                                                     column_names,
@@ -740,12 +733,6 @@ if __name__ == '__main__':
 
     column_names = clean_val_set_x_df.columns
     timestamps = clean_val_set_x_df.index
-
-    val_set_y_df = generate_anomaly_labels(tpu_failure_log_df,
-                                                    timestamps,
-                                                    column_names,
-                                                    np.array(tpu_numbers_val),
-                                                    prepad=5)
 
     rack_data_clean_val_all = []
 
