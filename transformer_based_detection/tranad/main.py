@@ -47,7 +47,9 @@ def load_dataset(dataset):
 
     loader = []
 
-    if dataset != 'HLT':
+    variant = int(dataset.split('_')[-1])
+
+    if 'HLT' not in dataset:
 
         folder = '../../datasets/smd'
 
@@ -61,7 +63,7 @@ def load_dataset(dataset):
 
     else:
 
-            train_set = HLTDataset('train', False,
+            train_set = HLTDataset(variant, 'train', False,
                                         'minmax', 'train_set_fit',
                                         applied_augmentations=\
                                                 args.augmentations,
@@ -77,7 +79,7 @@ def load_dataset(dataset):
 
             loader.append(train_set.get_data())
 
-            test_set = HLTDataset('test', False,
+            test_set = HLTDataset(variant, 'test', False,
                                     'minmax', 'train_set_fit',
                                     applied_augmentations=\
                                             args.augmentations,
@@ -554,13 +556,15 @@ if __name__ == '__main__':
     labelsFinal = (np.sum(labels, axis=1) >= 1) + 0
     result, _, latencies = pot_eval(lossTfinal, lossFinal, labelsFinal)
 
-    if args.dataset == 'HLT':
+    if 'HLT' in args.dataset:
+
+        variant = int(args.dataset.split('_')[-1])
 
         augment_label = '_no_augment_' if augmentation_string == 'no_augment' else '_'
 
-        _save_numpy_array(lossTfinal, f'../../evaluation/reduced_detection/predictions/tranad_train{augment_label}seed_{int(args.seed)}.npy')
-        _save_numpy_array(lossTfinal, f'../../evaluation/combined_detection/predictions/tranad_train{augment_label}seed_{int(args.seed)}.npy')
-        _save_numpy_array(lossFinal, f'../../evaluation/reduced_detection/predictions/tranad{augment_label}seed_{int(args.seed)}.npy')
+        _save_numpy_array(lossTfinal, f'../../evaluation/reduced_detection_{variant}/predictions/tranad_train{augment_label}seed_{int(args.seed)}.npy')
+        _save_numpy_array(lossTfinal, f'../../evaluation/combined_detection_{variant}/predictions/tranad_train{augment_label}seed_{int(args.seed)}.npy')
+        _save_numpy_array(lossFinal, f'../../evaluation/reduced_detection_{variant}/predictions/tranad{augment_label}seed_{int(args.seed)}.npy')
 
         parameter_dict = {"window_size": 10}
 

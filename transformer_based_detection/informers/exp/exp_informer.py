@@ -65,7 +65,8 @@ class ExpInformer(ExpBasic):
 
         data_dict = {
             'machine-1-1': OmniAnomalyDataset,
-            'HLT': HLTDataset,}
+            'HLT_2018': HLTDataset,
+            'HLT_2022': HLTDataset,}
 
         Data = data_dict[self.args.data]
 
@@ -105,7 +106,11 @@ class ExpInformer(ExpBasic):
                             scaling_source='train_set_fit')
 
         elif Data == HLTDataset:
-            dataset = Data(mode=flag,
+
+            variant = int(self.args.data.split('_')[-1])
+
+            dataset = Data(variant=variant,
+                            mode=flag,
                             size=[args.seq_len,
                                     args.label_len,
                                     args.pred_len],
@@ -410,7 +415,7 @@ class ExpInformer(ExpBasic):
 
     def test(self, setting):
 
-        tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
+        # tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
 
         test_data, test_loader = self._get_data(flag='test')
         
@@ -427,13 +432,14 @@ class ExpInformer(ExpBasic):
             for count, (batch_x, batch_y, batch_x_mark, batch_y_mark) in enumerate(test_loader):
 
                 if self.args.output_attention:
-
+                
                     pred, true, attention =\
                             self._process_one_batch(test_data,
                                                         batch_x,
                                                         batch_y,
                                                         batch_x_mark,
-                                                        batch_y_mark)
+                                                        batch_y_mark,
+                                                        batch_x)
 
                 else:
                     pred, true = self._process_one_batch(test_data,
@@ -463,7 +469,7 @@ class ExpInformer(ExpBasic):
         np.save(folder_path + 'labels_all_test.npy', test_data.get_labels())
 
 
-    def _process_one_batch(self, dataset_object, batch_x, batch_y, batch_x_mark, batch_y_mark):
+    def _process_one_batch(self, dataset_object, batch_x, batch_y, batch_x_mark, batch_y_mark, viz_data=None):
         batch_x = batch_x.float().to(self.device)
         batch_y = batch_y.float()
 
@@ -493,7 +499,7 @@ class ExpInformer(ExpBasic):
         else:
 
             if self.args.output_attention:
-                outputs, attention = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)
+                outputs, attention = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark, viz_data=viz_data)
 
             else:
                 outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)

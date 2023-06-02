@@ -18,7 +18,7 @@ base_data_anomaly_ends = [264,
                             465,
                             4277]
 
-output_dir = '../../../evaluation/combined_detection/predictions/'
+output_dir = '../../../evaluation/combined_detection_2022/predictions/'
 
 def _save_numpy_array(array: np.array,
                         filename: str):
@@ -93,10 +93,11 @@ class BenchmarkAnomalyRegistry(AnomalyRegistry):
     def evaluate(self,
                     pred_transformer_np: np.array,
                     model_name: str,
+                    variant: str,
                     seed: int) -> None:
 
         true_pd = pd.read_hdf(self.label_dir +\
-                                    '/unreduced_hlt_test_set_y.h5')
+                                    f'/unreduced_hlt_test_set_{variant}_y.h5')
 
         true_pd.index = _remove_timestamp_jumps(
                             pd.DatetimeIndex(true_pd.index)).strftime('%Y-%m-%d %H:%M:%S')

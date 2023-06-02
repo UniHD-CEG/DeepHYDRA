@@ -11,6 +11,8 @@ from models.decoder import Decoder, DecoderLayer
 from models.attn import FullAttention, ProbAttention, AttentionLayer
 from models.embed import DataEmbedding
 
+from informer_attention_viz.attentionvisualizer import AttentionVisualizer
+
 class Informer(nn.Module):
     def __init__(self, enc_in, dec_in, c_out, seq_len, label_len, out_len, 
                 factor=5, d_model=512, n_heads=8, e_layers=3, d_layers=2, d_ff=512, 
@@ -22,6 +24,12 @@ class Informer(nn.Module):
         self.pred_len = out_len
         self.attn = attn
         self.output_attention = output_attention
+
+        self.attention_visualizer = AttentionVisualizer(n_heads,
+                                                            d_model,
+                                                            'Timestep',
+                                                            'Data',
+                                                            discard_ratio=0.85)
 
         # Encoding
 
@@ -78,7 +86,8 @@ class Informer(nn.Module):
 
         
     def forward(self, x_enc, x_mark_enc, x_dec, x_mark_dec, 
-                enc_self_mask=None, dec_self_mask=None, dec_enc_mask=None):
+                enc_self_mask=None, dec_self_mask=None, dec_enc_mask=None,
+                viz_data=None):
 
         enc_out = self.enc_embedding(x_enc, x_mark_enc)
         enc_out, attns = self.encoder(enc_out, attn_mask=enc_self_mask)
@@ -87,6 +96,10 @@ class Informer(nn.Module):
         dec_out = self.decoder(dec_out, enc_out, x_mask=dec_self_mask, cross_mask=dec_enc_mask)
 
         dec_out = self.projection(dec_out)
+
+        if viz_data is not None:
+            self.attention_visualizer.push(self.enc_embedding,
+                                            viz_data, attns, x_enc)
 
         # dec_out = self.end_conv1(dec_out)
         # dec_out = self.end_conv2(dec_out.transpose(2,1)).transpose(1,2)

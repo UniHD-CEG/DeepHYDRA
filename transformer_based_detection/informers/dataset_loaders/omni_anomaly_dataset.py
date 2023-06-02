@@ -79,6 +79,11 @@ class OmniAnomalyDataset(Dataset):
             else:
                 raise RuntimeError(
                         'Invalid scaling source')
+    
+            data_len = len(data)
+
+            data = data[int(data_len*0.9):, :]
+            labels = labels[int(data_len*0.9):]
 
             timestamps = pd.DataFrame(pd.date_range(start='5/7/2020',
                                             periods=len(data),

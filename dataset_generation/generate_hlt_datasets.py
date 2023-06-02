@@ -478,14 +478,15 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Reduced HLT Dataset Generator')
 
     parser.add_argument('--dataset-dir', type=str, default='../datasets/hlt')
+    parser.add_argument('--variant', type=str, default='2018')
     
     args = parser.parse_args()
 
     # Load datasets
 
-    train_set_x_df = pd.read_csv(f'{args.dataset_dir}/hlt_train_set.csv', index_col=0)
-    test_set_x_df = pd.read_csv(f'{args.dataset_dir}/hlt_test_set.csv', index_col=0)
-    val_set_x_df = pd.read_csv(f'{args.dataset_dir}/hlt_val_set.csv', index_col=0)
+    train_set_x_df = pd.read_csv(f'{args.dataset_dir}/hlt_train_set_{args.variant}.csv', index_col=0)
+    test_set_x_df = pd.read_csv(f'{args.dataset_dir}/hlt_test_set_{args.variant}.csv', index_col=0)
+    val_set_x_df = pd.read_csv(f'{args.dataset_dir}/hlt_val_{args.variant}set.csv', index_col=0)
     
     column_names_train = list((train_set_x_df).columns.values)
     column_names_test = list((test_set_x_df).columns.values)
@@ -612,7 +613,7 @@ if __name__ == '__main__':
                                                         train_set_unlabeled_x_df.index,
                                                         columns_reduced_train_unlabeled)
 
-    train_set_unlabeled_x_df.to_hdf(f'{args.dataset_dir}/reduced_hlt_train_set_x.h5',
+    train_set_unlabeled_x_df.to_hdf(f'{args.dataset_dir}/reduced_hlt_train_set_{args.variant}_x.h5',
                                         key='reduced_hlt_train_set_x',
                                         mode='w')
 
@@ -750,11 +751,11 @@ if __name__ == '__main__':
                                             anomaly_generator_train_labeled.get_timestamps_pd(),
                                             columns_reduced_train_labeled)
 
-    train_set_labeled_x_df.to_hdf(f'{args.dataset_dir}/reduced_hlt_labeled_train_set_x.h5',
+    train_set_labeled_x_df.to_hdf(f'{args.dataset_dir}/reduced_hlt_labeled_train_set_{args.variant}_x.h5',
                                     key='reduced_hlt_labeled_train_set_x',
                                     mode='w')
 
-    train_set_labeled_y_df.to_hdf(f'{args.dataset_dir}/reduced_hlt_labeled_train_set_y.h5',
+    train_set_labeled_y_df.to_hdf(f'{args.dataset_dir}/reduced_hlt_labeled_train_set_{args.variant}_y.h5',
                                     key='reduced_hlt_labeled_train_set_y',
                                     mode='w')
 
@@ -891,11 +892,11 @@ if __name__ == '__main__':
                                     anomaly_generator_test.get_timestamps_pd(),
                                     columns_reduced_test)
 
-    test_set_x_df.to_hdf(f'{args.dataset_dir}/reduced_hlt_test_set_x.h5',
+    test_set_x_df.to_hdf(f'{args.dataset_dir}/reduced_hlt_test_set_{args.variant}_x.h5',
                             key='reduced_hlt_test_set_x',
                             mode='w')
 
-    test_set_y_df.to_hdf(f'{args.dataset_dir}/reduced_hlt_test_set_y.h5',
+    test_set_y_df.to_hdf(f'{args.dataset_dir}/reduced_hlt_test_set_{args.variant}_y.h5',
                             key='reduced_hlt_test_set_x',
                             mode='w')
 
@@ -955,7 +956,7 @@ if __name__ == '__main__':
                                                 val_set_x_df.index,
                                                 columns_reduced_clean_val)
 
-    clean_val_set_x_df.to_hdf(f'{args.dataset_dir}/reduced_hlt_clean_val_set_x.h5',
+    clean_val_set_x_df.to_hdf(f'{args.dataset_dir}/reduced_hlt_clean_val_set_{args.variant}_x.h5',
                                 key='reduced_hlt_clean_val_set_x',
                                 mode='w')
 
@@ -1091,11 +1092,11 @@ if __name__ == '__main__':
                                     anomaly_generator_val.get_timestamps_pd(),
                                     columns_reduced_val)
 
-    val_set_x_df.to_hdf(f'{args.dataset_dir}/reduced_hlt_val_set_x.h5',
+    val_set_x_df.to_hdf(f'{args.dataset_dir}/reduced_hlt_val_set_{args.variant}_x.h5',
                             key='reduced_hlt_val_set_x',
                             mode='w')
 
-    val_set_y_df.to_hdf(f'{args.dataset_dir}/reduced_hlt_val_set_y.h5',
+    val_set_y_df.to_hdf(f'{args.dataset_dir}/reduced_hlt_val_set_{args.variant}_y.h5',
                             key='reduced_hlt_val_set_y',
                             mode='w')
 
