@@ -108,6 +108,8 @@ if __name__ == '__main__':
 
     hlt_data_pd.index = _remove_timestamp_jumps(
                             pd.DatetimeIndex(hlt_data_pd.index))
+    
+    hlt_data_pd = hlt_data_pd.iloc[10000:20000, :]
 
     median_std_reducer = MedianStdReducer()
     

@@ -299,9 +299,11 @@ def plot_results(data: np.array,
     MEDIUM_SIZE = 13
     BIGGER_SIZE = 13
 
-    xlims = [(0, 17000),
-                (200, 2000),
-                (10000, 13500)]
+    # xlims = [(0, 17000),
+    #             (200, 2000),
+    #             (10000, 13500)]
+    
+    xlims = [(0, len(preds_clustering)),]
     
     plt.rc('font', size=SMALL_SIZE)
     plt.rc('axes', titlesize=BIGGER_SIZE)
