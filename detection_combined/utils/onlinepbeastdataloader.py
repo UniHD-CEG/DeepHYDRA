@@ -18,7 +18,7 @@ class OnlinePBeastDataLoader():
 
     def __init__(self,
                     data_channel: str,
-                    polling_interval: dt.datetime= dt.timedelta(seconds=10),
+                    polling_interval: dt.datetime = dt.timedelta(seconds=10),
                     delay: dt.timedelta = dt.timedelta(seconds=30),
                     window_length: dt.timedelta = dt.timedelta(seconds=10),
                     pbeast_server: str =\
@@ -37,34 +37,47 @@ class OnlinePBeastDataLoader():
         self._logger = logging.getLogger(__name__)
 
 
-    def __getitem__(self) -> pd.DataFrame:
-
-        data_channel_vars = _data_channel_vars_dict['DCMRate']
-
-        time_end = dt.now() - self._delay
-        time_start = time_end - self._window_length
+    async def poll(self) -> pd.DataFrame:
 
         try:
-            dcm_rates_all_list = self._beauty_instance.timeseries(time_start,
-                                                                    time_end,
-                                                                    data_channel_vars[0],
-                                                                    data_channel_vars[1],
-                                                                    data_channel_vars[2],
-                                                                    data_channel_vars[3],
-                                                                    regex=True,
-                                                                    all_publications=True)
 
-        except RuntimeError as runtime_error:
-            self._logger.error('Could not read DCM rate data from PBEAST')
-            raise
+            data_channel_vars = _data_channel_vars_dict['DCMRate']
 
-        for count in range(1, len(dcm_rates_all_list)):
-            dcm_rates_all_list[count] = dcm_rates_all_list[count].alignto(dcm_rates_all_list[0])
+            while True:
 
-        dcm_rates_all_pd = pd.concat(dcm_rates_all_list, axis=1)
+                time_end = dt.now() - self._delay
+                time_start = time_end - self._window_length
 
-        return dcm_rates_all_pd.fillna(nan_fill_value)
+                self._logger.info(f'Requesting PBEAST data from {time_start} to {time_end}')
+                self._logger.info(f'Request vars: {data_channel_vars[0]}, {data_channel_vars[1]}, '
+                                                    f'{data_channel_vars[2]}, {data_channel_vars[3]}')
 
+                try:
+                    dcm_rates_all_list = self._beauty_instance.timeseries(time_start,
+                                                                            time_end,
+                                                                            data_channel_vars[0],
+                                                                            data_channel_vars[1],
+                                                                            data_channel_vars[2],
+                                                                            data_channel_vars[3],
+                                                                            regex=True,
+                                                                            all_publications=True)
 
-    def __len__(self) -> int:
-        return len(self._run_numbers_all) 
+                except RuntimeError as runtime_error:
+                    self._logger.error('Could not read DCM rate data from PBEAST')
+                    break
+
+                self._logger.info('Successfully retrieved PBEAST data')
+
+                for count in range(1, len(dcm_rates_all_list)):
+                    dcm_rates_all_list[count] = dcm_rates_all_list[count].alignto(dcm_rates_all_list[0])
+
+                dcm_rates_all_pd = pd.concat(dcm_rates_all_list, axis=1)
+
+                yield dcm_rates_all_pd.fillna(nan_fill_value)
+
+                await asyncio.sleep(self._polling_interval.total_seconds())
+
+            yield None
+
+        except asyncio.CancelledError:
+            self._logger.info('Received stop request. Exiting')

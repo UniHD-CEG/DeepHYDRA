@@ -58,10 +58,10 @@ class JSONAnomalyRegistry(AnomalyRegistry):
 
     def __init__(self,
                     log_dir: str,
-                    run_number: int) -> None:
+                    log_name: str) -> None:
  
         self.log_dir = log_dir
-        self.run_number = run_number
+        self.log_name = log_name
 
         self.anomaly_registry_persistent =\
                 defaultdict(lambda: defaultdict(RunAnomaly))
@@ -100,7 +100,7 @@ class JSONAnomalyRegistry(AnomalyRegistry):
 
     def update_log_file(self):
         if len(self.anomaly_registry_persistent) > 0:
-            with open(f'{self.log_dir}/run_{self.run_number}.json', mode='w') as anomaly_log_file:
+            with open(f'{self.log_dir}/run_{self.log_name}.json', mode='w') as anomaly_log_file:
                 json.dump(self.anomaly_registry_persistent,
                                         anomaly_log_file,
                                         indent=4,
