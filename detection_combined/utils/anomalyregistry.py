@@ -54,6 +54,59 @@ class AnomalyRegistry(ABC):
     pass
 
 
+class JSONAnomalyRegistry(AnomalyRegistry):
+
+    def __init__(self,
+                    log_dir: str,
+                    run_number: int) -> None:
+ 
+        self.log_dir = log_dir
+        self.run_number = run_number
+
+        self.anomaly_registry_persistent =\
+                defaultdict(lambda: defaultdict(RunAnomaly))
+
+
+    def clustering_detection(self,
+                                origin_code: int,
+                                anomaly_type: AnomalyType,
+                                anomaly_start,
+                                anomaly_duration: int) -> None:
+        
+        self.anomaly_registry_persistent[origin_code][anomaly_start].update(anomaly_duration,
+                                                                                    anomaly_type)
+
+    def transformer_detection(self,
+                                origin_code: int,
+                                anomaly_type: AnomalyType,
+                                anomaly_start,
+                                anomaly_duration: int) -> None:
+        
+        self.anomaly_registry_persistent[origin_code][anomaly_start].update(anomaly_duration,
+                                                                                    anomaly_type)
+         
+
+    def update_run_number(self,
+                            run_number: int,
+                            dump_registry: bool = True):
+        
+        if dump_registry:
+            self.update_log_file()
+            self.anomaly_registry_persistent =\
+                defaultdict(lambda: defaultdict(RunAnomaly))
+        
+        self.run_number = run_number
+
+
+    def update_log_file(self):
+        if len(self.anomaly_registry_persistent) > 0:
+            with open(f'{self.log_dir}/run_{self.run_number}.json', mode='w') as anomaly_log_file:
+                json.dump(self.anomaly_registry_persistent,
+                                        anomaly_log_file,
+                                        indent=4,
+                                        default=RunAnomaly.to_json)
+
+
 class BenchmarkAnomalyRegistry(AnomalyRegistry):
 
     def __init__(self,

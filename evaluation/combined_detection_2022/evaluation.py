@@ -159,7 +159,8 @@ def get_scores(model_name,
                 true,
                 q=1e-3,
                 level=0.8,
-                to_csv=False):
+                to_csv=False,
+                pickle_spot_instances=False):
     """
     Run POT method on given score.
     Args:
@@ -222,6 +223,9 @@ def get_scores(model_name,
                         mcc,
                         precision,
                         recall)
+        
+    if pickle_spot_instances:
+        spot.pickle(f'spot_instances/spot_{model_name}.pkl')
 
     return pred
 
@@ -233,7 +237,8 @@ def get_scores_tranad(model_name,
                             true,
                             q=1e-3,
                             level=0.02,
-                            to_csv=False):
+                            to_csv=False,
+                            pickle_spot_instances=False):
     """
     Run POT method on given score.
     Args:
@@ -296,6 +301,9 @@ def get_scores_tranad(model_name,
                         precision,
                         recall)
 
+    if pickle_spot_instances:
+        s.pickle(f'spot_instances/spot_{model_name}.pkl')
+
     return pred
 
 
@@ -338,7 +346,8 @@ def print_results(label: np.array,
                         tranad_seed: int,
                         informer_mse_seed: int,
                         informer_smse_seed: int,
-                        to_csv: bool):
+                        to_csv: bool,
+                        pickle_spot_instances: bool):
 
     preds_clustering =\
         load_numpy_array('predictions/clustering.npy')
@@ -372,16 +381,10 @@ def print_results(label: np.array,
     label_reduced =\
         np.any(np.greater_equal(label, 1), axis=1).astype(np.uint8)
     
-    print(f'{label_reduced.mean()}\t{label_reduced.min()}\t{label_reduced.max()}')
-    print(f'{preds_clustering.mean()}\t{preds_clustering.min()}\t{preds_clustering.max()}')
 
     preds_clustering =\
         adjust_predicts(preds_clustering,
                             label_reduced, 0.1).astype(np.uint8)
-    
-    print(f'{preds_clustering.mean()}\t{preds_clustering.min()}\t{preds_clustering.max()}')
-
-    exit()
 
     print('T-DBSCAN:')
 
@@ -398,7 +401,8 @@ def print_results(label: np.array,
                                 preds_tranad_train,
                                 preds_tranad,
                                 label, 0.01, 0.02,
-                                to_csv)
+                                to_csv,
+                                pickle_spot_instances)
     
     print('STRADA-TranAD:')
 
@@ -419,7 +423,8 @@ def print_results(label: np.array,
                         preds_l2_dist_train_mse[:spot_train_size],
                                                 preds_l2_dist_mse,
                                                 label, 0.0025,
-                                                0.8, to_csv)
+                                                0.8, to_csv,
+                                                pickle_spot_instances)
 
     print('STRADA-MSE:')
 
@@ -440,7 +445,8 @@ def print_results(label: np.array,
                         preds_l2_dist_train_smse[:spot_train_size],
                                                 preds_l2_dist_smse,
                                                 label, 0.008,
-                                                0.8, to_csv)
+                                                0.8, to_csv,
+                                                pickle_spot_instances)
     
     print('STRADA-SMSE:')
 
@@ -464,6 +470,7 @@ if __name__ == '__main__':
     parser.add_argument('--informer-mse-seed', type=int)
     parser.add_argument('--informer-smse-seed', type=int)
     parser.add_argument('--to-csv', action='store_true', default=False)
+    parser.add_argument('--pickle-spot-instances', action='store_true', default=False)
 
     args = parser.parse_args()
 
@@ -476,4 +483,5 @@ if __name__ == '__main__':
                     args.tranad_seed,
                     args.informer_mse_seed,
                     args.informer_smse_seed,
-                    args.to_csv)
+                    args.to_csv,
+                    args.pickle_spot_instances)

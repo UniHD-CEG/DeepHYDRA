@@ -1,13 +1,14 @@
 import logging
 import json
+import pickle as pkl
 from collections.abc import Callable
 
 import numpy as np
 import pandas as pd
 import torch
-import torch.nn as nn
-from torch import optim
-from torch.utils.data import DataLoader
+# import torch.nn as nn
+# from torch import optim
+# from torch.utils.data import DataLoader
 
 from .models.model import Informer
 from .utils.datapreprocessor import DataPreprocessor
@@ -18,18 +19,22 @@ from utils.tqdmloggingdecorator import tqdmloggingdecorator
 class InformerRunner():
     def __init__(self,
                     checkpoint_dir,
-                    nan_output_tolerance_period: int = 10) -> None:
+                    nan_output_tolerance_period: int = 10,
+                    loss_type: str = 'mse',
+                    use_spot_detection: bool = False,
+                    device: str='cuda:0') -> None:
 
         self.checkpoint_dir = checkpoint_dir
         self._nan_output_tolerance_period =\
                         nan_output_tolerance_period
+        self._loss_type = loss_type
+        self._use_spot_detection = use_spot_detection
 
         with open(self.checkpoint_dir +\
                     '/model_parameters.json', 'r') as parameter_dict_file:
             self.parameter_dict = json.load(parameter_dict_file)
 
-        # self.device = torch.device('cpu')
-        self.device = torch.device('cuda:0')
+        self.device = torch.device(device)
 
         self.parameter_dict['timeenc'] = 0\
                     if self.parameter_dict['embed'] != 'timeF' else 1
@@ -41,8 +46,8 @@ class InformerRunner():
 
         path = self.checkpoint_dir
 
-        best_model_path = path + '/checkpoint_informer.pth'
-        self.model.load_state_dict(torch.load(best_model_path,
+        model_path = path + '/checkpoint_informer.pth'
+        self.model.load_state_dict(torch.load(model_path,
                                                 map_location=self.device))
 
         self._predictions_all = []
@@ -51,6 +56,12 @@ class InformerRunner():
 
         self._logger = logging.getLogger(__name__)
 
+        self._spot = None
+
+        if self._use_spot_detection:
+            spot_path = f'{path}/spot_informer_{self._loss_type}.pkl'
+            self._spot = pkl.load(open(spot_path, 'rb'))
+            
         self._data_x_last = None
 
         self._anomaly_start = None
@@ -145,12 +156,12 @@ class InformerRunner():
 
             self._predictions_all.append(l2_dist)
         
-            # Note: This is currently not using proper SPOT thresholding.
-            # The generated logs for transformer-based detection are not
-            # used for evaluation. Instead, we directly use the generated
-            # predictions.
+            if self._use_spot_detection:
+                l2_dist_detection = self._spot.run_online()
+            else:
+                l2_dist_detection = (l2_dist > 0.5)
 
-            if l2_dist > 0.5:
+            if l2_dist_detection:
 
                 if self._anomaly_duration == 0:
                     self._anomaly_start =\

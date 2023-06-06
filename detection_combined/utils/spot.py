@@ -605,6 +605,7 @@ class biSPOT:
         self.sigma = dict.copy(nonedict)
         self.Nt = {'up': 0, 'down': 0}
 
+
     def __str__(self):
         s = ''
         s += 'Streaming Peaks-Over-Threshold Object\n'
@@ -634,6 +635,7 @@ class biSPOT:
                 s += '\t lower extreme quantile : %s\n' % self.extreme_quantile['down']
                 s += 'Algorithm run : No\n'
         return s
+
 
     def fit(self, init_data, data):
         """
@@ -675,6 +677,7 @@ class biSPOT:
             print('The initial data cannot be set')
             return
 
+
     def add(self, data):
         """
         This function allows to append data to the already fitted data
@@ -696,6 +699,7 @@ class biSPOT:
 
         self.data = np.append(self.data, data)
         return
+
 
     def initialize(self, verbose=True):
         """
@@ -745,6 +749,7 @@ class biSPOT:
             print('\t' + '-' * ltab * 3)
         return
 
+
     def _rootsFinder(fun, jac, bounds, npoints, method):
         """
         Find possible roots of a scalar function
@@ -792,6 +797,7 @@ class biSPOT:
         np.round(X, decimals=5)
         return np.unique(X)
 
+
     def _log_likelihood(Y, gamma, sigma):
         """
         Compute the log-likelihood for the Generalized Pareto Distribution (μ=0)
@@ -816,6 +822,7 @@ class biSPOT:
         else:
             L = n * (1 + log(Y.mean()))
         return L
+
 
     def _grimshaw(self, side, epsilon=1e-8, n_points=10):
         """
@@ -896,6 +903,7 @@ class biSPOT:
 
         return gamma_best, sigma_best, ll_best
 
+
     def _quantile(self, side, gamma, sigma):
         """
         Compute the quantile at level 1-q for a given side
@@ -927,6 +935,7 @@ class biSPOT:
                 return self.init_threshold['down'] + sigma * log(r)
         else:
             print('error : the side is not right')
+
 
     def run(self, with_alarm=True):
         """
@@ -1015,6 +1024,7 @@ class biSPOT:
             thdown.append(self.extreme_quantile['down'])  # thresholds record
 
         return {'upper_thresholds': thup, 'lower_thresholds': thdown, 'alarms': alarm}
+
 
     def plot(self, run_results, with_alarm=True):
         """
@@ -1118,6 +1128,7 @@ class dSPOT:
         self.Nt = 0
         self.depth = depth
 
+
     def __str__(self):
         s = ''
         s += 'Streaming Peaks-Over-Threshold Object\n'
@@ -1146,6 +1157,7 @@ class dSPOT:
                 s += '\t extreme quantile : %s\n' % self.extreme_quantile
                 s += 'Algorithm run : No\n'
         return s
+
 
     def fit(self, init_data, data):
         """
@@ -1187,6 +1199,7 @@ class dSPOT:
             print('The initial data cannot be set')
             return
 
+
     def add(self, data):
         """
         This function allows to append data to the already fitted data
@@ -1208,6 +1221,7 @@ class dSPOT:
 
         self.data = np.append(self.data, data)
         return
+
 
     def initialize(self, verbose=True):
         """
@@ -1247,6 +1261,7 @@ class dSPOT:
             print('Extreme quantile (probability = %s): %s' % (self.proba, self.extreme_quantile))
 
         return
+
 
     def _rootsFinder(fun, jac, bounds, npoints, method):
         """
@@ -1295,6 +1310,7 @@ class dSPOT:
         np.round(X, decimals=5)
         return np.unique(X)
 
+
     def _log_likelihood(Y, gamma, sigma):
         """
         Compute the log-likelihood for the Generalized Pareto Distribution (μ=0)
@@ -1319,6 +1335,7 @@ class dSPOT:
         else:
             L = n * (1 + log(Y.mean()))
         return L
+
 
     def _grimshaw(self, epsilon=1e-8, n_points=10):
         """
@@ -1399,6 +1416,7 @@ class dSPOT:
 
         return gamma_best, sigma_best, ll_best
 
+
     def _quantile(self, gamma, sigma):
         """
         Compute the quantile at level 1-q
@@ -1419,6 +1437,7 @@ class dSPOT:
             return self.init_threshold + (sigma / gamma) * (pow(r, -gamma) - 1)
         else:
             return self.init_threshold - sigma * log(r)
+
 
     def run(self, with_alarm=True):
         """
@@ -1486,6 +1505,7 @@ class dSPOT:
             th.append(self.extreme_quantile + Mi)  # thresholds record
 
         return {'thresholds': th, 'alarms': alarm}
+
 
     def plot(self, run_results, with_alarm=True):
         """
@@ -1589,6 +1609,7 @@ class bidSPOT:
         self.sigma = dict.copy(nonedict)
         self.Nt = {'up': 0, 'down': 0}
 
+
     def __str__(self):
         s = ''
         s += 'Streaming Peaks-Over-Threshold Object\n'
@@ -1618,6 +1639,7 @@ class bidSPOT:
                 s += '\t lower extreme quantile : %s\n' % self.extreme_quantile['down']
                 s += 'Algorithm run : No\n'
         return s
+
 
     def fit(self, init_data, data):
         """
@@ -1659,6 +1681,7 @@ class bidSPOT:
             print('The initial data cannot be set')
             return
 
+
     def add(self, data):
         """
         This function allows to append data to the already fitted data
@@ -1680,6 +1703,7 @@ class bidSPOT:
 
         self.data = np.append(self.data, data)
         return
+
 
     def initialize(self, verbose=True):
         """
@@ -1731,6 +1755,7 @@ class bidSPOT:
             print('\t' + '-' * ltab * 3)
         return
 
+
     def _rootsFinder(fun, jac, bounds, npoints, method):
         """
         Find possible roots of a scalar function
@@ -1778,6 +1803,7 @@ class bidSPOT:
         np.round(X, decimals=5)
         return np.unique(X)
 
+
     def _log_likelihood(Y, gamma, sigma):
         """
         Compute the log-likelihood for the Generalized Pareto Distribution (μ=0)
@@ -1802,6 +1828,7 @@ class bidSPOT:
         else:
             L = n * (1 + log(Y.mean()))
         return L
+
 
     def _grimshaw(self, side, epsilon=1e-8, n_points=8):
         """
@@ -1882,6 +1909,7 @@ class bidSPOT:
 
         return gamma_best, sigma_best, ll_best
 
+
     def _quantile(self, side, gamma, sigma):
         """
         Compute the quantile at level 1-q for a given side
@@ -1913,6 +1941,7 @@ class bidSPOT:
                 return self.init_threshold['down'] + sigma * log(r)
         else:
             print('error : the side is not right')
+
 
     def run(self, with_alarm=True, plot=True):
         """
@@ -2009,6 +2038,7 @@ class bidSPOT:
             thdown.append(self.extreme_quantile['down'] + Mi)  # lower thresholds record
 
         return {'upper_thresholds': thup, 'lower_thresholds': thdown, 'alarms': alarm}
+
 
     def plot(self, run_results, with_alarm=True):
         """
