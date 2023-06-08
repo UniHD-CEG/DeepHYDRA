@@ -44,12 +44,12 @@ class OnlinePBeastDataLoader():
     def init(self) -> pd.DataFrame:
         data_channel_vars = _data_channel_vars_dict['DCMRate']
 
-        requested_period_end = dt.now() - self._delay
+        requested_period_end = dt.datetime.now() - self._delay
         requested_period_start = requested_period_end - self._window_length
 
-        self._logger.info(f'Requesting PBEAST data from '
+        self._logger.debug(f'Requesting PBEAST data from '
                             f'{requested_period_start} to {requested_period_end}')
-        self._logger.info(f'Request vars: {data_channel_vars[0]}, {data_channel_vars[1]}, '
+        self._logger.debug(f'Request vars: {data_channel_vars[0]}, {data_channel_vars[1]}, '
                                             f'{data_channel_vars[2]}, {data_channel_vars[3]}')
 
         try:
@@ -87,12 +87,12 @@ class OnlinePBeastDataLoader():
 
                 time_start = t.monotonic()
 
-                requested_period_end = dt.now() - self._delay
+                requested_period_end = dt.datetime.now() - self._delay
                 requested_period_start = requested_period_end - self._window_length
 
-                self._logger.info(f'Requesting PBEAST data from '
+                self._logger.debug(f'Requesting PBEAST data from '
                                     f'{requested_period_start} to {requested_period_end}')
-                self._logger.info(f'Request vars: {data_channel_vars[0]}, {data_channel_vars[1]}, '
+                self._logger.debug(f'Request vars: {data_channel_vars[0]}, {data_channel_vars[1]}, '
                                                     f'{data_channel_vars[2]}, {data_channel_vars[3]}')
 
                 try:
@@ -109,7 +109,7 @@ class OnlinePBeastDataLoader():
                     self._logger.error('Could not read DCM rate data from PBEAST')
                     break
 
-                self._logger.info('Successfully retrieved PBEAST data')
+                self._logger.debug('Successfully retrieved PBEAST data')
 
                 for count in range(1, len(dcm_rates_all_list)):
                     dcm_rates_all_list[count] = dcm_rates_all_list[count].alignto(dcm_rates_all_list[0])
