@@ -23,7 +23,7 @@ class OnlinePBeastDataLoader():
                     delay: dt.timedelta = dt.timedelta(seconds=30),
                     window_length: dt.timedelta = dt.timedelta(seconds=10),
                     pbeast_server: str =\
-                        'https://vm-atlas-tdaq-cc.cern.ch/tbed/pbeast/api/') -> None:
+                        'https://atlasop.cern.ch') -> None:
 
         self._data_channel = data_channel
         self._polling_interval = polling_interval
