@@ -2,6 +2,7 @@
 from collections.abc import Callable
 from collections import deque
 
+import numpy as np
 import pandas as pd
 
 class ReducedDataBuffer():
@@ -17,7 +18,17 @@ class ReducedDataBuffer():
 
 
     def push(self, data: pd.DataFrame):
-        self._buffer.append(data)
+        
+        data_size = len(data)
+
+        if data_size > 1:
+            for data_row in np.vsplit(data, data_size):
+                self._buffer.append(data_row)
+
+        elif data_size == 1:
+            self._buffer.append(data)
+        else:
+            return
 
         # print(self._buffer)
 

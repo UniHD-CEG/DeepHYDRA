@@ -43,6 +43,7 @@ if __name__ == '__main__':
     parser.add_argument('--output-dir', type=str, default='./results/')
     parser.add_argument('--log-level', type=str, default='info')
     parser.add_argument('--log-dir', type=str, default='./log/')
+    parser.add_argument('--anomaly-log-dump-interval', type=int, default=720)
 
     args = parser.parse_args()
 
@@ -51,7 +52,7 @@ if __name__ == '__main__':
     log_model_name = args.model.lower().replace('-', '_')
 
     log_filename = f'{args.log_dir}/strada_{log_model_name}'\
-                            f'benchmark_log_{time_now_string}.log'
+                            f'_log_{time_now_string}.log'
 
     logging_format = '[%(asctime)s] %(levelname)s: %(name)s: %(message)s'
 
@@ -65,15 +66,12 @@ if __name__ == '__main__':
                                     format=logging_format,
                                     datefmt='%Y-%m-%d %H:%M:%S')
     
-    data_loader = OnlinePBeastDataLoader('DCMRate')
+    data_loader = OnlinePBeastDataLoader('DCMRate',
+                                            polling_interval=dt.timedelta(seconds=5))
 
     data_loader.init()
 
     tpu_labels = data_loader.get_column_names()
-
-    print(tpu_labels)
-
-    exit()
 
     median_std_reducer = MedianStdReducer()
 
@@ -90,31 +88,58 @@ if __name__ == '__main__':
                                 args.dbscan_min_samples,
                                 args.dbscan_duration_threshold)
 
-    
-    if args.model == 'Informer-SMSE':
-        reduced_data_buffer = ReducedDataBuffer(size=65)
+    reduced_data_buffer_size = 65 if args.model == 'Informer-SMSE' else 17
 
-    else:
-        reduced_data_buffer = ReducedDataBuffer(size=17)
+    reduced_data_buffer = ReducedDataBuffer(size=reduced_data_buffer_size)
 
     reduced_data_buffer.set_buffer_filled_callback(informer_runner.detect)
 
     json_anomaly_registry =\
-            JSONAnomalyRegistry(args.output_dir,
-                                        args.data_dir)
+            JSONAnomalyRegistry(args.output_dir)
 
     dbscan_anomaly_detector.register_detection_callback(
                     json_anomaly_registry.clustering_detection)
     informer_runner.register_detection_callback(
                     json_anomaly_registry.transformer_detection)
+    
+    # Process a number of elements equal to the ReducedDataBuffer 
+    # size minus one so the transformer-based detection can 
+    # begin detection on the first polled sample
+    
+    buffer_prefill_chunk =\
+        data_loader.get_prefill_chunk(reduced_data_buffer_size - 1)
 
+    for element in np.vsplit(buffer_prefill_chunk,
+                                reduced_data_buffer_size - 1):
 
-    def processing_func():
-        for element in data_loader.poll():
+        timestamp = element.index[0]
 
-            timestamp = element.index
+        data = element.to_numpy().squeeze()
 
-            data = element.to_numpy()
+        try:
+            dbscan_anomaly_detector.process(timestamp, data)
+
+            output_slice =\
+                median_std_reducer.reduce_numpy(tpu_labels,
+                                                    timestamp,
+                                                    data)
+            reduced_data_buffer.push(output_slice)
+            
+        except NonCriticalPredictionException:
+            break
+
+    def processing_func(queue):
+
+        processed_element_count = 0
+
+        for element in queue:
+
+            if element is None:
+                break
+
+            timestamp = element.index[0]
+
+            data = element.to_numpy().squeeze()
 
             try:
                 dbscan_anomaly_detector.process(timestamp, data)
@@ -128,17 +153,50 @@ if __name__ == '__main__':
             except NonCriticalPredictionException:
                 break
 
-    try:
+            if (processed_element_count > 0) and\
+                        ~(processed_element_count %\
+                            args.anomaly_log_dump_interval):
+                time_now_string = dt.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
+                anomaly_log_name = f'anomaly_log_{time_now_string}'
+                json_anomaly_registry.dump(anomaly_log_name)
 
-        data_loader_proc = mp.Process(target=asyncio.run, args=(data_loader.poll(),))
-        processing_proc = mp.Process(target=processing_func)
+        time_now_string = dt.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
+        anomaly_log_name = f'anomaly_log_{time_now_string}'
+        json_anomaly_registry.dump(anomaly_log_name)
 
-        data_loader_proc.start()
+    async def async_main():
+
+        loop = asyncio.get_event_loop()
+        queue = mp.Queue()
+
+        data_loader_task = loop.run_in_executor(None, data_loader.poll)
+
+        processing_proc = mp.Process(target=processing_func, args=(queue,))
         processing_proc.start()
 
-        data_loader_proc.join()
-        processing_proc.join()
+        async for item in data_loader_task:
+            queue.put(item)
 
-    except KeyboardInterrupt:
-        data_loader_proc.terminate()
-        processing_proc.terminate()
+        processing_proc.join()
+        
+
+    asyncio.run(async_main())
+
+#     @asyncio.coroutine
+#     def data_loader_func():
+#         yield from data_loader.poll()
+# 
+#     try:
+# 
+#         data_loader_proc = mp.Process(target=asyncio.run, args=(data_loader_func(),))
+#         processing_proc = mp.Process(target=processing_func)
+# 
+#         data_loader_proc.start()
+#         processing_proc.start()
+# 
+#         data_loader_proc.join()
+#         processing_proc.join()
+# 
+#     except KeyboardInterrupt:
+#         data_loader_proc.terminate()
+#         processing_proc.terminate()

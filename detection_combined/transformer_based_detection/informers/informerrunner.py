@@ -12,6 +12,8 @@ import torch
 
 from .models.model import Informer
 from .utils.datapreprocessor import DataPreprocessor
+import utils.spotunpickler as supkl
+from utils.spot import SPOT
 from utils.exceptions import NonCriticalPredictionException
 from utils.anomalyclassification import AnomalyType
 from utils.tqdmloggingdecorator import tqdmloggingdecorator
@@ -60,7 +62,7 @@ class InformerRunner():
 
         if self._use_spot_detection:
             spot_path = f'{path}/spot_informer_{self._loss_type}.pkl'
-            self._spot = pkl.load(open(spot_path, 'rb'))
+            self._spot = supkl.load(open(spot_path, 'rb'))
             
         self._data_x_last = None
 

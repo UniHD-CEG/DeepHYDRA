@@ -36,13 +36,14 @@ class OnlinePBeastDataLoader():
         self._beauty_instance = Beauty(server=self._pbeast_server)
 
         self._column_names = None
+        self._timestamp_last = None
         self._initialized = False
 
         self._logger = logging.getLogger(__name__)
 
 
     def init(self) -> pd.DataFrame:
-        data_channel_vars = _data_channel_vars_dict['DCMRate']
+        data_channel_vars = _data_channel_vars_dict[self._data_channel]
 
         requested_period_end = dt.datetime.now() - self._delay
         requested_period_start = requested_period_end - self._window_length
@@ -63,7 +64,7 @@ class OnlinePBeastDataLoader():
                                                                     all_publications=True)
 
         except RuntimeError as runtime_error:
-            self._logger.error('Could not read DCM rate data from PBEAST')
+            self._logger.error(f'Could not read {self._data_channel} data from PBEAST')
             raise
 
         self._logger.info('Successfully retrieved PBEAST data')
@@ -77,11 +78,52 @@ class OnlinePBeastDataLoader():
         self._initialized = True
 
 
+    def get_prefill_chunk(self,
+                            size: int) -> pd.DataFrame:
+
+        data_channel_vars = _data_channel_vars_dict[self._data_channel]
+
+        requested_period_end = dt.datetime.now() - self._delay - self._window_length
+        requested_period_start = requested_period_end - size*self._polling_interval
+
+        self._logger.debug(f'Requesting PBEAST data from '
+                            f'{requested_period_start} to {requested_period_end}')
+        self._logger.debug(f'Request vars: {data_channel_vars[0]}, {data_channel_vars[1]}, '
+                                            f'{data_channel_vars[2]}, {data_channel_vars[3]}')
+
+        try:
+            dcm_rates_all_list = self._beauty_instance.timeseries(requested_period_start,
+                                                                    requested_period_end,
+                                                                    data_channel_vars[0],
+                                                                    data_channel_vars[1],
+                                                                    data_channel_vars[2],
+                                                                    data_channel_vars[3],
+                                                                    regex=True,
+                                                                    all_publications=True)
+
+        except RuntimeError as runtime_error:
+            self._logger.error(f'Could not read {self._data_channel} data from PBEAST')
+            raise
+
+        self._logger.debug('Successfully retrieved PBEAST data')
+
+        for count in range(1, len(dcm_rates_all_list)):
+            dcm_rates_all_list[count] = dcm_rates_all_list[count].alignto(dcm_rates_all_list[0])
+
+        dcm_rates_all_pd = pd.concat(dcm_rates_all_list, axis=1)
+
+        dcm_rates_all_pd = dcm_rates_all_pd.fillna(nan_fill_value)
+
+        dcm_rates_all_pd = dcm_rates_all_pd.iloc[-size:, :]
+
+        return dcm_rates_all_pd
+    
+
     async def poll(self) -> pd.DataFrame:
 
         try:
 
-            data_channel_vars = _data_channel_vars_dict['DCMRate']
+            data_channel_vars = _data_channel_vars_dict[self._data_channel]
 
             while True:
 
@@ -106,7 +148,7 @@ class OnlinePBeastDataLoader():
                                                                             all_publications=True)
 
                 except RuntimeError as runtime_error:
-                    self._logger.error('Could not read DCM rate data from PBEAST')
+                    self._logger.error(f'Could not read {self._data_channel} data from PBEAST')
                     break
 
                 self._logger.debug('Successfully retrieved PBEAST data')
@@ -116,7 +158,9 @@ class OnlinePBeastDataLoader():
 
                 dcm_rates_all_pd = pd.concat(dcm_rates_all_list, axis=1)
 
-                yield dcm_rates_all_pd.fillna(nan_fill_value)
+                dcm_rates_all_pd = dcm_rates_all_pd.fillna(nan_fill_value)
+
+                yield dcm_rates_all_pd
 
                 request_duration = t.monotonic() - time_start
 
