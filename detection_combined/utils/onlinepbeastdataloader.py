@@ -9,7 +9,9 @@ import logging
 
 import numpy as np
 import pandas as pd
+from rich import print
 from beauty import Beauty
+
 
 from .variables import nan_fill_value
 
@@ -125,6 +127,15 @@ class OnlinePBeastDataLoader():
         # for count in range(1, len(dcm_rates_all_list)):
         #     dcm_rates_all_list[count] = dcm_rates_all_list[count].alignto(dcm_rates_all_list[0])
 
+        # timestamps = [element.index[-1].to_numpy().astype(np.int64) for element in dcm_rates_all_list]
+
+        # mean_val = np.datetime64(int(np.mean(timestamps)), 'ns')
+        # min_val = np.datetime64(int(np.min(timestamps)), 'ns')
+        # max_val = np.datetime64(int(np.max(timestamps)), 'ns')
+        # std = np.std(timestamps)
+
+        # print(f'{mean_val}\t{min_val}\t{max_val}\t{std:.3f}')
+
         for count in range(1, len(dcm_rates_all_list)):
             dcm_rates_all_list[count].index = dcm_rates_all_list[0].index
 
@@ -139,11 +150,13 @@ class OnlinePBeastDataLoader():
         return dcm_rates_all_pd
     
 
-    def poll(self, queue: mp.Queue) -> pd.DataFrame:
+    def poll(self,
+                queue: mp.Queue,
+                close_event: mp.Event) -> pd.DataFrame:
 
         data_channel_vars = _data_channel_vars_dict[self._data_channel]
 
-        while True:
+        while not close_event.is_set():
 
             time_start = t.monotonic()
 
@@ -186,6 +199,9 @@ class OnlinePBeastDataLoader():
             dcm_rates_all_pd = dcm_rates_all_pd.iloc[[target_idx], :]
 
             timestamp_delta = dcm_rates_all_pd.index[0] - self._timestamp_last
+
+            print(f'Current timestamp: {dcm_rates_all_pd.index[0]}')
+            print(f'Last timestamp: {self._timestamp_last}')
 
             self._logger.debug(f'Current timestamp delta: {timestamp_delta}')
 

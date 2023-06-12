@@ -5,16 +5,13 @@ import sys
 import time as t
 import datetime as dt
 import multiprocessing as mp
-from concurrent.futures import ProcessPoolExecutor
-import asyncio
-import json
 import logging
 
 import numpy as np
 import pandas as pd
-from tqdm import tqdm
-from tqdm.contrib import tzip
-from tqdm.contrib.logging import logging_redirect_tqdm
+from rich import print
+from rich.console import Console
+from rich.logging import RichHandler
 
 sys.path.append('../../')
 
@@ -49,8 +46,8 @@ def fix_for_2023_deployment(data: pd.DataFrame) -> pd.DataFrame:
 
     data = data.loc[:, data.columns.isin(known_channels_2022)]
 
-    data.insert(median_loc, 'm_63', data['m_64'].to_numpy())
-    data.insert(std_loc, 'std_63', data['std_64'].to_numpy())
+    data.insert(median_loc, 'm_63', data['m_62'].to_numpy())
+    data.insert(std_loc, 'std_63', data['std_62'].to_numpy())
 
     return data
 
@@ -97,7 +94,7 @@ if __name__ == '__main__':
     
     data_loader = OnlinePBeastDataLoader('DCMRate',
                                             polling_interval=dt.timedelta(seconds=5),
-                                            delay=dt.timedelta(hours=10),
+                                            delay=dt.timedelta(seconds=30),
                                             window_length=dt.timedelta(seconds=5))
 
     data_loader.init()
@@ -172,48 +169,63 @@ if __name__ == '__main__':
 
         processed_element_count = 0
 
-        while True:
+        with Console().status('Running anomaly detection...', spinner='dots12'):
+            while True:
 
-            element = queue.get()
+                element = queue.get()
 
-            if element is None:
-                break
+                if element is None:
+                    break
 
-            timestamp = element.index[0]
+                timestamp = element.index[0]
 
-            data = element.to_numpy().squeeze()
+                data = element.to_numpy().squeeze()
 
-            try:
-                dbscan_anomaly_detector.process(timestamp, data)
+                try:
+                    dbscan_anomaly_detector.process(timestamp, data)
 
-                output_slice =\
-                    median_std_reducer.reduce_numpy(tpu_labels,
-                                                        timestamp,
-                                                        data)
-                
-                output_slice = fix_for_2023_deployment(output_slice)
-                
-                reduced_data_buffer.push(output_slice)
-                
-            except NonCriticalPredictionException:
-                break
+                    output_slice =\
+                        median_std_reducer.reduce_numpy(tpu_labels,
+                                                            timestamp,
+                                                            data)
+                    
+                    output_slice = fix_for_2023_deployment(output_slice)
+                    
+                    reduced_data_buffer.push(output_slice)
+                    
+                except NonCriticalPredictionException:
+                    break
 
-            if (processed_element_count > 0) and\
-                        ~(processed_element_count %\
-                            args.anomaly_log_dump_interval):
-                time_now_string = dt.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
-                anomaly_log_name = f'anomaly_log_{time_now_string}'
-                json_anomaly_registry.dump(anomaly_log_name)
+                if (processed_element_count > 0) and\
+                            ~(processed_element_count %\
+                                args.anomaly_log_dump_interval):
+                    time_now_string = dt.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
+                    anomaly_log_name = f'anomaly_log_{time_now_string}'
+                    json_anomaly_registry.dump(anomaly_log_name)
 
-        time_now_string = dt.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
-        anomaly_log_name = f'anomaly_log_{time_now_string}'
-        json_anomaly_registry.dump(anomaly_log_name)
+            time_now_string = dt.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
+            anomaly_log_name = f'anomaly_log_{time_now_string}'
+            json_anomaly_registry.dump(anomaly_log_name)
 
     queue = mp.Queue()
 
-    data_loader_proc = mp.Process(target=data_loader.poll, args=(queue,))
+    close_event = mp.Event()
+
+    data_loader_proc = mp.Process(target=data_loader.poll,
+                                    args=(queue, close_event))
     data_loader_proc.start()
 
-    processing_func(queue)
+    try:
+        processing_func(queue)
+    except KeyboardInterrupt:
+        logger.info('Received keyboard interrupt')
+        close_event.set()
+        data_loader_proc.join()
+        raise
 
-    data_loader_proc.join()
+    except Exception as e:
+        logger.error(f'Caught exception: {e}')
+        close_event.set()
+        raise
+    else:
+        data_loader_proc.join()
