@@ -2,12 +2,13 @@
 
 import argparse
 import sys
+import time as t
 import datetime as dt
 import multiprocessing as mp
+from concurrent.futures import ProcessPoolExecutor
 import asyncio
 import json
 import logging
-
 
 import numpy as np
 import pandas as pd
@@ -24,6 +25,34 @@ from utils.onlinepbeastdataloader import OnlinePBeastDataLoader
 from utils.anomalyregistry import JSONAnomalyRegistry
 from utils.reduceddatabuffer import ReducedDataBuffer
 from utils.exceptions import NonCriticalPredictionException
+
+
+known_channels_2022 = ['m_1', 'm_2', 'm_3', 'm_4', 'm_5', 'm_6', 'm_7', 'm_8',
+                        'm_9', 'm_10', 'm_11', 'm_12', 'm_13', 'm_44', 'm_45', 'm_46',
+                        'm_47', 'm_48', 'm_49', 'm_50', 'm_51', 'm_52', 'm_53', 'm_54',
+                        'm_55', 'm_56', 'm_57', 'm_58', 'm_59', 'm_60', 'm_61', 'm_62',
+                        'm_63', 'm_64', 'm_65', 'm_66', 'm_67', 'm_68', 'm_69', 'm_70',
+                        'm_71', 'm_72', 'm_73', 'm_74', 'm_75', 'm_76', 'm_77', 'm_79',
+                        'm_80', 'm_81', 'm_82', 'm_83',
+                        'std_1', 'std_2', 'std_3', 'std_4', 'std_5', 'std_6', 'std_7', 'std_8',
+                        'std_9', 'std_10', 'std_11', 'std_12', 'std_13', 'std_44', 'std_45', 'std_46',
+                        'std_47', 'std_48', 'std_49', 'std_50', 'std_51', 'std_52', 'std_53', 'std_54',
+                        'std_55', 'std_56', 'std_57', 'std_58', 'std_59', 'std_60', 'std_61', 'std_62',
+                        'std_63', 'std_64', 'std_65', 'std_66', 'std_67', 'std_68', 'std_69', 'std_70',
+                        'std_71', 'std_72', 'std_73', 'std_74', 'std_75', 'std_76', 'std_77', 'std_79',
+                        'std_80', 'std_81', 'std_82', 'std_83']
+
+
+def fix_for_2023_deployment(data: pd.DataFrame) -> pd.DataFrame:
+    median_loc = int(np.flatnonzero(np.array(known_channels_2022) == 'm_63')[0])
+    std_loc = int(np.flatnonzero(np.array(known_channels_2022) == 'std_63')[0])
+
+    data = data.loc[:, data.columns.isin(known_channels_2022)]
+
+    data.insert(median_loc, 'm_63', data['m_64'].to_numpy())
+    data.insert(std_loc, 'std_63', data['std_64'].to_numpy())
+
+    return data
 
 
 if __name__ == '__main__':
@@ -67,7 +96,9 @@ if __name__ == '__main__':
                                     datefmt='%Y-%m-%d %H:%M:%S')
     
     data_loader = OnlinePBeastDataLoader('DCMRate',
-                                            polling_interval=dt.timedelta(seconds=5))
+                                            polling_interval=dt.timedelta(seconds=5),
+                                            delay=dt.timedelta(hours=10),
+                                            window_length=dt.timedelta(seconds=5))
 
     data_loader.init()
 
@@ -106,6 +137,8 @@ if __name__ == '__main__':
     # size minus one so the transformer-based detection can 
     # begin detection on the first polled sample
     
+    time_start = t.monotonic()
+
     buffer_prefill_chunk =\
         data_loader.get_prefill_chunk(reduced_data_buffer_size - 1)
 
@@ -123,16 +156,25 @@ if __name__ == '__main__':
                 median_std_reducer.reduce_numpy(tpu_labels,
                                                     timestamp,
                                                     data)
+
+            output_slice = fix_for_2023_deployment(output_slice)
+
             reduced_data_buffer.push(output_slice)
             
         except NonCriticalPredictionException:
             break
 
+    prefill_duration = t.monotonic() - time_start
+
+    logger.info(f'Buffer prefill took {prefill_duration:.3f} s')
+
     def processing_func(queue):
 
         processed_element_count = 0
 
-        for element in queue:
+        while True:
+
+            element = queue.get()
 
             if element is None:
                 break
@@ -148,6 +190,9 @@ if __name__ == '__main__':
                     median_std_reducer.reduce_numpy(tpu_labels,
                                                         timestamp,
                                                         data)
+                
+                output_slice = fix_for_2023_deployment(output_slice)
+                
                 reduced_data_buffer.push(output_slice)
                 
             except NonCriticalPredictionException:
@@ -164,39 +209,11 @@ if __name__ == '__main__':
         anomaly_log_name = f'anomaly_log_{time_now_string}'
         json_anomaly_registry.dump(anomaly_log_name)
 
-    async def async_main():
+    queue = mp.Queue()
 
-        loop = asyncio.get_event_loop()
-        queue = mp.Queue()
+    data_loader_proc = mp.Process(target=data_loader.poll, args=(queue,))
+    data_loader_proc.start()
 
-        data_loader_task = loop.run_in_executor(None, data_loader.poll)
+    processing_func(queue)
 
-        processing_proc = mp.Process(target=processing_func, args=(queue,))
-        processing_proc.start()
-
-        async for item in data_loader_task:
-            queue.put(item)
-
-        processing_proc.join()
-        
-
-    asyncio.run(async_main())
-
-#     @asyncio.coroutine
-#     def data_loader_func():
-#         yield from data_loader.poll()
-# 
-#     try:
-# 
-#         data_loader_proc = mp.Process(target=asyncio.run, args=(data_loader_func(),))
-#         processing_proc = mp.Process(target=processing_func)
-# 
-#         data_loader_proc.start()
-#         processing_proc.start()
-# 
-#         data_loader_proc.join()
-#         processing_proc.join()
-# 
-#     except KeyboardInterrupt:
-#         data_loader_proc.terminate()
-#         processing_proc.terminate()
+    data_loader_proc.join()

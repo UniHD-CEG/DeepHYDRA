@@ -3,6 +3,7 @@
 import os
 import time as t
 import datetime as dt
+import multiprocessing as mp
 import asyncio
 import logging
 
@@ -40,6 +41,20 @@ class OnlinePBeastDataLoader():
         self._initialized = False
 
         self._logger = logging.getLogger(__name__)
+
+
+    def get_idx_closest_consecutive_timestamp(self,
+                                                timestamps: pd.DatetimeIndex):
+        
+        cand_timestamps = [timestamp for timestamp in timestamps\
+                                if timestamp > self._timestamp_last]
+        
+        if len(cand_timestamps) == 0:
+            error_string = 'No consecutive timestamp found in input'
+            self._logger.error(error_string)
+            raise RuntimeError(error_string)
+
+        return np.argmin(cand_timestamps)
 
 
     def init(self) -> pd.DataFrame:
@@ -107,8 +122,11 @@ class OnlinePBeastDataLoader():
 
         self._logger.debug('Successfully retrieved PBEAST data')
 
+        # for count in range(1, len(dcm_rates_all_list)):
+        #     dcm_rates_all_list[count] = dcm_rates_all_list[count].alignto(dcm_rates_all_list[0])
+
         for count in range(1, len(dcm_rates_all_list)):
-            dcm_rates_all_list[count] = dcm_rates_all_list[count].alignto(dcm_rates_all_list[0])
+            dcm_rates_all_list[count].index = dcm_rates_all_list[0].index
 
         dcm_rates_all_pd = pd.concat(dcm_rates_all_list, axis=1)
 
@@ -116,73 +134,83 @@ class OnlinePBeastDataLoader():
 
         dcm_rates_all_pd = dcm_rates_all_pd.iloc[-size:, :]
 
+        self._timestamp_last = dcm_rates_all_pd.index[-1]
+
         return dcm_rates_all_pd
     
 
-    async def poll(self) -> pd.DataFrame:
+    def poll(self, queue: mp.Queue) -> pd.DataFrame:
 
-        try:
+        data_channel_vars = _data_channel_vars_dict[self._data_channel]
 
-            data_channel_vars = _data_channel_vars_dict[self._data_channel]
+        while True:
 
-            while True:
+            time_start = t.monotonic()
 
-                time_start = t.monotonic()
+            requested_period_end = dt.datetime.now() - self._delay
+            requested_period_start = requested_period_end - self._window_length
 
-                requested_period_end = dt.datetime.now() - self._delay
-                requested_period_start = requested_period_end - self._window_length
+            self._logger.debug(f'Requesting PBEAST data from '
+                                f'{requested_period_start} to {requested_period_end}')
+            self._logger.debug(f'Request vars: {data_channel_vars[0]}, {data_channel_vars[1]}, '
+                                                f'{data_channel_vars[2]}, {data_channel_vars[3]}')
 
-                self._logger.debug(f'Requesting PBEAST data from '
-                                    f'{requested_period_start} to {requested_period_end}')
-                self._logger.debug(f'Request vars: {data_channel_vars[0]}, {data_channel_vars[1]}, '
-                                                    f'{data_channel_vars[2]}, {data_channel_vars[3]}')
+            try:
+                dcm_rates_all_list = self._beauty_instance.timeseries(requested_period_start,
+                                                                        requested_period_end,
+                                                                        data_channel_vars[0],
+                                                                        data_channel_vars[1],
+                                                                        data_channel_vars[2],
+                                                                        data_channel_vars[3],
+                                                                        regex=True,
+                                                                        all_publications=True)
 
-                try:
-                    dcm_rates_all_list = self._beauty_instance.timeseries(requested_period_start,
-                                                                            requested_period_end,
-                                                                            data_channel_vars[0],
-                                                                            data_channel_vars[1],
-                                                                            data_channel_vars[2],
-                                                                            data_channel_vars[3],
-                                                                            regex=True,
-                                                                            all_publications=True)
+            except RuntimeError as runtime_error:
+                self._logger.error(f'Could not read {self._data_channel} data from PBEAST')
+                break
 
-                except RuntimeError as runtime_error:
-                    self._logger.error(f'Could not read {self._data_channel} data from PBEAST')
-                    break
+            self._logger.debug('Successfully retrieved PBEAST data')
 
-                self._logger.debug('Successfully retrieved PBEAST data')
+            # for count in range(1, len(dcm_rates_all_list)):
+            #     dcm_rates_all_list[count] = dcm_rates_all_list[count].alignto(dcm_rates_all_list[0])
 
-                for count in range(1, len(dcm_rates_all_list)):
-                    dcm_rates_all_list[count] = dcm_rates_all_list[count].alignto(dcm_rates_all_list[0])
+            for count in range(1, len(dcm_rates_all_list)):
+                dcm_rates_all_list[count].index = dcm_rates_all_list[0].index
 
-                dcm_rates_all_pd = pd.concat(dcm_rates_all_list, axis=1)
+            dcm_rates_all_pd = pd.concat(dcm_rates_all_list, axis=1)
 
-                dcm_rates_all_pd = dcm_rates_all_pd.fillna(nan_fill_value)
+            dcm_rates_all_pd = dcm_rates_all_pd.fillna(nan_fill_value)
 
-                yield dcm_rates_all_pd
+            target_idx = self.get_idx_closest_consecutive_timestamp(dcm_rates_all_pd.index)
 
-                request_duration = t.monotonic() - time_start
+            dcm_rates_all_pd = dcm_rates_all_pd.iloc[[target_idx], :]
 
-                if request_duration >= self._polling_interval.total_seconds():
+            timestamp_delta = dcm_rates_all_pd.index[0] - self._timestamp_last
 
-                    error_string = 'Request processing time '\
-                                        'exceeded polling interval.'\
-                                        f'Request processing time: {request_duration} s\t'\
-                                        'Polling interval: '\
-                                        f'{self._polling_interval.total_seconds()} s'
+            self._logger.debug(f'Current timestamp delta: {timestamp_delta}')
 
-                    self._logger.error(error_string)
-                    raise RuntimeError(error_string)
+            self._timestamp_last = dcm_rates_all_pd.index[0]
+            
+            queue.put(dcm_rates_all_pd)
 
-                delay_period = self._polling_interval.total_seconds() - request_duration
+            request_duration = t.monotonic() - time_start
 
-                await asyncio.sleep(delay_period)
+            if request_duration >= self._polling_interval.total_seconds():
 
-            yield None
+                error_string = 'Request processing time '\
+                                    'exceeded polling interval. '\
+                                    f'Request processing time: {request_duration:.3f} s\t'\
+                                    'Polling interval: '\
+                                    f'{self._polling_interval.total_seconds()} s'
 
-        except asyncio.CancelledError:
-            self._logger.info('Received stop request. Exiting')
+                self._logger.error(error_string)
+                raise RuntimeError(error_string)
+
+            delay_period = self._polling_interval.total_seconds() - request_duration
+
+            t.sleep(delay_period)
+
+        queue.put(None)
 
 
     def get_column_names(self) -> list:

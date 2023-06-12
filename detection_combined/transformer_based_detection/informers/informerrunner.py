@@ -159,7 +159,7 @@ class InformerRunner():
             self._predictions_all.append(l2_dist)
         
             if self._use_spot_detection:
-                l2_dist_detection = self._spot.run_online()
+                l2_dist_detection = self._spot.run_online([l2_dist])
             else:
                 l2_dist_detection = (l2_dist > 0.5)
 
