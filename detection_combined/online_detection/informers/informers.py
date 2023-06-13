@@ -9,8 +9,7 @@ import logging
 
 import numpy as np
 import pandas as pd
-from rich import print
-from rich.console import Console
+
 from rich.logging import RichHandler
 
 sys.path.append('../../')
@@ -22,6 +21,7 @@ from utils.onlinepbeastdataloader import OnlinePBeastDataLoader
 from utils.anomalyregistry import JSONAnomalyRegistry
 from utils.reduceddatabuffer import ReducedDataBuffer
 from utils.exceptions import NonCriticalPredictionException
+from utils.console import console
 
 
 known_channels_2022 = ['m_1', 'm_2', 'm_3', 'm_4', 'm_5', 'm_6', 'm_7', 'm_8',
@@ -75,26 +75,50 @@ if __name__ == '__main__':
 
     time_now_string = dt.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
 
+    # Configure logger
+
     log_model_name = args.model.lower().replace('-', '_')
 
     log_filename = f'{args.log_dir}/strada_{log_model_name}'\
-                            f'_log_{time_now_string}.log'
+                                    f'_log_{time_now_string}.log'
 
-    logging_format = '[%(asctime)s] %(levelname)s: %(name)s: %(message)s'
+    logger = logging.getLogger()
 
-    logger = logging.getLogger(__name__)
+    log_level = args.log_level.upper()
 
-    logging.getLogger().addFilter(lambda record: 'running accelerated version on CPU' not in record.msg)
+    logger.setLevel(log_level)
+    logger.addFilter(lambda record: 'running accelerated version on CPU' not in record.msg)
 
-    logging.basicConfig(filename=log_filename,
-                                    filemode='w',
-                                    level=args.log_level.upper(),
-                                    format=logging_format,
-                                    datefmt='%Y-%m-%d %H:%M:%S')
+    file_logging_format = '[%(asctime)s] %(levelname)s: %(name)s: %(message)s'
+
+    file_logging_formatter = logging.Formatter(fmt=file_logging_format,
+                                                datefmt='%Y-%m-%d %H:%M:%S')
+
+    file_logging_handler = logging.FileHandler(log_filename, mode='w')
+    file_logging_handler.setLevel(log_level)
+    file_logging_handler.setFormatter(file_logging_formatter)
+
+    console_logging_format = '%(name)s: %(message)s'
+
+    console_logging_formatter = logging.Formatter(fmt=console_logging_format,
+                                                    datefmt='%Y-%m-%d %H:%M:%S')
+
+    console_logging_handler = RichHandler(console=console)
+    console_logging_handler.setLevel(log_level)
+    console_logging_handler.setFormatter(console_logging_formatter)
+
+    logger.addHandler(file_logging_handler)
+    logger.addHandler(console_logging_handler)
+
+    # logging.basicConfig(filename=log_filename,
+    #                                 filemode='w',
+    #                                 level=args.log_level.upper(),
+    #                                 format=logging_format,
+    #                                 datefmt='%Y-%m-%d %H:%M:%S')
     
     data_loader = OnlinePBeastDataLoader('DCMRate',
                                             polling_interval=dt.timedelta(seconds=5),
-                                            delay=dt.timedelta(seconds=30),
+                                            delay=dt.timedelta(hours=12),
                                             window_length=dt.timedelta(seconds=5))
 
     data_loader.init()
@@ -169,7 +193,7 @@ if __name__ == '__main__':
 
         processed_element_count = 0
 
-        with Console().status('Running anomaly detection...', spinner='dots12'):
+        with console.status('Running anomaly detection...', spinner='dots12'):
             while True:
 
                 element = queue.get()

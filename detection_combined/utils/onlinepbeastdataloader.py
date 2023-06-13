@@ -4,7 +4,6 @@ import os
 import time as t
 import datetime as dt
 import multiprocessing as mp
-import asyncio
 import logging
 
 import numpy as np
@@ -14,6 +13,7 @@ from beauty import Beauty
 
 
 from .variables import nan_fill_value
+from .console import console
 
 _data_channel_vars_dict = {'DCMRate': ['ATLAS', 'DCM', 'L1Rate', 'DF_IS:.*.DCM.*.info']}
 
@@ -200,9 +200,8 @@ class OnlinePBeastDataLoader():
 
             timestamp_delta = dcm_rates_all_pd.index[0] - self._timestamp_last
 
-            print(f'Current timestamp: {dcm_rates_all_pd.index[0]}')
-            print(f'Last timestamp: {self._timestamp_last}')
-
+            self._logger.debug(f'Current timestamp: {dcm_rates_all_pd.index[0]}')
+            self._logger.debug(f'Last timestamp: {self._timestamp_last}')
             self._logger.debug(f'Current timestamp delta: {timestamp_delta}')
 
             self._timestamp_last = dcm_rates_all_pd.index[0]
