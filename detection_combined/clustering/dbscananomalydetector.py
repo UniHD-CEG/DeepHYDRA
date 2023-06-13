@@ -123,7 +123,7 @@ class DBScanAnomalyDetector(BaseClusteringDetector):
                                     f'at element {self.datapoints_processed}')
 
             if anomaly_duration >= self.duration_threshold:
-                self.detection_callback(machine_label,
+                self.detection_callback(int(machine_label),
                                             AnomalyType.ClusteringGeneral,
                                             anomaly_start,
                                             anomaly_duration)
@@ -136,7 +136,7 @@ class DBScanAnomalyDetector(BaseClusteringDetector):
                                     f'at element {self.datapoints_processed}')
 
             if anomaly_duration >= self.duration_threshold:
-                self.detection_callback(machine_label,
+                self.detection_callback(int(machine_label),
                                             AnomalyType.ClusteringDropToZero,
                                             anomaly_start,
                                             anomaly_duration)

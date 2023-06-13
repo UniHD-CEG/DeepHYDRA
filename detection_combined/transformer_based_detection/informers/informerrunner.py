@@ -29,37 +29,63 @@ class InformerRunner():
         self._loss_type = loss_type
         self._use_spot_detection = use_spot_detection
 
-        with open(self.checkpoint_dir +\
-                    '/model_parameters.json', 'r') as parameter_dict_file:
+        self._logger = logging.getLogger(__name__)
+
+        param_file_string = self.checkpoint_dir +\
+                                '/model_parameters.json'
+        
+        self._logger.debug(f'Reading informer hyperparameters from {param_file_string}')
+
+        with open(param_file_string, 'r') as parameter_dict_file:
             self.parameter_dict = json.load(parameter_dict_file)
+
+            self._logger.debug(f'Successfully read informer parameters')
+
+            parameter_string = ''
+
+            for key, val in self.parameter_dict.items():
+                parameter_string += f'{key}: {val}, '
+
+            self._logger.info(f'Informer model hyperparameters: {parameter_string}')
 
         self.device = torch.device(device)
 
         self.parameter_dict['timeenc'] = 0\
                     if self.parameter_dict['embed'] != 'timeF' else 1
         
+        self._logger.debug(f'Loading DataPreprocessor instance from {self.checkpoint_dir}')
+        
         self.data_preprocessor = DataPreprocessor(self.parameter_dict,
                                                     self.checkpoint_dir)
         
+        self._logger.debug('Successfully loaded DataPreprocessor instance')
+        self._logger.debug(f'Instantiating model and copying to device {self.device}')
+
         self.model = self.load_model().to(self.device)
 
-        path = self.checkpoint_dir
+        self._logger.debug(f'Successfully instantiated model and copied model to device')
 
+        path = self.checkpoint_dir
         model_path = path + '/checkpoint_informer.pth'
+
+        self._logger.debug(f'Loading Informer model state_dict from {model_path}')
+
         self.model.load_state_dict(torch.load(model_path,
                                                 map_location=self.device))
+        
+        self._logger.debug('Successfully loaded Informer state_dict')
 
         self._predictions_all = []
 
         self.model.eval()
 
-        self._logger = logging.getLogger(__name__)
-
         self._spot = None
 
         if self._use_spot_detection:
             spot_path = f'{path}/spot_informer_{self._loss_type}.pkl'
+            self._logger.debug(f'Loading SPOT instance from file {spot_path}')
             self._spot = supkl.load(open(spot_path, 'rb'))
+            self._logger.debug('Successfully loaded SPOT instance')
             
         self._data_x_last = None
 
@@ -168,13 +194,23 @@ class InformerRunner():
 
                     self._logger.info('Transformer-based detection '
                                         'encountered anomaly at timestamp '
-                                        f'{self._anomaly_start} '
-                                        'using L2 dist')
+                                        f'{self._anomaly_start}')
+
+                self.detection_callback(0, AnomalyType.TransformerBased,
+                                                        self._anomaly_start,
+                                                        self._anomaly_duration)
 
                 self._anomaly_duration += 1
 
             else:
+
+                if self._anomaly_duration != 0:
+                    anomaly_end = timestamp.strftime('%Y-%m-%d %H:%M:%S')
+                    self._logger.info('Transformer-based detection '
+                                        f'anomaly ended at {anomaly_end}')
+
                 self._anomaly_duration = 0
+
 
         self._data_x_last = data_x.detach().cpu().numpy()
 

@@ -21,7 +21,7 @@ from utils.onlinepbeastdataloader import OnlinePBeastDataLoader
 from utils.anomalyregistry import JSONAnomalyRegistry
 from utils.reduceddatabuffer import ReducedDataBuffer
 from utils.exceptions import NonCriticalPredictionException
-from utils.console import console
+from utils.console import ConsoleSingleton
 
 
 known_channels_2022 = ['m_1', 'm_2', 'm_3', 'm_4', 'm_5', 'm_6', 'm_7', 'm_8',
@@ -73,6 +73,8 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
+    console = ConsoleSingleton().get_console()
+
     time_now_string = dt.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
 
     # Configure logger
@@ -121,7 +123,8 @@ if __name__ == '__main__':
                                             delay=dt.timedelta(hours=12),
                                             window_length=dt.timedelta(seconds=5))
 
-    data_loader.init()
+    with console.status('Initializing dataloader', spinner='flip'):
+        data_loader.init()
 
     tpu_labels = data_loader.get_column_names()
 
@@ -129,10 +132,11 @@ if __name__ == '__main__':
 
     loss_type = args.model.split('-')[-1].lower()
     
-    informer_runner = InformerRunner(args.checkpoint_dir,
-                                        loss_type=loss_type,
-                                        use_spot_detection=args.spot_based_detection,
-                                        device=args.device)
+    with console.status('Loading model', spinner='dots12'):
+        informer_runner = InformerRunner(args.checkpoint_dir,
+                                            loss_type=loss_type,
+                                            use_spot_detection=args.spot_based_detection,
+                                            device=args.device)
 
     dbscan_anomaly_detector =\
         DBScanAnomalyDetector(tpu_labels,
@@ -160,30 +164,32 @@ if __name__ == '__main__':
     
     time_start = t.monotonic()
 
-    buffer_prefill_chunk =\
-        data_loader.get_prefill_chunk(reduced_data_buffer_size - 1)
+    with console.status('Prefilling buffer...', spinner='flip'):
 
-    for element in np.vsplit(buffer_prefill_chunk,
-                                reduced_data_buffer_size - 1):
+        buffer_prefill_chunk =\
+            data_loader.get_prefill_chunk(reduced_data_buffer_size - 1)
 
-        timestamp = element.index[0]
+        for element in np.vsplit(buffer_prefill_chunk,
+                                    reduced_data_buffer_size - 1):
 
-        data = element.to_numpy().squeeze()
+            timestamp = element.index[0]
 
-        try:
-            dbscan_anomaly_detector.process(timestamp, data)
+            data = element.to_numpy().squeeze()
 
-            output_slice =\
-                median_std_reducer.reduce_numpy(tpu_labels,
-                                                    timestamp,
-                                                    data)
+            try:
+                dbscan_anomaly_detector.process(timestamp, data)
 
-            output_slice = fix_for_2023_deployment(output_slice)
+                output_slice =\
+                    median_std_reducer.reduce_numpy(tpu_labels,
+                                                        timestamp,
+                                                        data)
 
-            reduced_data_buffer.push(output_slice)
-            
-        except NonCriticalPredictionException:
-            break
+                output_slice = fix_for_2023_deployment(output_slice)
+
+                reduced_data_buffer.push(output_slice)
+                
+            except NonCriticalPredictionException:
+                break
 
     prefill_duration = t.monotonic() - time_start
 
@@ -193,7 +199,10 @@ if __name__ == '__main__':
 
         processed_element_count = 0
 
-        with console.status('Running anomaly detection...', spinner='dots12'):
+        with console.status('Running anomaly detection...',
+                                            spinner='flip',
+                                            speed=0.5,
+                                            refresh_per_second=5):
             while True:
 
                 element = queue.get()
@@ -236,13 +245,18 @@ if __name__ == '__main__':
     close_event = mp.Event()
 
     data_loader_proc = mp.Process(target=data_loader.poll,
-                                    args=(queue, close_event))
+                                    args=(queue, close_event,))
     data_loader_proc.start()
 
     try:
         processing_func(queue)
     except KeyboardInterrupt:
         logger.info('Received keyboard interrupt')
+
+        time_now_string = dt.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
+        anomaly_log_name = f'anomaly_log_{time_now_string}'
+        json_anomaly_registry.dump(anomaly_log_name)
+        
         close_event.set()
         data_loader_proc.join()
         raise
