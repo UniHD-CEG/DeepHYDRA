@@ -11,9 +11,7 @@ import pandas as pd
 from rich import print
 from beauty import Beauty
 
-
 from .variables import nan_fill_value
-from .console import console
 
 _data_channel_vars_dict = {'DCMRate': ['ATLAS', 'DCM', 'L1Rate', 'DF_IS:.*.DCM.*.info']}
 
@@ -65,6 +63,8 @@ class OnlinePBeastDataLoader():
         requested_period_end = dt.datetime.now() - self._delay
         requested_period_start = requested_period_end - self._window_length
 
+        self._logger.info('Initializing')
+
         self._logger.debug(f'Requesting PBEAST data from '
                             f'{requested_period_start} to {requested_period_end}')
         self._logger.debug(f'Request vars: {data_channel_vars[0]}, {data_channel_vars[1]}, '
@@ -84,15 +84,18 @@ class OnlinePBeastDataLoader():
             self._logger.error(f'Could not read {self._data_channel} data from PBEAST')
             raise
 
-        self._logger.info('Successfully retrieved PBEAST data')
+        # for count in range(1, len(dcm_rates_all_list)):
+        #     dcm_rates_all_list[count] = dcm_rates_all_list[count].alignto(dcm_rates_all_list[0])
 
         for count in range(1, len(dcm_rates_all_list)):
-            dcm_rates_all_list[count] = dcm_rates_all_list[count].alignto(dcm_rates_all_list[0])
+            dcm_rates_all_list[count].index = dcm_rates_all_list[0].index
 
         dcm_rates_all_pd = pd.concat(dcm_rates_all_list, axis=1)
 
         self._column_names = dcm_rates_all_pd.columns
         self._initialized = True
+
+        self._logger.info('Initialization successful')
 
 
     def get_prefill_chunk(self,
@@ -102,6 +105,8 @@ class OnlinePBeastDataLoader():
 
         requested_period_end = dt.datetime.now() - self._delay - self._window_length
         requested_period_start = requested_period_end - size*self._polling_interval
+
+        self._logger.info('Requesting prefill chunk')
 
         self._logger.debug(f'Requesting PBEAST data from '
                             f'{requested_period_start} to {requested_period_end}')
@@ -146,6 +151,8 @@ class OnlinePBeastDataLoader():
         dcm_rates_all_pd = dcm_rates_all_pd.iloc[-size:, :]
 
         self._timestamp_last = dcm_rates_all_pd.index[-1]
+
+        self._logger.info('Prefill chunk processing successful')
 
         return dcm_rates_all_pd
     
@@ -211,6 +218,8 @@ class OnlinePBeastDataLoader():
             request_duration = t.monotonic() - time_start
 
             if request_duration >= self._polling_interval.total_seconds():
+
+                queue.put(None)
 
                 error_string = 'Request processing time '\
                                     'exceeded polling interval. '\

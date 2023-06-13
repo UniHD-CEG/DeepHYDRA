@@ -93,6 +93,9 @@ class JSONAnomalyRegistry(AnomalyRegistry):
 
     def write_log_file(self, log_name: str):
         if len(self.anomaly_registry_persistent) > 0:
+
+            print(self.anomaly_registry_persistent)
+
             with open(f'{self.log_dir}/{log_name}.json', mode='w') as anomaly_log_file:
                 json.dump(self.anomaly_registry_persistent,
                                         anomaly_log_file,
