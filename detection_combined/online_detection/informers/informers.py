@@ -57,6 +57,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='T-DBSCAN/Informer Offline HLT Anomaly Detection')
 
     parser.add_argument('--model', type=str, choices=['Informer-MSE', 'Informer-SMSE'])
+    parser.add_argument('--cluster-configuration-version', type=str, choices=['2018', '2023'])
     parser.add_argument('--device', type=str, default='cuda:0')
     parser.add_argument('--checkpoint-dir', type=str, default='../../../transformer_based_detection')
     parser.add_argument('--seed', type=int)
@@ -120,7 +121,7 @@ if __name__ == '__main__':
     
     data_loader = OnlinePBeastDataLoader('DCMRate',
                                             polling_interval=dt.timedelta(seconds=5),
-                                            delay=dt.timedelta(hours=12),
+                                            delay=dt.timedelta(hours=212, minutes=30),
                                             window_length=dt.timedelta(seconds=5))
 
     with console.status('Initializing dataloader', spinner='flip'):
@@ -128,11 +129,12 @@ if __name__ == '__main__':
 
     tpu_labels = data_loader.get_column_names()
 
-    median_std_reducer = MedianStdReducer()
+    median_std_reducer =\
+            MedianStdReducer(args.cluster_configuration_version)
 
     loss_type = args.model.split('-')[-1].lower()
     
-    with console.status('Loading model', spinner='dots12'):
+    with console.status('Loading model', spinner='flip'):
         informer_runner = InformerRunner(args.checkpoint_dir,
                                             loss_type=loss_type,
                                             use_spot_detection=args.spot_based_detection,

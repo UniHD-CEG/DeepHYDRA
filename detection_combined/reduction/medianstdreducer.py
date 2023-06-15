@@ -13,8 +13,8 @@ from utils.tqdmloggingdecorator import tqdmloggingdecorator
 
 class MedianStdReducer(BaseReducer):
 
-    def __init__(self) -> None:
-        super(MedianStdReducer, self).__init__()
+    def __init__(self, configuration_version: str) -> None:
+        super(MedianStdReducer, self).__init__(configuration_version)
 
         self._columns_reduced = None
         self._keys_last = None
