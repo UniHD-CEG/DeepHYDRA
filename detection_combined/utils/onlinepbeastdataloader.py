@@ -52,6 +52,7 @@ class OnlinePBeastDataLoader():
         self._column_names = None
         self._timestamp_last = None
         self._initialized = False
+        self._stream_started = False
 
         self._logger = logging.getLogger(__name__)
 
@@ -73,7 +74,8 @@ class OnlinePBeastDataLoader():
     def init(self) -> pd.DataFrame:
         data_channel_vars = _data_channel_vars_dict[self._data_channel]
 
-        requested_period_end = dt.datetime.now() - self._delay
+        # requested_period_end = dt.datetime.now() - self._delay
+        requested_period_end = dt.datetime.now()
         requested_period_start = requested_period_end - self._window_length
 
         self._logger.info('Initializing')
@@ -290,8 +292,13 @@ class OnlinePBeastDataLoader():
                                                                         all_publications=True)
 
             except RuntimeError as runtime_error:
-                self._logger.error(f'Could not read {self._data_channel} data from PBEAST')
+                if self._stream_started == False:
+                    self._logger.error(f'Could not read {self._data_channel} data from PBEAST')
+                else:
+                    self._logger.info(f'{self._data_channel} data production ended')
                 break
+
+            self._stream_started = True
 
             self._logger.debug('Successfully retrieved PBEAST data')
 

@@ -5,6 +5,7 @@ import sys
 import time as t
 import datetime as dt
 import multiprocessing as mp
+import asyncio as aio
 import logging
 
 import numpy as np
@@ -17,6 +18,7 @@ sys.path.append('../../')
 from clustering.dbscananomalydetector import DBScanAnomalyDetector
 from reduction.medianstdreducer import MedianStdReducer
 from transformer_based_detection.informers.informerrunner import InformerRunner
+from utils.runcontrolstateprovider import RunControlStateProvider
 from utils.onlinepbeastdataloader import OnlinePBeastDataLoader
 from utils.anomalyregistry import JSONAnomalyRegistry
 from utils.reduceddatabuffer import ReducedDataBuffer
@@ -52,6 +54,17 @@ def fix_for_2023_deployment(data: pd.DataFrame) -> pd.DataFrame:
     return data
 
 
+def polling_rate_parser(polling_rate_string: str):
+    hours, minutes, seconds = map(int, polling_rate_string.split(':'))
+    return dt.timedelta(hours=hours, minutes=minutes, seconds=seconds)
+
+
+async def wait_func(state: str,
+                        return_delay: dt.timedelta):
+    with console.status(f'Waiting for state {state}...', spinner='simpleDots'):
+        await run_control_state_provider.wait_for_state(state, return_delay)
+
+
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='T-DBSCAN/Informer Offline HLT Anomaly Detection')
@@ -62,6 +75,8 @@ if __name__ == '__main__':
     parser.add_argument('--checkpoint-dir', type=str, default='../../../transformer_based_detection')
     parser.add_argument('--seed', type=int)
     parser.add_argument('--spot-based-detection', action='store_true', default=False)
+
+    parser.add_argument('--cluster-state-polling-interval', type=str, default='00:00:10')
 
     parser.add_argument('--dbscan-eps', type=float, default=3)
     parser.add_argument('--dbscan-min-samples', type=int, default=4)
@@ -113,15 +128,14 @@ if __name__ == '__main__':
     logger.addHandler(file_logging_handler)
     logger.addHandler(console_logging_handler)
 
-    # logging.basicConfig(filename=log_filename,
-    #                                 filemode='w',
-    #                                 level=args.log_level.upper(),
-    #                                 format=logging_format,
-    #                                 datefmt='%Y-%m-%d %H:%M:%S')
+    run_control_state_provider = RunControlStateProvider()
+
+    aio.run(wait_func('INITIAL',
+                        dt.timedelta(seconds=5)))
     
     data_loader = OnlinePBeastDataLoader('DCMRate',
                                             polling_interval=dt.timedelta(seconds=5),
-                                            delay=dt.timedelta(hours=212, minutes=30),
+                                            delay=dt.timedelta(days=10, hours=3),
                                             window_length=dt.timedelta(seconds=5))
 
     with console.status('Initializing dataloader', spinner='flip'):
@@ -165,6 +179,9 @@ if __name__ == '__main__':
     # begin detection on the first polled sample
     
     time_start = t.monotonic()
+
+    aio.run(wait_func('RUNNING',
+                        dt.timedelta(minutes=1)))
 
     with console.status('Prefilling buffer...', spinner='flip'):
 
