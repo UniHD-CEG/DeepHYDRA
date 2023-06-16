@@ -23,7 +23,7 @@ from utils.onlinepbeastdataloader import OnlinePBeastDataLoader
 from utils.anomalyregistry import JSONAnomalyRegistry
 from utils.reduceddatabuffer import ReducedDataBuffer
 from utils.exceptions import NonCriticalPredictionException
-from utils.console import ConsoleSingleton
+from utils.consolesingleton import ConsoleSingleton
 
 
 known_channels_2022 = ['m_1', 'm_2', 'm_3', 'm_4', 'm_5', 'm_6', 'm_7', 'm_8',
@@ -61,7 +61,7 @@ def polling_rate_parser(polling_rate_string: str):
 
 async def wait_func(state: str,
                         return_delay: dt.timedelta):
-    with console.status(f'Waiting for state {state}...', spinner='simpleDots'):
+    with console.status(f'Waiting for {state} transition...', spinner='simpleDots'):
         await run_control_state_provider.wait_for_state(state, return_delay)
 
 
@@ -130,7 +130,7 @@ if __name__ == '__main__':
 
     run_control_state_provider = RunControlStateProvider()
 
-    aio.run(wait_func('INITIAL',
+    aio.run(wait_func('CONNECTED',
                         dt.timedelta(seconds=5)))
     
     data_loader = OnlinePBeastDataLoader('DCMRate',

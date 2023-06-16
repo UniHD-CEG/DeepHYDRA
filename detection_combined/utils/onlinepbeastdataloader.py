@@ -9,8 +9,8 @@ import logging
 import numpy as np
 import pandas as pd
 from rich import print
-from beauty import Beauty
 
+from .beautysingleton import BeautySingleton
 from .variables import nan_fill_value
 
 _data_channel_vars_dict = {'DCMRate': ['ATLAS', 'DCM', 'L1Rate', 'DF_IS:.*.DCM.*.info']}
@@ -47,7 +47,7 @@ class OnlinePBeastDataLoader():
 
         os.environ['PBEAST_SERVER_SSO_SETUP_TYPE'] = 'AutoUpdateKerberos'
 
-        self._beauty_instance = Beauty(server=self._pbeast_server)
+        self._beauty_instance = BeautySingleton(server=self._pbeast_server).instance()
 
         self._column_names = None
         self._timestamp_last = None
@@ -74,8 +74,8 @@ class OnlinePBeastDataLoader():
     def init(self) -> pd.DataFrame:
         data_channel_vars = _data_channel_vars_dict[self._data_channel]
 
-        # requested_period_end = dt.datetime.now() - self._delay
-        requested_period_end = dt.datetime.now()
+        requested_period_end = dt.datetime.now() - self._delay
+        # requested_period_end = dt.datetime.now()
         requested_period_start = requested_period_end - self._window_length
 
         self._logger.info('Initializing')
@@ -129,12 +129,15 @@ class OnlinePBeastDataLoader():
         # for count in range(1, len(dcm_rates_all_list)):
         #     dcm_rates_all_list[count] = dcm_rates_all_list[count].alignto(dcm_rates_all_list[0])
 
-        for count in range(1, len(dcm_rates_all_list)):
-            dcm_rates_all_list[count].index = dcm_rates_all_list[0].index
+        # for count in range(1, len(dcm_rates_all_list)):
+        #     dcm_rates_all_list[count].index = dcm_rates_all_list[0].index
 
-        dcm_rates_all_pd = pd.concat(dcm_rates_all_list, axis=1)
+        # dcm_rates_all_pd = pd.concat(dcm_rates_all_list, axis=1)
 
-        self._column_names = dcm_rates_all_pd.columns
+        # self._column_names = dcm_rates_all_pd.columns
+
+        self._column_names = pd.Index([dcm_rate.name for dcm_rate in dcm_rates_all_list])
+
         self._initialized = True
 
         self._logger.info('Initialization successful')

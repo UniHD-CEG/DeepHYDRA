@@ -8,7 +8,8 @@ import logging
 
 import pandas as pd
 from rich import print
-from beauty import Beauty
+
+from .beautysingleton import BeautySingleton
 
 _run_state_vars = ['ATLAS', 'RCStateInfo', 'state', 'RunCtrl.RootController']
 
@@ -24,7 +25,7 @@ class RunControlStateProvider():
 
         os.environ['PBEAST_SERVER_SSO_SETUP_TYPE'] = 'AutoUpdateKerberos'
 
-        self._beauty_instance = Beauty(server=self._pbeast_server)
+        self._beauty_instance = BeautySingleton(server=self._pbeast_server).instance()
 
         self._timestamp_last = None
 
@@ -84,8 +85,8 @@ class RunControlStateProvider():
                     break
 
                 else:
-                    self._logger.info(f'Run Control status is {state}. Waiting  '
-                                        f' for state {target_state} before continuing')
+                    self._logger.info(f'Run Control status is {state}. Waiting '
+                                        f'for state {target_state} before continuing')
 
             request_duration = t.monotonic() - time_start
 
