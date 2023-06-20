@@ -11,6 +11,7 @@ import pandas as pd
 from rich import print
 
 from .beautysingleton import BeautySingleton
+from .shiftedtimesingleton import ShiftedTimeSingleton
 from .variables import nan_fill_value
 
 _data_channel_vars_dict = {'DCMRate': ['ATLAS', 'DCM', 'L1Rate', 'DF_IS:.*.DCM.*.info']}
@@ -74,7 +75,9 @@ class OnlinePBeastDataLoader():
     def init(self) -> pd.DataFrame:
         data_channel_vars = _data_channel_vars_dict[self._data_channel]
 
-        requested_period_end = dt.datetime.now() - self._delay
+        # requested_period_end = dt.datetime.now() - self._delay
+        requested_period_end =\
+            ShiftedTimeSingleton(dt.datetime(2023, 6, 7, 14, 30, 0)).now() - self._delay
         # requested_period_end = dt.datetime.now()
         requested_period_start = requested_period_end - self._window_length
 
@@ -148,7 +151,12 @@ class OnlinePBeastDataLoader():
 
         data_channel_vars = _data_channel_vars_dict[self._data_channel]
 
-        requested_period_end = dt.datetime.now() - self._delay - self._window_length
+        # requested_period_end = dt.datetime.now() - self._delay - self._window_length
+        requested_period_end =\
+            ShiftedTimeSingleton(dt.datetime(2023, 6, 7, 14, 30, 0)).now() -\
+                                                                self._delay -\
+                                                                self._window_length
+        
         requested_period_start = requested_period_end - size*self._polling_interval
 
         self._logger.info('Requesting prefill chunk')
@@ -276,7 +284,9 @@ class OnlinePBeastDataLoader():
 
             time_start = t.monotonic()
 
-            requested_period_end = dt.datetime.now() - self._delay
+            # requested_period_end = dt.datetime.now() - self._delay
+            requested_period_end =\
+                ShiftedTimeSingleton(dt.datetime(2023, 6, 7, 14, 30, 0)).now() - self._delay
             requested_period_start = requested_period_end - self._window_length
 
             self._logger.debug(f'Requesting PBEAST data from '
@@ -319,11 +329,14 @@ class OnlinePBeastDataLoader():
 
             dcm_rates_all_pd = dcm_rates_all_pd.iloc[[target_idx], :]
 
-            timestamp_delta = dcm_rates_all_pd.index[0] - self._timestamp_last
-
             self._logger.debug(f'Current timestamp: {dcm_rates_all_pd.index[0]}')
-            self._logger.debug(f'Last timestamp: {self._timestamp_last}')
-            self._logger.debug(f'Current timestamp delta: {timestamp_delta}')
+
+            if self._timestamp_last is not None:
+
+                timestamp_delta = dcm_rates_all_pd.index[0] - self._timestamp_last
+
+                self._logger.debug(f'Last timestamp: {self._timestamp_last}')
+                self._logger.debug(f'Current timestamp delta: {timestamp_delta}')
 
             self._timestamp_last = dcm_rates_all_pd.index[0]
             

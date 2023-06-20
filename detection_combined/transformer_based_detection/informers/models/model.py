@@ -31,7 +31,6 @@ class Informer(nn.Module):
                                                             'Data',
                                                             discard_ratio=0.85)
 
-
         # Encoding
 
         self.enc_embedding = DataEmbedding(enc_in, d_model, embed, freq, dropout)

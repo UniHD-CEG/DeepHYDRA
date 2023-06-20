@@ -10,6 +10,7 @@ import pandas as pd
 from rich import print
 
 from .beautysingleton import BeautySingleton
+from .shiftedtimesingleton import ShiftedTimeSingleton
 
 _run_state_vars = ['ATLAS', 'RCStateInfo', 'state', 'RunCtrl.RootController']
 
@@ -43,9 +44,11 @@ class RunControlStateProvider():
             time_start = t.monotonic()
 
             # request_time = dt.datetime.now()
-            request_time = dt.datetime(2023, 6, 7, 14, 30, 0) +\
-                                        count*self._polling_interval
+            # request_time = dt.datetime(2023, 6, 7, 14, 30, 0) +\
+            #                             count*self._polling_interval
             
+            request_time = ShiftedTimeSingleton(dt.datetime(2023, 6, 7, 14, 30, 0)).now()
+
             print(request_time)
 
             self._logger.debug(f'Requesting Run Control status '

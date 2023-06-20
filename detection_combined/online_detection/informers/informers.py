@@ -59,7 +59,7 @@ def polling_rate_parser(polling_rate_string: str):
     return dt.timedelta(hours=hours, minutes=minutes, seconds=seconds)
 
 
-async def wait_func(state: str,
+async def wait_for_state(state: str,
                         return_delay: dt.timedelta):
     with console.status(f'Waiting for {state} transition...', spinner='simpleDots'):
         await run_control_state_provider.wait_for_state(state, return_delay)
@@ -130,12 +130,12 @@ if __name__ == '__main__':
 
     run_control_state_provider = RunControlStateProvider()
 
-    aio.run(wait_func('CONNECTED',
+    aio.run(wait_for_state('CONNECTED',
                         dt.timedelta(seconds=5)))
     
     data_loader = OnlinePBeastDataLoader('DCMRate',
                                             polling_interval=dt.timedelta(seconds=5),
-                                            delay=dt.timedelta(days=10, hours=3),
+                                            delay=dt.timedelta(seconds=30),
                                             window_length=dt.timedelta(seconds=5))
 
     with console.status('Initializing dataloader', spinner='flip'):
@@ -173,46 +173,49 @@ if __name__ == '__main__':
                     json_anomaly_registry.clustering_detection)
     informer_runner.register_detection_callback(
                     json_anomaly_registry.transformer_detection)
-    
-    # Process a number of elements equal to the ReducedDataBuffer 
-    # size minus one so the transformer-based detection can 
-    # begin detection on the first polled sample
-    
-    time_start = t.monotonic()
 
-    aio.run(wait_func('RUNNING',
-                        dt.timedelta(minutes=1)))
+    aio.run(wait_for_state('RUNNING',
+                        dt.timedelta(seconds=5)))
 
-    with console.status('Prefilling buffer...', spinner='flip'):
-
-        buffer_prefill_chunk =\
-            data_loader.get_prefill_chunk(reduced_data_buffer_size - 1)
-
-        for element in np.vsplit(buffer_prefill_chunk,
-                                    reduced_data_buffer_size - 1):
-
-            timestamp = element.index[0]
-
-            data = element.to_numpy().squeeze()
-
-            try:
-                dbscan_anomaly_detector.process(timestamp, data)
-
-                output_slice =\
-                    median_std_reducer.reduce_numpy(tpu_labels,
-                                                        timestamp,
-                                                        data)
-
-                output_slice = fix_for_2023_deployment(output_slice)
-
-                reduced_data_buffer.push(output_slice)
-                
-            except NonCriticalPredictionException:
-                break
-
-    prefill_duration = t.monotonic() - time_start
-
-    logger.info(f'Buffer prefill took {prefill_duration:.3f} s')
+#     aio.run(wait_for_state('RUNNING',
+#                         dt.timedelta(minutes=5)))
+#     
+#     # Process a number of elements equal to the ReducedDataBuffer 
+#     # size minus one so the transformer-based detection can 
+#     # begin detection on the first polled sample
+# 
+#     time_start = t.monotonic()
+# 
+#     with console.status('Prefilling buffer...', spinner='flip'):
+# 
+#         buffer_prefill_chunk =\
+#             data_loader.get_prefill_chunk(reduced_data_buffer_size - 1)
+# 
+#         for element in np.vsplit(buffer_prefill_chunk,
+#                                     reduced_data_buffer_size - 1):
+# 
+#             timestamp = element.index[0]
+# 
+#             data = element.to_numpy().squeeze()
+# 
+#             try:
+#                 dbscan_anomaly_detector.process(timestamp, data)
+# 
+#                 output_slice =\
+#                     median_std_reducer.reduce_numpy(tpu_labels,
+#                                                         timestamp,
+#                                                         data)
+# 
+#                 output_slice = fix_for_2023_deployment(output_slice)
+# 
+#                 reduced_data_buffer.push(output_slice)
+#                 
+#             except NonCriticalPredictionException:
+#                 break
+# 
+#     prefill_duration = t.monotonic() - time_start
+# 
+#     logger.info(f'Buffer prefill took {prefill_duration:.3f} s')
 
     def processing_func(queue):
 
