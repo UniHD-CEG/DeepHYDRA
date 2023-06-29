@@ -114,13 +114,14 @@ if __name__ == '__main__':
     recoveries_hierarchical['time'] = pd.to_datetime(
                                             recoveries_hierarchical['time'],
                                             format='%H:%M:%S %b %d %Y')
+    
+    recovery_failures = pd.DataFrame(columns=['run', 'source', 'start', 'end'])
 
-    # for label, data in recoveries_hierarchical.groupby(level=0):
-    #     if 'F' in data['type'].values:
-    #         print(data)
+    failure_count = 0
 
     for count, run in enumerate(atlas_runs.itertuples()):
-        print(f'Run {run.Index} start: {run.start}')
+
+        print(f'Run {run.Index}')
 
         for label, data in recoveries_hierarchical.groupby(level=0):
 
@@ -133,13 +134,33 @@ if __name__ == '__main__':
             timestamps_in_run = timestamps[in_run]
             types_in_run = types[in_run]
 
-            # if len(timestamps_in_run):
-            #     print(timestamps_in_run)
-            #     print(types_in_run)
-
             if 'F' in types_in_run:
                 for timestamp, mode in zip(timestamps_in_run, types_in_run):
-                    print(f'{label}: {timestamp}, {mode}')
+                    print(f'{label}')
 
-        print(f'Run {run.Index} end: {run.end}')
+                    # This only works for logs where there are no
+                    # successful recoveries after failed recoveries
+                    # in the runs contained in the run summary file.
+                    # If in the future such cases are included in the
+                    # processed logs, one will have to add functionality
+                    # to check if a successful recovery with a matching
+                    # label followed the failed recovery. In this case,
+                    # the end of the anomaly would be the timestamp of
+                    # the first successful matching recovery after the
+                    # failed recovery, not the end of the run.
+
+                    print(f'Time start: {timestamp}\ttime end: {run.end}')
+
+                    if mode == 'F':
+                        recovery_failures.loc[failure_count] =\
+                                                    {'run': run.Index,
+                                                        'source': label,
+                                                        'start': timestamp,
+                                                        'end': run.end}
+                        
+                        failure_count += 1
+
+    # recovery_failures.to_hdf(args.output_filename,
+    #                             key='recovery_log_preprocessed',
+    #                             mode='w')
 

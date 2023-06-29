@@ -23,6 +23,73 @@ thickness = 1
 line_type = 2
 
 
+class AtlasRunsParser(HTMLParser):
+
+    def __init__(self, variant: str):
+        HTMLParser.__init__(self)
+
+        self._variant = variant
+
+        self._runs_df = pd.DataFrame(columns = ['run', 'start', 'end', 'duration'])
+
+        self._run_info_data_type = self.RunInfoDataType(self.RunInfoDataType.dont_care)
+        self._run_info = {'run': None, 'start': None, 'end': None, 'duration': None}
+
+    def handle_data(self, data):
+        
+        if self._run_info_data_type is self.RunInfoDataType.dont_care:
+        
+            if data == 'Run ':
+                self._run_info_data_type = self.RunInfoDataType.run_number
+            elif data == 'Start':
+                self._run_info_data_type = self.RunInfoDataType.run_start
+            elif data == 'End':
+                self._run_info_data_type = self.RunInfoDataType.run_end
+                
+        else:
+            
+            if self._run_info_data_type is self.RunInfoDataType.run_number:
+                
+                assert(self._run_info['run'] is None)
+                
+                self._run_info['run'] = int(data)
+                
+            elif self._run_info_data_type is self.RunInfoDataType.run_start:
+                
+                assert(self._run_info['start'] is None)
+                
+                self._run_info['start'] = dt.datetime.strptime(f'{self._variant} ' + data, '%Y %a %b %d, %H:%M %Z')
+                
+            elif self._run_info_data_type is self.RunInfoDataType.run_end:
+                
+                assert(self._run_info['end'] is None)
+                
+                self._run_info['end'] = dt.datetime.strptime(f'{self._variant} ' + data, '%Y %a %b %d, %H:%M %Z')
+                
+                duration_dt = self._run_info['end'] - self._run_info['start']
+                
+                self._run_info['duration'] = int(duration_dt.total_seconds())
+                
+                self._runs_df = self._runs_df.append(self._run_info, ignore_index=True)
+                
+                self._run_info = {'run': None, 'start': None, 'end': None, 'duration': None}
+        
+            else:
+                raise RuntimeError('AtlasRunsParser entered unexpected state')
+                        
+            self._run_info_data_type = self.RunInfoDataType.dont_care
+
+    @property
+    def runs(self):
+        return self._runs_df.iloc[::-1].set_index('run')
+        
+    class RunInfoDataType(Enum):
+        dont_care = 0
+        run_number = 1
+        run_start = 2
+        run_end = 3
+        
+
 def generate_anomaly_labels(failure_data: pd.DataFrame,
                                         index: pd.Index,
                                         columns: pd.Index,
@@ -112,9 +179,9 @@ if __name__ == '__main__':
 
     np.random.seed(42)
 
-    parser = argparse.ArgumentParser(description='Second Stage Detection '
-                                                    '2022 L1 Rate Dataset Generator')
+    parser = argparse.ArgumentParser(description='Real-World dcm Rate Anomaly Dataset Generator')
 
+    parser.add_argument('--variant', type=str)
     parser.add_argument('--dataset-dir', type=str, default='../../../../atlas-hlt-datasets')
     parser.add_argument('--generate-videos', action='store_true')
     parser.add_argument('--video-output-dir', type=str, default='../videos')
@@ -123,19 +190,20 @@ if __name__ == '__main__':
 
     # Load datasets
 
-    train_set_x_df = pd.read_csv(f'{args.dataset_dir}/second_stage_'\
-                                        f'train_set_l1_rates_2022.csv', index_col=0)
-    test_set_x_df = pd.read_csv(f'{args.dataset_dir}/second_stage_'\
-                                        f'test_set_l1_rates_2022.csv', index_col=0)
-    val_set_x_df = pd.read_csv(f'{args.dataset_dir}/second_stage_'\
-                                        f'val_set_l1_rates_2022.csv', index_col=0)
+    train_set_x_df = pd.read_csv(f'{args.dataset_dir}/train_set_'\
+                                    f'dcm_rates_{args.variant}.csv', index_col=0)
+    test_set_x_df = pd.read_csv(f'{args.dataset_dir}/test_set_'\
+                                    f'dcm_rates_{args.variant}.csv', index_col=0)
+    val_set_x_df = pd.read_csv(f'{args.dataset_dir}/val_set_'\
+                                    f'dcm_rates_{args.variant}.csv', index_col=0)
 
     print(f'Train set size: {len(train_set_x_df)}')
     print(f'Test set size: {len(test_set_x_df)}')
     print(f'Val set size: {len(val_set_x_df)}')
 
     tpu_failure_log_df = pd.read_hdf(f'{args.dataset_dir}/'\
-                                        'tpu_failures_2022_combined_preprocessed.h5')
+                                        f'tpu_failures_{args.variant}_'\
+                                                'combined_preprocessed.h5')
 
     print(f'Anomaly count total: {len(tpu_failure_log_df)}')
 
@@ -145,6 +213,23 @@ if __name__ == '__main__':
     column_names_train = list((train_set_x_df).columns.values)
     column_names_test = list((test_set_x_df).columns.values)
     column_names_val = list((val_set_x_df).columns.values)
+
+#     print('Train channel names')
+# 
+#     for name in column_names_train:
+#         print(name, end=' ')
+# 
+#     print('Test channel names')
+# 
+#     for name in column_names_test:
+#         print(name, end=' ')
+# 
+#     print('Val channel names')
+# 
+#     for name in column_names_val:
+#         print(name, end=' ')
+# 
+#     exit()
 
     print(f'Channels train: {len(column_names_train)}')
     print(f'Channels test: {len(column_names_test)}')
@@ -198,7 +283,8 @@ if __name__ == '__main__':
 
     def get_tpu_number(channel_name):
         parameters = [int(substring) for substring in re.findall(r'\d+', channel_name)]
-        return parameters[4]
+        # print(f'{channel_name}: {parameters}')
+        return parameters[-1]
 
     tpu_numbers_train = [get_tpu_number(label) for label in column_names_train]
     tpu_numbers_test = [get_tpu_number(label) for label in column_names_test]
@@ -212,9 +298,20 @@ if __name__ == '__main__':
     rack_numbers_test = np.floor_divide(tpu_numbers_test, 1000)
     rack_numbers_val = np.floor_divide(tpu_numbers_val, 1000)
 
-    print(rack_numbers_train)
-    print(rack_numbers_test)
-    print(rack_numbers_val)
+#     print('Train rack numbers')
+# 
+#     for name in rack_numbers_train:
+#         print(name, end=' ')
+# 
+#     print('Test rack numbers')
+# 
+#     for name in rack_numbers_test:
+#         print(name, end=' ')
+# 
+#     print('Val rack numbers')
+# 
+#     for name in rack_numbers_val:
+#         print(name, end=' ')
 
     racks_train, counts_train =\
         np.unique(rack_numbers_train, return_counts=True)
@@ -301,31 +398,31 @@ if __name__ == '__main__':
         for index, datapoint in enumerate(row_x_data):
             rack_buckets_data[rack_numbers_train[index]].append(datapoint)
 
-        rack_median_l1_rates = {}
-        rack_l1_rate_stdevs = {}
+        rack_median_dcm_rates = {}
+        rack_dcm_rate_stdevs = {}
 
         for rack, rack_bucket in rack_buckets_data.items():
-            rack_median_l1_rates[rack] = np.nanmedian(rack_bucket)
-            rack_l1_rate_stdevs[rack] = np.nanstd(rack_bucket)
+            rack_median_dcm_rates[rack] = np.nanmedian(rack_bucket)
+            rack_dcm_rate_stdevs[rack] = np.nanstd(rack_bucket)
 
-        rack_median_l1_rates = dict(sorted(rack_median_l1_rates.items()))
-        rack_l1_rate_stdevs = dict(sorted(rack_l1_rate_stdevs.items()))
+        rack_median_dcm_rates = dict(sorted(rack_median_dcm_rates.items()))
+        rack_dcm_rate_stdevs = dict(sorted(rack_dcm_rate_stdevs.items()))
 
         if keys_last != None:
-            assert rack_median_l1_rates.keys() == keys_last,\
+            assert rack_median_dcm_rates.keys() == keys_last,\
                                                     'Rack bucket keys changed between slices'
 
-            assert rack_median_l1_rates.keys() == rack_l1_rate_stdevs.keys(),\
+            assert rack_median_dcm_rates.keys() == rack_dcm_rate_stdevs.keys(),\
                                                     'Rack bucket keys not identical'
 
-        keys_last = rack_median_l1_rates.keys()
+        keys_last = rack_median_dcm_rates.keys()
 
         if type(columns_reduced_train_unlabeled) == type(None):
-            columns_reduced_train_unlabeled = create_channel_names(rack_median_l1_rates.keys(),
-                                                                    rack_l1_rate_stdevs.keys())
+            columns_reduced_train_unlabeled = create_channel_names(rack_median_dcm_rates.keys(),
+                                                                    rack_dcm_rate_stdevs.keys())
 
-        rack_data_np = np.concatenate((np.array(list(rack_median_l1_rates.values())),
-                                            np.array(list(rack_l1_rate_stdevs.values()))))
+        rack_data_np = np.concatenate((np.array(list(rack_median_dcm_rates.values())),
+                                            np.array(list(rack_dcm_rate_stdevs.values()))))
 
         rack_data_train_unlabeled_all.append(rack_data_np)
 
@@ -341,7 +438,8 @@ if __name__ == '__main__':
                                                         train_set_unlabeled_x_df.index,
                                                         columns_reduced_train_unlabeled)
 
-    train_set_unlabeled_x_df.to_hdf(f'{args.dataset_dir}/reduced_hlt_train_set_2022_x.h5',
+    train_set_unlabeled_x_df.to_hdf(f'{args.dataset_dir}/reduced_hlt_'\
+                                            f'train_set_{args.variant}_x.h5',
                                         key='reduced_hlt_train_set_x',
                                         mode='w')
 
@@ -349,8 +447,9 @@ if __name__ == '__main__':
 
         four_cc = cv.VideoWriter_fourcc('m', 'p', '4', 'v')
 
-        writer = cv.VideoWriter(f'{args.video_output_dir}/reduced_hlt_train_set_2022.mp4',
-                                                    four_cc, 60, (image_width, image_height))
+        writer = cv.VideoWriter(f'{args.video_output_dir}/reduced_hlt_'\
+                                            f'train_set_{args.variant}.mp4',
+                                        four_cc, 60, (image_width, image_height))
 
         for count in tqdm(range(len(rack_data_train_unlabeled_all_np)),
                             desc='Generating unlabeled train set animation'):
@@ -424,13 +523,13 @@ if __name__ == '__main__':
         for index, label in enumerate(row_x_labels):
             rack_buckets_labels[rack_numbers_test[index]].append(label)
 
-        rack_median_l1_rates = {}
-        rack_l1_rate_stdevs = {}
+        rack_median_dcm_rates = {}
+        rack_dcm_rate_stdevs = {}
         rack_labels = {}
 
         for rack, rack_bucket in rack_buckets_data.items():
-            rack_median_l1_rates[rack] = np.nanmedian(rack_bucket)
-            rack_l1_rate_stdevs[rack] = np.nanstd(rack_bucket)
+            rack_median_dcm_rates[rack] = np.nanmedian(rack_bucket)
+            rack_dcm_rate_stdevs[rack] = np.nanstd(rack_bucket)
 
         for rack, rack_bucket in rack_buckets_labels.items():
 
@@ -441,30 +540,30 @@ if __name__ == '__main__':
                 
             rack_labels[rack] = rack_label
 
-        rack_median_l1_rates = dict(sorted(rack_median_l1_rates.items()))
-        rack_l1_rate_stdevs = dict(sorted(rack_l1_rate_stdevs.items()))
+        rack_median_dcm_rates = dict(sorted(rack_median_dcm_rates.items()))
+        rack_dcm_rate_stdevs = dict(sorted(rack_dcm_rate_stdevs.items()))
 
         rack_labels = dict(sorted(rack_labels.items()))
 
         if keys_last != None:
-            assert rack_median_l1_rates.keys() == keys_last,\
+            assert rack_median_dcm_rates.keys() == keys_last,\
                                                     'Rack bucket keys changed between slices'
 
-            assert (rack_median_l1_rates.keys() == rack_l1_rate_stdevs.keys()) and\
-                                (rack_median_l1_rates.keys() == rack_labels.keys()),\
+            assert (rack_median_dcm_rates.keys() == rack_dcm_rate_stdevs.keys()) and\
+                                (rack_median_dcm_rates.keys() == rack_labels.keys()),\
                                                         'Rack bucket keys not identical'
 
-        keys_last = rack_median_l1_rates.keys()
+        keys_last = rack_median_dcm_rates.keys()
 
         if type(columns_reduced_train_labeled) == type(None):
-            columns_reduced_train_labeled = create_channel_names(rack_median_l1_rates.keys(),
-                                                            rack_l1_rate_stdevs.keys())
+            columns_reduced_train_labeled = create_channel_names(rack_median_dcm_rates.keys(),
+                                                            rack_dcm_rate_stdevs.keys())
             
             assert np.array_equal(columns_reduced_train_labeled, columns_reduced_train_unlabeled),\
                                             "Labeled train columns don't match unlabeled train columns" 
 
-        rack_data_np = np.concatenate((np.array(list(rack_median_l1_rates.values())),
-                                            np.array(list(rack_l1_rate_stdevs.values()))))
+        rack_data_np = np.concatenate((np.array(list(rack_median_dcm_rates.values())),
+                                            np.array(list(rack_dcm_rate_stdevs.values()))))
 
         rack_data_train_labeled_all.append(rack_data_np)
 
@@ -503,19 +602,21 @@ if __name__ == '__main__':
 
         print(f'{column_name}: {anomalies} anomalies, {anomaly_ratio} % of all data')
 
-    train_set_labeled_x_df.to_hdf(f'{args.dataset_dir}/reduced_hlt_labeled_train_set_2022_x.h5',
+    train_set_labeled_x_df.to_hdf(f'{args.dataset_dir}/reduced_hlt_'\
+                                        f'labeled_train_set_{args.variant}_x.h5',
                                     key='reduced_hlt_labeled_train_set_x',
                                     mode='w')
 
-    train_set_labeled_y_df.to_hdf(f'{args.dataset_dir}/reduced_hlt_labeled_train_set_2022_y.h5',
+    train_set_labeled_y_df.to_hdf(f'{args.dataset_dir}/reduced_hlt_'\
+                                        f'labeled_train_set_{args.variant}_y.h5',
                                     key='reduced_hlt_labeled_train_set_y',
                                     mode='w')
 
     if args.generate_videos:
 
-        writer = cv.VideoWriter(f'{args.video_output_dir}/'
-                                    'reduced_hlt_labeled_train_set_2022.mp4',
-                                        four_cc, 60, (image_width, image_height))
+        writer = cv.VideoWriter(f'{args.video_output_dir}/reduced_hlt_'
+                                        f'labeled_train_set_{args.variant}.mp4',
+                                    four_cc, 60, (image_width, image_height))
 
 
         for count in tqdm(range(len(rack_data_train_labeled_all_np)),
@@ -568,10 +669,10 @@ if __name__ == '__main__':
                                                     np.array(tpu_numbers_test),
                                                     prepad=5)
 
-    test_set_x_df.to_hdf(f'{args.dataset_dir}/unreduced_hlt_test_set_2022_x.h5',
+    test_set_x_df.to_hdf(f'{args.dataset_dir}/unreduced_hlt_test_set_{args.variant}_x.h5',
                                                 key='unreduced_hlt_test_set_x', mode='w')
 
-    test_set_y_df.to_hdf(f'{args.dataset_dir}/unreduced_hlt_test_set_2022_y.h5',
+    test_set_y_df.to_hdf(f'{args.dataset_dir}/unreduced_hlt_test_set_{args.variant}_y.h5',
                                                     key='reduced_hlt_test_set_y', mode='w')
 
     rack_data_test_all = []
@@ -595,13 +696,13 @@ if __name__ == '__main__':
         for index, label in enumerate(row_x_labels):
             rack_buckets_labels[rack_numbers_test[index]].append(label)
 
-        rack_median_l1_rates = {}
-        rack_l1_rate_stdevs = {}
+        rack_median_dcm_rates = {}
+        rack_dcm_rate_stdevs = {}
         rack_labels = {}
 
         for rack, rack_bucket in rack_buckets_data.items():
-            rack_median_l1_rates[rack] = np.nanmedian(rack_bucket)
-            rack_l1_rate_stdevs[rack] = np.nanstd(rack_bucket)
+            rack_median_dcm_rates[rack] = np.nanmedian(rack_bucket)
+            rack_dcm_rate_stdevs[rack] = np.nanstd(rack_bucket)
 
         for rack, rack_bucket in rack_buckets_labels.items():
 
@@ -612,30 +713,30 @@ if __name__ == '__main__':
                 
             rack_labels[rack] = rack_label
 
-        rack_median_l1_rates = dict(sorted(rack_median_l1_rates.items()))
-        rack_l1_rate_stdevs = dict(sorted(rack_l1_rate_stdevs.items()))
+        rack_median_dcm_rates = dict(sorted(rack_median_dcm_rates.items()))
+        rack_dcm_rate_stdevs = dict(sorted(rack_dcm_rate_stdevs.items()))
 
         rack_labels = dict(sorted(rack_labels.items()))
 
         if keys_last != None:
-            assert rack_median_l1_rates.keys() == keys_last,\
+            assert rack_median_dcm_rates.keys() == keys_last,\
                             'Rack bucket keys changed between slices'
 
-            assert (rack_median_l1_rates.keys() == rack_l1_rate_stdevs.keys()) and\
-                                (rack_median_l1_rates.keys() == rack_labels.keys()),\
+            assert (rack_median_dcm_rates.keys() == rack_dcm_rate_stdevs.keys()) and\
+                                (rack_median_dcm_rates.keys() == rack_labels.keys()),\
                                                         'Rack bucket keys not identical'
 
-        keys_last = rack_median_l1_rates.keys()
+        keys_last = rack_median_dcm_rates.keys()
 
         if type(columns_reduced_test) == type(None):
-            columns_reduced_test = create_channel_names(rack_median_l1_rates.keys(),
-                                                            rack_l1_rate_stdevs.keys())
+            columns_reduced_test = create_channel_names(rack_median_dcm_rates.keys(),
+                                                            rack_dcm_rate_stdevs.keys())
             
             assert np.array_equal(columns_reduced_test, columns_reduced_train_unlabeled),\
                                                     "Test columns don't match train columns" 
 
-        rack_data_np = np.concatenate((np.array(list(rack_median_l1_rates.values())),
-                                            np.array(list(rack_l1_rate_stdevs.values()))))
+        rack_data_np = np.concatenate((np.array(list(rack_median_dcm_rates.values())),
+                                            np.array(list(rack_dcm_rate_stdevs.values()))))
 
         rack_data_test_all.append(rack_data_np)
 
@@ -674,18 +775,21 @@ if __name__ == '__main__':
 
         print(f'{column_name}: {anomalies} anomalies, {anomaly_ratio} % of all data')
 
-    test_set_x_df.to_hdf(f'{args.dataset_dir}/reduced_hlt_test_set_2022_x.h5',
+    test_set_x_df.to_hdf(f'{args.dataset_dir}/reduced_hlt_'
+                                f'test_set_{args.variant}_x.h5',
                             key='reduced_hlt_test_set_x',
                             mode='w')
 
-    test_set_y_df.to_hdf(f'{args.dataset_dir}/reduced_hlt_test_set_2022_y.h5',
+    test_set_y_df.to_hdf(f'{args.dataset_dir}/reduced_hlt_'
+                                f'test_set_{args.variant}_y.h5',
                             key='reduced_hlt_test_set_y',
                             mode='w')
 
     if args.generate_videos:
 
-        writer = cv.VideoWriter(f'{args.video_output_dir}/reduced_hlt_test_set_2022.mp4',
-                                                    four_cc, 60, (image_width, image_height))
+        writer = cv.VideoWriter(f'{args.video_output_dir}/reduced_hlt_'
+                                        f'test_set_{args.variant}.mp4',
+                                    four_cc, 60, (image_width, image_height))
 
         for count in tqdm(range(len(rack_data_test_all_np)),
                                     desc='Generating test set animation'):
@@ -747,34 +851,34 @@ if __name__ == '__main__':
         for index, datapoint in enumerate(row_x_data):
             rack_buckets_data[rack_numbers_val[index]].append(datapoint)
 
-        rack_median_l1_rates = {}
-        rack_l1_rate_stdevs = {}
+        rack_median_dcm_rates = {}
+        rack_dcm_rate_stdevs = {}
 
         for rack, rack_bucket in rack_buckets_data.items():
-            rack_median_l1_rates[rack] = np.nanmedian(rack_bucket)
-            rack_l1_rate_stdevs[rack] = np.nanstd(rack_bucket)
+            rack_median_dcm_rates[rack] = np.nanmedian(rack_bucket)
+            rack_dcm_rate_stdevs[rack] = np.nanstd(rack_bucket)
 
-        rack_median_l1_rates = dict(sorted(rack_median_l1_rates.items()))
-        rack_l1_rate_stdevs = dict(sorted(rack_l1_rate_stdevs.items()))
+        rack_median_dcm_rates = dict(sorted(rack_median_dcm_rates.items()))
+        rack_dcm_rate_stdevs = dict(sorted(rack_dcm_rate_stdevs.items()))
 
         if keys_last != None:
-            assert rack_median_l1_rates.keys() == keys_last,\
+            assert rack_median_dcm_rates.keys() == keys_last,\
                                                     'Rack bucket keys changed between slices'
 
-            assert rack_median_l1_rates.keys() == rack_l1_rate_stdevs.keys(),\
+            assert rack_median_dcm_rates.keys() == rack_dcm_rate_stdevs.keys(),\
                                                     'Rack bucket keys not identical'
 
-        keys_last = rack_median_l1_rates.keys()
+        keys_last = rack_median_dcm_rates.keys()
 
         if type(columns_reduced_clean_val) == type(None):
-            columns_reduced_clean_val = create_channel_names(rack_median_l1_rates.keys(),
-                                                                rack_l1_rate_stdevs.keys())
+            columns_reduced_clean_val = create_channel_names(rack_median_dcm_rates.keys(),
+                                                                rack_dcm_rate_stdevs.keys())
 
             assert np.array_equal(columns_reduced_clean_val, columns_reduced_train_unlabeled),\
                                                         "Val columns don't match train columns" 
 
-        rack_data_np = np.concatenate((np.array(list(rack_median_l1_rates.values())),
-                                            np.array(list(rack_l1_rate_stdevs.values()))))
+        rack_data_np = np.concatenate((np.array(list(rack_median_dcm_rates.values())),
+                                            np.array(list(rack_dcm_rate_stdevs.values()))))
 
         rack_data_clean_val_all.append(rack_data_np)
 
@@ -790,14 +894,16 @@ if __name__ == '__main__':
                                                 val_set_x_df.index,
                                                 columns_reduced_clean_val)
 
-    clean_val_set_x_df.to_hdf(f'{args.dataset_dir}/reduced_hlt_clean_val_set_2022_x.h5',
+    clean_val_set_x_df.to_hdf(f'{args.dataset_dir}/reduced_hlt_'
+                                    f'clean_val_set_{args.variant}_x.h5',
                                 key='reduced_hlt_clean_val_set_x',
                                 mode='w')
 
     if args.generate_videos:
 
-        writer = cv.VideoWriter(f'{args.video_output_dir}/reduced_hlt_clean_val_set_2022.mp4',
-                                                        four_cc, 60, (image_width, image_height))
+        writer = cv.VideoWriter(f'{args.video_output_dir}/reduced_hlt_'
+                                        f'clean_val_set_{args.variant}.mp4',
+                                    four_cc, 60, (image_width, image_height))
 
         for count in tqdm(range(len(rack_data_clean_val_all_np)),
                                     desc='Generating clean val set animation'):
@@ -866,13 +972,13 @@ if __name__ == '__main__':
         for index, label in enumerate(row_x_labels):
             rack_buckets_labels[rack_numbers_val[index]].append(label)
 
-        rack_median_l1_rates = {}
-        rack_l1_rate_stdevs = {}
+        rack_median_dcm_rates = {}
+        rack_dcm_rate_stdevs = {}
         rack_labels = {}
 
         for rack, rack_bucket in rack_buckets_data.items():
-            rack_median_l1_rates[rack] = np.nanmedian(rack_bucket)
-            rack_l1_rate_stdevs[rack] = np.nanstd(rack_bucket)
+            rack_median_dcm_rates[rack] = np.nanmedian(rack_bucket)
+            rack_dcm_rate_stdevs[rack] = np.nanstd(rack_bucket)
 
         for rack, rack_bucket in rack_buckets_labels.items():
 
@@ -883,30 +989,30 @@ if __name__ == '__main__':
                 
             rack_labels[rack] = rack_label
 
-        rack_median_l1_rates = dict(sorted(rack_median_l1_rates.items()))
-        rack_l1_rate_stdevs = dict(sorted(rack_l1_rate_stdevs.items()))
+        rack_median_dcm_rates = dict(sorted(rack_median_dcm_rates.items()))
+        rack_dcm_rate_stdevs = dict(sorted(rack_dcm_rate_stdevs.items()))
 
         rack_labels = dict(sorted(rack_labels.items()))
 
         if keys_last != None:
-            assert rack_median_l1_rates.keys() == keys_last,\
+            assert rack_median_dcm_rates.keys() == keys_last,\
                                                     'Rack bucket keys changed between slices'
 
-            assert (rack_median_l1_rates.keys() == rack_l1_rate_stdevs.keys()) and\
-                                (rack_median_l1_rates.keys() == rack_labels.keys()),\
+            assert (rack_median_dcm_rates.keys() == rack_dcm_rate_stdevs.keys()) and\
+                                (rack_median_dcm_rates.keys() == rack_labels.keys()),\
                                                         'Rack bucket keys not identical'
 
-        keys_last = rack_median_l1_rates.keys()
+        keys_last = rack_median_dcm_rates.keys()
 
         if type(columns_reduced_val) == type(None):
-            columns_reduced_val = create_channel_names(rack_median_l1_rates.keys(),
-                                                        rack_l1_rate_stdevs.keys())
+            columns_reduced_val = create_channel_names(rack_median_dcm_rates.keys(),
+                                                        rack_dcm_rate_stdevs.keys())
 
             assert np.array_equal(columns_reduced_val, columns_reduced_train_unlabeled),\
                                                     "Val columns don't match train columns" 
 
-        rack_data_np = np.concatenate((np.array(list(rack_median_l1_rates.values())),
-                                            np.array(list(rack_l1_rate_stdevs.values()))))
+        rack_data_np = np.concatenate((np.array(list(rack_median_dcm_rates.values())),
+                                            np.array(list(rack_dcm_rate_stdevs.values()))))
 
         rack_data_val_all.append(rack_data_np)
 
@@ -939,18 +1045,21 @@ if __name__ == '__main__':
     anomaly_ratio_per_column = anomalies_per_column/\
                                     len(rack_labels_val_all_np)
 
-    val_set_x_df.to_hdf(f'{args.dataset_dir}/reduced_hlt_val_set_2022_x.h5',
+    val_set_x_df.to_hdf(f'{args.dataset_dir}/reduced_hlt_'
+                                f'val_set_{args.variant}_x.h5',
                             key='reduced_hlt_val_set_x',
                             mode='w')
 
-    val_set_y_df.to_hdf(f'{args.dataset_dir}/reduced_hlt_val_set_2022_y.h5',
+    val_set_y_df.to_hdf(f'{args.dataset_dir}/reduced_hlt_'
+                                f'val_set_{args.variant}_y.h5',
                             key='reduced_hlt_val_set_y',
                             mode='w')
 
     if args.generate_videos:
 
-        writer = cv.VideoWriter(f'{args.video_output_dir}/reduced_hlt_val_set_2022.mp4',
-                                                four_cc, 60,(image_width, image_height))
+        writer = cv.VideoWriter(f'{args.video_output_dir}/reduced_hlt_'
+                                        f'val_set_{args.variant}.mp4',
+                                    four_cc, 60,(image_width, image_height))
 
         for count in tqdm(range(len(rack_data_val_all_np)),
                             desc='Generating dirty val set animation'):

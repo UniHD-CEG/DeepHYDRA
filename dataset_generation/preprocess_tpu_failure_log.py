@@ -106,7 +106,7 @@ if __name__ == '__main__':
     
     args = parser.parse_args()
 
-    atlas_runs_2022 = None
+    atlas_runs = None
 
     with open(args.run_summary_file) as file:
         html_string = file.read()
@@ -116,13 +116,16 @@ if __name__ == '__main__':
         atlas_runs_parser.feed(html_string)
         atlas_runs_parser.close()
 
-        atlas_runs_2022 = atlas_runs_parser.runs
+        atlas_runs = atlas_runs_parser.runs
 
     tpu_failure_log = pd.read_csv(args.input_filename)
 
+    datetime_format = '%H:%M:%S %b %d %Y' if args.variant != '2023'\
+                                                else '%Y-%m-%d %H:%M:%S'
+
     tpu_failure_log['time'] = pd.to_datetime(
                                     tpu_failure_log['time'],
-                                    format='%H:%M:%S %b %d %Y')
+                                    format=datetime_format)
 
     tpu_failure_log['failure_source'] =\
             tpu_failure_log['failure_source'].map(failure_source_dict)
@@ -147,7 +150,7 @@ if __name__ == '__main__':
 
     failure_count_per_run = defaultdict(int)
 
-    for run in atlas_runs_2022.itertuples():
+    for run in atlas_runs.itertuples():
 
         failure_count_per_run[run.Index] = 0
 
