@@ -12,7 +12,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Informer-MSE/Informer-SMSE Anomaly Detection')
 
-    parser.add_argument('--data', type=str, required=True, choices=['HLT_2018', 'HLT_2022', 'SMD'], default='HLT', help='data')
+    parser.add_argument('--data', type=str, required=True, choices=['HLT_2018', 'HLT_2022', 'HLT_2023', 'SMD'], default='HLT', help='data')
     parser.add_argument('--seed', type=float, default=42, help='Random seed')
     
     parser.add_argument('--features', type=str, default='M', help='forecasting task, options:[M, S, MS]; M:multivariate predict multivariate, S:univariate predict univariate, MS:multivariate predict univariate')
