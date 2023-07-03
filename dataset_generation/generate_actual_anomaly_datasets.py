@@ -21,73 +21,6 @@ font_scale = 1
 font_color = (255,255,255)
 thickness = 1
 line_type = 2
-
-
-class AtlasRunsParser(HTMLParser):
-
-    def __init__(self, variant: str):
-        HTMLParser.__init__(self)
-
-        self._variant = variant
-
-        self._runs_df = pd.DataFrame(columns = ['run', 'start', 'end', 'duration'])
-
-        self._run_info_data_type = self.RunInfoDataType(self.RunInfoDataType.dont_care)
-        self._run_info = {'run': None, 'start': None, 'end': None, 'duration': None}
-
-    def handle_data(self, data):
-        
-        if self._run_info_data_type is self.RunInfoDataType.dont_care:
-        
-            if data == 'Run ':
-                self._run_info_data_type = self.RunInfoDataType.run_number
-            elif data == 'Start':
-                self._run_info_data_type = self.RunInfoDataType.run_start
-            elif data == 'End':
-                self._run_info_data_type = self.RunInfoDataType.run_end
-                
-        else:
-            
-            if self._run_info_data_type is self.RunInfoDataType.run_number:
-                
-                assert(self._run_info['run'] is None)
-                
-                self._run_info['run'] = int(data)
-                
-            elif self._run_info_data_type is self.RunInfoDataType.run_start:
-                
-                assert(self._run_info['start'] is None)
-                
-                self._run_info['start'] = dt.datetime.strptime(f'{self._variant} ' + data, '%Y %a %b %d, %H:%M %Z')
-                
-            elif self._run_info_data_type is self.RunInfoDataType.run_end:
-                
-                assert(self._run_info['end'] is None)
-                
-                self._run_info['end'] = dt.datetime.strptime(f'{self._variant} ' + data, '%Y %a %b %d, %H:%M %Z')
-                
-                duration_dt = self._run_info['end'] - self._run_info['start']
-                
-                self._run_info['duration'] = int(duration_dt.total_seconds())
-                
-                self._runs_df = self._runs_df.append(self._run_info, ignore_index=True)
-                
-                self._run_info = {'run': None, 'start': None, 'end': None, 'duration': None}
-        
-            else:
-                raise RuntimeError('AtlasRunsParser entered unexpected state')
-                        
-            self._run_info_data_type = self.RunInfoDataType.dont_care
-
-    @property
-    def runs(self):
-        return self._runs_df.iloc[::-1].set_index('run')
-        
-    class RunInfoDataType(Enum):
-        dont_care = 0
-        run_number = 1
-        run_start = 2
-        run_end = 3
         
 
 def generate_anomaly_labels(failure_data: pd.DataFrame,
@@ -493,6 +426,13 @@ if __name__ == '__main__':
 
     train_set_labeled_x_df = test_set_x_df.iloc[:test_set_size//4, :]
 
+    for count in range(1, len(train_set_labeled_x_df.index)):
+        if train_set_labeled_x_df.index[count] <=\
+                train_set_labeled_x_df.index[count-1]:
+            print(f'Non-monotonic timestamp increase at {count-1}:\t'
+                    f'First timestamp: {train_set_labeled_x_df.index[count-1]}\t'
+                     f'Second timestamp: {train_set_labeled_x_df.index[count]}')
+
     dataset = train_set_labeled_x_df.to_numpy()
     column_names = train_set_labeled_x_df.columns
     timestamps = train_set_labeled_x_df.index
@@ -655,6 +595,7 @@ if __name__ == '__main__':
 
         writer.release()
 
+
     # Reduce and save test set
 
     # Save unreduced test set for testing of combined DBSCAN/Transformer-based
@@ -756,13 +697,13 @@ if __name__ == '__main__':
                                                 rack_labels_test_all_np],
                                                 axis=1)
 
-    test_set_x_df = pd.DataFrame(rack_data_test_all_np,
-                                    test_set_x_df.index,
-                                    columns_reduced_test)
+    test_set_reduced_x_df = pd.DataFrame(rack_data_test_all_np,
+                                                test_set_x_df.index,
+                                                columns_reduced_test)
 
-    test_set_y_df = pd.DataFrame(rack_labels_test_all_np,
-                                    test_set_y_df.index,
-                                    columns_reduced_test)
+    test_set_reduced_y_df = pd.DataFrame(rack_labels_test_all_np,
+                                                test_set_y_df.index,
+                                                columns_reduced_test)
 
     anomalies_per_column = np.count_nonzero(rack_labels_test_all_np, axis=0)
 
@@ -775,15 +716,15 @@ if __name__ == '__main__':
 
         print(f'{column_name}: {anomalies} anomalies, {anomaly_ratio} % of all data')
 
-    test_set_x_df.to_hdf(f'{args.dataset_dir}/reduced_hlt_'
-                                f'test_set_{args.variant}_x.h5',
-                            key='reduced_hlt_test_set_x',
-                            mode='w')
+    test_set_reduced_x_df.to_hdf(f'{args.dataset_dir}/reduced_hlt_'
+                                        f'test_set_{args.variant}_x.h5',
+                                    key='reduced_hlt_test_set_x',
+                                    mode='w')
 
-    test_set_y_df.to_hdf(f'{args.dataset_dir}/reduced_hlt_'
-                                f'test_set_{args.variant}_y.h5',
-                            key='reduced_hlt_test_set_y',
-                            mode='w')
+    test_set_reduced_y_df.to_hdf(f'{args.dataset_dir}/reduced_hlt_'
+                                        f'test_set_{args.variant}_y.h5',
+                                    key='reduced_hlt_test_set_y',
+                                    mode='w')
 
     if args.generate_videos:
 
@@ -829,11 +770,10 @@ if __name__ == '__main__':
 
     # Reduce and save clean val set
 
-    val_set_size = len(val_set_x_df)
-    
-    clean_val_set_x_df = pd.concat((val_set_x_df.iloc[:10500, :],
-                                val_set_x_df.iloc[11500:14500, :]))
+    # clean_val_set_x_df = pd.concat((val_set_x_df.iloc[:10500, :],
+    #                             val_set_x_df.iloc[11500:14500, :]))
 
+    clean_val_set_x_df = val_set_x_df
 
     column_names = clean_val_set_x_df.columns
     timestamps = clean_val_set_x_df.index
@@ -888,7 +828,7 @@ if __name__ == '__main__':
     nan_amount_clean_val = 100*pd.isna(rack_data_clean_val_all_np.flatten()).sum()/\
                                                     rack_data_clean_val_all_np.size
 
-    print('NaN amount reduced train set: {:.3f} %'.format(nan_amount_clean_val))
+    print('NaN amount reduced clean val set: {:.3f} %'.format(nan_amount_clean_val))
 
     clean_val_set_x_df = pd.DataFrame(rack_data_clean_val_all_np,
                                                 val_set_x_df.index,
@@ -942,6 +882,21 @@ if __name__ == '__main__':
         writer.release()
 
     # Reduce and save dirty val set
+
+    val_set_x_df = pd.concat((val_set_x_df.iloc[:9270, :],
+                                test_set_x_df.iloc[-6497:, :]))
+
+    column_names_val = list((val_set_x_df).columns.values)
+    tpu_numbers_val = [get_tpu_number(label) for label in column_names_val]
+    tpu_numbers_val_unique = np.array(list(set(tpu_numbers_val)))
+    rack_numbers_val = np.floor_divide(tpu_numbers_val, 1000)
+
+    for count in range(1, len(val_set_x_df.index)):
+        if val_set_x_df.index[count] <=\
+                val_set_x_df.index[count-1]:
+            print(f'Non-monotonic timestamp increase at {count-1}:\t'
+                    f'First timestamp: {val_set_x_df.index[count-1]}\t'
+                     f'Second timestamp: {val_set_x_df.index[count]}')
 
     column_names = val_set_x_df.columns
     timestamps = val_set_x_df.index
@@ -1021,10 +976,10 @@ if __name__ == '__main__':
     rack_data_val_all_np = np.stack(rack_data_val_all)
     rack_data_val_all_np = np.nan_to_num(rack_data_val_all_np, nan=-1)
 
-    nan_amount_test = 100*pd.isna(rack_data_val_all_np.flatten()).sum()/\
+    nan_amount_dirty_val = 100*pd.isna(rack_data_val_all_np.flatten()).sum()/\
                                                     rack_data_val_all_np.size
 
-    print('NaN amount reduced test set: {:.3f} %'.format(nan_amount_test))
+    print('NaN amount reduced dirty val set: {:.3f} %'.format(nan_amount_dirty_val))
 
     rack_labels_val_all_np = np.stack(rack_labels_val_all)
 
