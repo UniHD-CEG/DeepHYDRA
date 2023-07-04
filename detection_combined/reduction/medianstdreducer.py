@@ -22,7 +22,7 @@ class MedianStdReducer(BaseReducer):
 
     def _parse_channel_name(self, channel_name):
         parameters = [int(substring) for substring in re.findall(r'\d+', channel_name)]
-        return parameters[1]
+        return parameters[-1]//1000
 
 
     def _create_channel_names(self,

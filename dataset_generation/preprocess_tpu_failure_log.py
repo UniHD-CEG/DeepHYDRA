@@ -152,6 +152,8 @@ if __name__ == '__main__':
 
     for run in atlas_runs.itertuples():
 
+        print(f'{run.Index}: {run.start}\t{run.end}')
+
         failure_count_per_run[run.Index] = 0
 
         for count in range(len(tpu_failure_log)):

@@ -72,7 +72,7 @@ if __name__ == '__main__':
     parser.add_argument('--dbscan-min-samples', type=int, default=4)
     parser.add_argument('--dbscan-duration-threshold', type=int, default=4)
 
-    parser.add_argument('--variant', type=str, choices=['2018', '2022'], default='2018')
+    parser.add_argument('--variant', type=str, choices=['2018', '2022', '2023'], default='2018')
     parser.add_argument('--seed', type=int)
 
     args = parser.parse_args()
@@ -109,9 +109,11 @@ if __name__ == '__main__':
     hlt_data_pd.index = _remove_timestamp_jumps(
                             pd.DatetimeIndex(hlt_data_pd.index))
     
-    hlt_data_pd = hlt_data_pd.iloc[10000:20000, :]
+    # hlt_data_pd = hlt_data_pd.iloc[10000:20000, :]
 
-    median_std_reducer = MedianStdReducer()
+    rack_config = '2018' if args.variant in ['2018', '2022'] else '2023'
+
+    median_std_reducer = MedianStdReducer(rack_config)
     
     informer_runner = InformerRunner(args.checkpoint_dir)
 
@@ -160,30 +162,30 @@ if __name__ == '__main__':
             except NonCriticalPredictionException:
                 break
 
-    informer_runner.model.attention_visualizer.render_projection('smse_dcm_rate_data_2022_'\
-                                                                        'attention_viz_projection.mp4',
-                                                                    'Kevin Franz Stehle',
-                                                                    channels_upper=52,
-                                                                    fps=24,
-                                                                    label_size=20,
-                                                                    title_size=20,
-                                                                    cmap='plasma')
-
-    informer_runner.model.attention_visualizer.render_combined('smse_dcm_rate_data_2022_'\
-                                                                    'attention_viz_combined.mp4',
-                                                                'Kevin Franz Stehle',
-                                                                fps=24,
-                                                                label_size=20,
-                                                                title_size=20,
-                                                                cmap='plasma')
-
-    informer_runner.model.attention_visualizer.render_individual_heads('smse_dcm_rate_data_2022_'\
-                                                                            'attention_viz_individual.mp4',
-                                                                        'Kevin Franz Stehle',
-                                                                        fps=24,
-                                                                        label_size=20,
-                                                                        title_size=20,
-                                                                        cmap='plasma')
+#     informer_runner.model.attention_visualizer.render_projection('smse_dcm_rate_data_2022_'\
+#                                                                         'attention_viz_projection.mp4',
+#                                                                     'Kevin Franz Stehle',
+#                                                                     channels_upper=52,
+#                                                                     fps=24,
+#                                                                     label_size=20,
+#                                                                     title_size=20,
+#                                                                     cmap='plasma')
+# 
+#     informer_runner.model.attention_visualizer.render_combined('smse_dcm_rate_data_2022_'\
+#                                                                     'attention_viz_combined.mp4',
+#                                                                 'Kevin Franz Stehle',
+#                                                                 fps=24,
+#                                                                 label_size=20,
+#                                                                 title_size=20,
+#                                                                 cmap='plasma')
+# 
+#     informer_runner.model.attention_visualizer.render_individual_heads('smse_dcm_rate_data_2022_'\
+#                                                                             'attention_viz_individual.mp4',
+#                                                                         'Kevin Franz Stehle',
+#                                                                         fps=24,
+#                                                                         label_size=20,
+#                                                                         title_size=20,
+#                                                                         cmap='plasma')
 
 
 #     preds = informer_runner.get_predictions()

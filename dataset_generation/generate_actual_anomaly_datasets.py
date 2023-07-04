@@ -40,6 +40,15 @@ def generate_anomaly_labels(failure_data: pd.DataFrame,
         start = pd.DatetimeIndex([failure.start], tz=index.tz)
         end = pd.DatetimeIndex([failure.end], tz=index.tz)
 
+        print(f'{failure.Index}: ', end='')
+
+        if np.any(index >= start[0]) and\
+                    np.any(index <= end[0]):
+            print(f'Got anomalies between {start[0]} and {end[0]}')
+
+        else:
+            print(f'No anomalies between {start[0]} and {end[0]}')
+
         # Check if any timestamp in the index is
         # close to the start of the anomaly
 
@@ -53,11 +62,11 @@ def generate_anomaly_labels(failure_data: pd.DataFrame,
             index_following_start =\
                 max(0, index_following_start - prepad)
 
-            # print('Found start timestamp within tolerance')
-            # print(f'Anomaly start: {start}')
-            # print(f'Timestamp within tolerance: '\
-            #             f'{index[index_following_start]}'\
-            #             f' at index {index_following_start}')
+            print('Found start timestamp within tolerance')
+            print(f'Anomaly start: {start}')
+            print(f'Timestamp within tolerance: '\
+                        f'{index[index_following_start]}'\
+                        f' at index {index_following_start}')
 
             index_following_end =\
                 labels.index.get_indexer(end,
@@ -65,11 +74,11 @@ def generate_anomaly_labels(failure_data: pd.DataFrame,
                                             tolerance=pd.Timedelta(10, unit='s'))[0]
 
 
-            # print('Found end timestamp within tolerance')
-            # print(f'Anomaly end: {end}')
-            # print(f'Timestamp within tolerance: '\
-            #             f'{index[index_following_end]}'\
-            #             f' at index {index_following_end}')
+            print('Found end timestamp within tolerance')
+            print(f'Anomaly end: {end}')
+            print(f'Timestamp within tolerance: '\
+                        f'{index[index_following_end]}'\
+                        f' at index {index_following_end}')
 
             column_indices = np.flatnonzero(tpu_numbers == failure.Index)
 
@@ -222,6 +231,17 @@ if __name__ == '__main__':
     tpu_numbers_train = [get_tpu_number(label) for label in column_names_train]
     tpu_numbers_test = [get_tpu_number(label) for label in column_names_test]
     tpu_numbers_val = [get_tpu_number(label) for label in column_names_val]
+
+    column_names = test_set_x_df.columns
+    timestamps = test_set_x_df.index
+
+    labels = generate_anomaly_labels(tpu_failure_log_df,
+                                                timestamps,
+                                                column_names,
+                                                np.array(tpu_numbers_test),
+                                                prepad=5).to_numpy()
+
+    exit()
 
     tpu_numbers_train_unique = np.array(list(set(tpu_numbers_train)))
     tpu_numbers_test_unique = np.array(list(set(tpu_numbers_test)))
@@ -442,6 +462,7 @@ if __name__ == '__main__':
                                                 column_names,
                                                 np.array(tpu_numbers_test),
                                                 prepad=5).to_numpy()
+
 
     rack_data_train_labeled_all = []
     rack_labels_train_labeled_all = []
