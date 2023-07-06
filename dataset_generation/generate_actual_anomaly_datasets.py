@@ -21,7 +21,20 @@ font_scale = 1
 font_color = (255,255,255)
 thickness = 1
 line_type = 2
-        
+
+def find_timestamp_jumps(index: pd.DatetimeIndex) -> None:
+
+        delta = index[1:] - index[:-1]
+
+        index = pd.Series(index)
+
+        for i in range(0, len(index) - 1):
+            if delta[i] >= pd.Timedelta(10, unit='s'):
+                # print(f'Found timestamp jump at {i} between '
+                #         f'timestamps {index[i]} and {index[i+1]}')
+                print(index[i])
+                print(index[i+1])
+
 
 def generate_anomaly_labels(failure_data: pd.DataFrame,
                                         index: pd.Index,
@@ -31,7 +44,15 @@ def generate_anomaly_labels(failure_data: pd.DataFrame,
 
     index = pd.DatetimeIndex(index)
 
+#     print(index[0])
+#     find_timestamp_jumps(index)
+#     print(index[-1])
+    
     labels = pd.DataFrame(0, index, columns, dtype=np.uint32)
+
+    # print(failure_data)
+
+    # exit()
 
     failure_data = failure_data.droplevel(0)
 
@@ -39,23 +60,29 @@ def generate_anomaly_labels(failure_data: pd.DataFrame,
 
         start = pd.DatetimeIndex([failure.start], tz=index.tz)
         end = pd.DatetimeIndex([failure.end], tz=index.tz)
+        
+        # print(f'{failure.Index}: ', end='')
+        # print(f'{failure.Index}: ')
 
-        print(f'{failure.Index}: ', end='')
+        # if np.any(index >= start[0]) and\
+        #             np.any(index <= end[0]):
+        #     print(f'Got anomaly {int(failure.failure_source)}'\
+        #                         f' between {start[0]} and {end[0]}')
 
-        if np.any(index >= start[0]) and\
-                    np.any(index <= end[0]):
-            print(f'Got anomalies between {start[0]} and {end[0]}')
-
-        else:
-            print(f'No anomalies between {start[0]} and {end[0]}')
+        # else:
+        #     print(f'No anomalies between {start[0]} and {end[0]}')
 
         # Check if any timestamp in the index is
         # close to the start of the anomaly
 
+        # print(labels.index.get_indexer(start,
+        #                                 method='bfill',
+        #                                 tolerance=pd.Timedelta(5, unit='m')))
+
         index_following_start =\
             labels.index.get_indexer(start,
                                         method='bfill',
-                                        tolerance=pd.Timedelta(10, unit='s'))[0]
+                                        tolerance=pd.Timedelta(5, unit='m'))[0]
 
         if index_following_start != -1:
 
@@ -67,11 +94,16 @@ def generate_anomaly_labels(failure_data: pd.DataFrame,
             print(f'Timestamp within tolerance: '\
                         f'{index[index_following_start]}'\
                         f' at index {index_following_start}')
+            
+            # print(labels.index.get_indexer(end,
+            #                                 method='bfill',
+            #                                 tolerance=pd.Timedelta(5, unit='s')))
+
 
             index_following_end =\
                 labels.index.get_indexer(end,
                                             method='bfill',
-                                            tolerance=pd.Timedelta(10, unit='s'))[0]
+                                            tolerance=pd.Timedelta(5, unit='s'))[0]
 
 
             print('Found end timestamp within tolerance')
@@ -231,17 +263,6 @@ if __name__ == '__main__':
     tpu_numbers_train = [get_tpu_number(label) for label in column_names_train]
     tpu_numbers_test = [get_tpu_number(label) for label in column_names_test]
     tpu_numbers_val = [get_tpu_number(label) for label in column_names_val]
-
-    column_names = test_set_x_df.columns
-    timestamps = test_set_x_df.index
-
-    labels = generate_anomaly_labels(tpu_failure_log_df,
-                                                timestamps,
-                                                column_names,
-                                                np.array(tpu_numbers_test),
-                                                prepad=5).to_numpy()
-
-    exit()
 
     tpu_numbers_train_unique = np.array(list(set(tpu_numbers_train)))
     tpu_numbers_test_unique = np.array(list(set(tpu_numbers_test)))
@@ -463,7 +484,6 @@ if __name__ == '__main__':
                                                 np.array(tpu_numbers_test),
                                                 prepad=5).to_numpy()
 
-
     rack_data_train_labeled_all = []
     rack_labels_train_labeled_all = []
 
@@ -561,7 +581,7 @@ if __name__ == '__main__':
                                                         anomaly_ratio_per_column,
                                                         columns_reduced_train_labeled):
 
-        print(f'{column_name}: {anomalies} anomalies, {anomaly_ratio} % of all data')
+        print(f'{column_name}: {anomalies} anomalies, {100*anomaly_ratio} % of all data')
 
     train_set_labeled_x_df.to_hdf(f'{args.dataset_dir}/reduced_hlt_'\
                                         f'labeled_train_set_{args.variant}_x.h5',
@@ -735,7 +755,7 @@ if __name__ == '__main__':
                                                         anomaly_ratio_per_column,
                                                         columns_reduced_test):
 
-        print(f'{column_name}: {anomalies} anomalies, {anomaly_ratio} % of all data')
+        print(f'{column_name}: {anomalies} anomalies, {100*anomaly_ratio} % of all data')
 
     test_set_reduced_x_df.to_hdf(f'{args.dataset_dir}/reduced_hlt_'
                                         f'test_set_{args.variant}_x.h5',
@@ -905,7 +925,7 @@ if __name__ == '__main__':
     # Reduce and save dirty val set
 
     val_set_x_df = pd.concat((val_set_x_df.iloc[:9270, :],
-                                test_set_x_df.iloc[-6497:, :]))
+                                test_set_x_df.iloc[-8570:, :]))
 
     column_names_val = list((val_set_x_df).columns.values)
     tpu_numbers_val = [get_tpu_number(label) for label in column_names_val]

@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-import re
+
 import argparse
 import datetime as dt
 from enum import Enum
 from collections import defaultdict
 from html.parser import HTMLParser
 
+import pytz
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -23,6 +24,8 @@ failure_source_dict =  {'DCM':              0b00000000001000000,
                         'NodeCoralProxy':   0b00100000000000000,
                         'RackCoralProxy':   0b01000000000000000,
                         'hardware_glitch':  0b10000000000000000}
+
+timezone = pytz.FixedOffset(120)
 
 
 class AtlasRunsParser(HTMLParser):
@@ -142,8 +145,9 @@ if __name__ == '__main__':
 
     tpu_failure_log.reset_index(level='tpu',
                                     inplace=True)
-
-    tpu_failure_log['start'] = tpu_failure_log.index
+    
+    tpu_failure_log['start'] =\
+        tpu_failure_log.index.tz_localize(pytz.FixedOffset(120))
 
     run_numbers = pd.Series(pd.NA, tpu_failure_log.index)
     failure_ends = pd.Series(pd.NA, tpu_failure_log.index)
@@ -151,6 +155,9 @@ if __name__ == '__main__':
     failure_count_per_run = defaultdict(int)
 
     for run in atlas_runs.itertuples():
+
+        start = run.start.tz_localize(timezone)
+        end = run.end.tz_localize(timezone)
 
         print(f'{run.Index}: {run.start}\t{run.end}')
 
@@ -161,15 +168,16 @@ if __name__ == '__main__':
             failure_start =\
                 tpu_failure_log.iloc[count]['start']
 
-            if failure_start >= run.start and\
-                            failure_start < run.end:
+            if failure_start >= start and\
+                            failure_start < end:
+
                 run_numbers.iloc[count] = run.Index
-                failure_ends.iloc[count] = run.end
+                failure_ends.iloc[count] = end
 
                 failure_count_per_run[run.Index] += 1
 
-    for run, failure_count in failure_count_per_run.items():
-        print(f'Run {run}: {failure_count} failures')
+    # for run, failure_count in failure_count_per_run.items():
+    #     print(f'Run {run}: {failure_count} failures')
 
     tpu_failure_log['run'] = run_numbers
     tpu_failure_log['end'] = failure_ends
