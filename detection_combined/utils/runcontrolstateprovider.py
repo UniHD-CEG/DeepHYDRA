@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from typing import List
 import os
 import time as t
 import datetime as dt
@@ -33,19 +34,15 @@ class RunControlStateProvider():
         self._logger = logging.getLogger(__name__)
     
 
-    async def wait_for_state(self,
-                                target_state: str,
+    async def wait_for_states(self,
+                                target_states: List[str],
                                 return_delay: dt.timedelta) -> pd.DataFrame:
-
-        count = 0
 
         while True:
 
             time_start = t.monotonic()
 
             # request_time = dt.datetime.now()
-            # request_time = dt.datetime(2023, 6, 7, 14, 30, 0) +\
-            #                             count*self._polling_interval
             
             request_time = ShiftedTimeSingleton(dt.datetime(2023, 6, 7, 14, 30, 0)).now()
 
@@ -81,15 +78,15 @@ class RunControlStateProvider():
 
                 state = return_val[0][0]
 
-                if state == target_state:
+                if state in target_states:
 
-                    self._logger.info(f'Run Control status switched to {target_state}. '
+                    self._logger.info(f'Run Control status switched to {state}. '
                                                 f'Continuing after delay of {return_delay}')
                     break
 
                 else:
                     self._logger.info(f'Run Control status is {state}. Waiting '
-                                        f'for state {target_state} before continuing')
+                                        f'for state(s) {target_states} before continuing')
 
             request_duration = t.monotonic() - time_start
 
@@ -107,8 +104,6 @@ class RunControlStateProvider():
             delay_period = self._polling_interval.total_seconds() - request_duration
 
             await aio.sleep(delay_period)
-
-            count += 1
 
         await aio.sleep(return_delay.total_seconds())
 

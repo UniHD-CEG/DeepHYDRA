@@ -325,10 +325,6 @@ class OnlinePBeastDataLoader():
 
             dcm_rates_all_pd = dcm_rates_all_pd.fillna(nan_fill_value)
 
-            target_idx = self._get_idx_closest_consecutive_timestamp(dcm_rates_all_pd.index)
-
-            dcm_rates_all_pd = dcm_rates_all_pd.iloc[[target_idx], :]
-
             self._logger.debug(f'Current timestamp: {dcm_rates_all_pd.index[0]}')
 
             if self._timestamp_last is not None:
@@ -337,6 +333,13 @@ class OnlinePBeastDataLoader():
 
                 self._logger.debug(f'Last timestamp: {self._timestamp_last}')
                 self._logger.debug(f'Current timestamp delta: {timestamp_delta}')
+
+                target_idx = self._get_idx_closest_consecutive_timestamp(dcm_rates_all_pd.index)
+
+            else:
+                target_idx = -1
+
+            dcm_rates_all_pd = dcm_rates_all_pd.iloc[[target_idx], :]
 
             self._timestamp_last = dcm_rates_all_pd.index[0]
             

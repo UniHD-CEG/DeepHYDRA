@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from typing import List
 import argparse
 import sys
 import time as t
@@ -59,10 +60,10 @@ def polling_rate_parser(polling_rate_string: str):
     return dt.timedelta(hours=hours, minutes=minutes, seconds=seconds)
 
 
-async def wait_for_state(state: str,
-                        return_delay: dt.timedelta):
-    with console.status(f'Waiting for {state} transition...', spinner='simpleDots'):
-        await run_control_state_provider.wait_for_state(state, return_delay)
+async def wait_for_states(states: List[str],
+                            return_delay: dt.timedelta):
+    with console.status(f'Waiting for {states} transition...', spinner='simpleDots'):
+        await run_control_state_provider.wait_for_states(states, return_delay)
 
 
 if __name__ == '__main__':
@@ -130,8 +131,8 @@ if __name__ == '__main__':
 
     run_control_state_provider = RunControlStateProvider()
 
-    aio.run(wait_for_state('CONNECTED',
-                        dt.timedelta(seconds=5)))
+    aio.run(wait_for_states(['CONNECTED' 'ONLINE'],
+                            dt.timedelta(seconds=5)))
     
     data_loader = OnlinePBeastDataLoader('DCMRate',
                                             polling_interval=dt.timedelta(seconds=5),
@@ -174,8 +175,8 @@ if __name__ == '__main__':
     informer_runner.register_detection_callback(
                     json_anomaly_registry.transformer_detection)
 
-    aio.run(wait_for_state('RUNNING',
-                        dt.timedelta(seconds=5)))
+    aio.run(wait_for_states(['RUNNING'],
+                    dt.timedelta(seconds=5)))
 
 #     aio.run(wait_for_state('RUNNING',
 #                         dt.timedelta(minutes=5)))
