@@ -13,17 +13,17 @@ import matplotlib.pyplot as plt
 import cv2 as cv
 from tqdm import tqdm
 
-failure_source_dict =  {'DCM':              0b00000000001000000,
-                        'HLT':              0b00000000010000000,
-                        'HLTRC':            0b00000000100000000,
-                        'HLTMPPU':          0b00000001000000000,
-                        'HLT_DB_Gen':       0b00000010000000000,
-                        'DF_IS':            0b00000100000000000,
-                        'DF_Histogramming': 0b00001000000000000,
-                        'DefRDB':           0b00010000000000000,
-                        'NodeCoralProxy':   0b00100000000000000,
-                        'RackCoralProxy':   0b01000000000000000,
-                        'hardware_glitch':  0b10000000000000000}
+failure_source_dict =  {'DCM':              0b000000000010000000,
+                        'HLT':              0b000000000100000000,
+                        'HLTRC':            0b000000001000000000,
+                        'HLTMPPU':          0b000000010000000000,
+                        'HLT_DB_Gen':       0b000000100000000000,
+                        'DF_IS':            0b000001000000000000,
+                        'DF_Histogramming': 0b000010000000000000,
+                        'DefRDB':           0b000100000000000000,
+                        'NodeCoralProxy':   0b001000000000000000,
+                        'RackCoralProxy':   0b010000000000000000,
+                        'hardware_glitch':  0b100000000000000000}
 
 timezone = pytz.FixedOffset(120)
 

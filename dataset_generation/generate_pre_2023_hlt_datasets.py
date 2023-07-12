@@ -797,7 +797,6 @@ if __name__ == '__main__':
                                                             ratio=0.025,
                                                             factor=0.5)
 
-
     rack_data_test_all = []
     rack_labels_test_all = []
 
@@ -997,7 +996,6 @@ if __name__ == '__main__':
     anomaly_generator_val.collective_trend_outliers(rack_count=3,
                                                         ratio=0.025,
                                                         factor=0.5)
-
 
     rack_data_val_all = []
     rack_labels_val_all = []
