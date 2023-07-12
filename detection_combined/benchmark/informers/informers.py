@@ -188,13 +188,13 @@ if __name__ == '__main__':
 #                                                                         cmap='plasma')
 
 
-#     preds = informer_runner.get_predictions()
-# 
-#     with open(args.checkpoint_dir +\
-#                 '/model_parameters.json', 'r') as parameter_dict_file:
-#         parameter_dict = json.load(parameter_dict_file)
-# 
-#         benchmark_anomaly_registry.evaluate(preds,
-#                                                 args.model,
-#                                                 args.variant,
-#                                                 args.seed)
+    preds = informer_runner.get_predictions()
+
+    with open(args.checkpoint_dir +\
+                '/model_parameters.json', 'r') as parameter_dict_file:
+        parameter_dict = json.load(parameter_dict_file)
+
+        benchmark_anomaly_registry.evaluate(preds,
+                                                args.model,
+                                                args.variant,
+                                                args.seed)

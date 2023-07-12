@@ -351,27 +351,31 @@ def print_results(label: np.array,
 
     preds_clustering =\
         load_numpy_array('predictions/clustering.npy')
-    preds_tranad =\
-        load_numpy_array(f'predictions/tranad_seed_{tranad_seed}.npy')
-    preds_tranad_train =\
-        load_numpy_array(f'predictions/tranad_train_no_augment_seed_{tranad_seed}.npy')
-    preds_l2_dist_train_mse =\
-        load_numpy_array(f'predictions/l2_dist_train_mse_seed_{informer_mse_seed}.npy')
-    preds_l2_dist_mse =\
-        load_numpy_array(f'predictions/l2_dist_mse_seed_{informer_mse_seed}.npy')
+    # preds_tranad =\
+    #     load_numpy_array(f'predictions/tranad_seed_{tranad_seed}.npy')
+    # preds_tranad_train =\
+    #     load_numpy_array(f'predictions/tranad_train_no_augment_seed_{tranad_seed}.npy')
+    # preds_l2_dist_train_mse =\
+    #     load_numpy_array(f'predictions/l2_dist_train_mse_seed_{informer_mse_seed}.npy')
+    # preds_l2_dist_mse =\
+    #     load_numpy_array(f'predictions/l2_dist_mse_seed_{informer_mse_seed}.npy')
+    # preds_l2_dist_train_smse =\
+    #     load_numpy_array(f'predictions/l2_dist_train_smse_seed_{informer_smse_seed}.npy')
+    # preds_l2_dist_smse =\
+    #     load_numpy_array(f'predictions/l2_dist_smse_seed_{informer_smse_seed}.npy')
     preds_l2_dist_train_smse =\
-        load_numpy_array(f'predictions/l2_dist_train_smse_seed_{informer_smse_seed}.npy')
+        load_numpy_array(f'predictions/l2_dist_train_smse_no_augment_seed_{informer_smse_seed}.npy')
     preds_l2_dist_smse =\
         load_numpy_array(f'predictions/l2_dist_smse_seed_{informer_smse_seed}.npy')
 
-    spot_train_size = int(len(preds_l2_dist_mse)*0.1)
+    spot_train_size = int(len(preds_l2_dist_smse)*0.1)
 
     # Fix alignment
     
-    preds_l2_dist_mse =\
-        np.pad(preds_l2_dist_mse[1:],
-                    (0, 1), 'constant',
-                    constant_values=(0,))
+    # preds_l2_dist_mse =\
+    #     np.pad(preds_l2_dist_mse[1:],
+    #                 (0, 1), 'constant',
+    #                 constant_values=(0,))
     
     preds_l2_dist_smse =\
         np.pad(preds_l2_dist_smse[1:],
@@ -393,50 +397,50 @@ def print_results(label: np.array,
                             label,
                             to_csv)
 
-    print('TranAD:')
-
-    preds_tranad =\
-            get_scores_tranad('tranad',
-                                tranad_seed,
-                                preds_tranad_train,
-                                preds_tranad,
-                                label, 0.01, 0.02,
-                                to_csv,
-                                pickle_spot_instances)
-    
-    print('STRADA-TranAD:')
-
-    preds_strada_tranad =\
-        np.logical_or(preds_clustering,
-                            preds_tranad)
-    
-    get_scores_thresholded('strada_tranad',
-                                tranad_seed,
-                                preds_strada_tranad,
-                                label,
-                                to_csv)
-    
-    print('Informer-MSE:')
-
-    preds_l2_dist_mse =\
-            get_scores('informer_mse', informer_mse_seed,
-                        preds_l2_dist_train_mse[:spot_train_size],
-                                                preds_l2_dist_mse,
-                                                label, 0.0025,
-                                                0.8, to_csv,
-                                                pickle_spot_instances)
-
-    print('STRADA-MSE:')
-
-    preds_strada_mse =\
-        np.logical_or(preds_clustering,
-                        preds_l2_dist_mse)
-    
-    get_scores_thresholded('strada_mse',
-                            informer_mse_seed,
-                            preds_strada_mse,
-                            label,
-                            to_csv)
+#     print('TranAD:')
+# 
+#     preds_tranad =\
+#             get_scores_tranad('tranad',
+#                                 tranad_seed,
+#                                 preds_tranad_train,
+#                                 preds_tranad,
+#                                 label, 0.01, 0.02,
+#                                 to_csv,
+#                                 pickle_spot_instances)
+#     
+#     print('STRADA-TranAD:')
+# 
+#     preds_strada_tranad =\
+#         np.logical_or(preds_clustering,
+#                             preds_tranad)
+#     
+#     get_scores_thresholded('strada_tranad',
+#                                 tranad_seed,
+#                                 preds_strada_tranad,
+#                                 label,
+#                                 to_csv)
+#     
+#     print('Informer-MSE:')
+# 
+#     preds_l2_dist_mse =\
+#             get_scores('informer_mse', informer_mse_seed,
+#                         preds_l2_dist_train_mse[:spot_train_size],
+#                                                 preds_l2_dist_mse,
+#                                                 label, 0.0025,
+#                                                 0.8, to_csv,
+#                                                 pickle_spot_instances)
+# 
+#     print('STRADA-MSE:')
+# 
+#     preds_strada_mse =\
+#         np.logical_or(preds_clustering,
+#                         preds_l2_dist_mse)
+#     
+#     get_scores_thresholded('strada_mse',
+#                             informer_mse_seed,
+#                             preds_strada_mse,
+#                             label,
+#                             to_csv)
     
     print('Informer-SMSE:')
 
@@ -475,7 +479,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     labels_pd = pd.read_hdf(args.data_dir +\
-                            '/unreduced_hlt_test_set_2022_y.h5')
+                            '/unreduced_hlt_test_set_2023_y.h5')
 
     labels_np = labels_pd.to_numpy()
 

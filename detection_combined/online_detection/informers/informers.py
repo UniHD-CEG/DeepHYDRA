@@ -26,32 +26,32 @@ from utils.exceptions import NonCriticalPredictionException
 from utils.consolesingleton import ConsoleSingleton
 
 
-known_channels_2022 = ['m_1', 'm_2', 'm_3', 'm_4', 'm_5', 'm_6', 'm_7', 'm_8',
-                        'm_9', 'm_10', 'm_11', 'm_12', 'm_13', 'm_44', 'm_45', 'm_46',
-                        'm_47', 'm_48', 'm_49', 'm_50', 'm_51', 'm_52', 'm_53', 'm_54',
-                        'm_55', 'm_56', 'm_57', 'm_58', 'm_59', 'm_60', 'm_61', 'm_62',
-                        'm_63', 'm_64', 'm_65', 'm_66', 'm_67', 'm_68', 'm_69', 'm_70',
-                        'm_71', 'm_72', 'm_73', 'm_74', 'm_75', 'm_76', 'm_77', 'm_79',
-                        'm_80', 'm_81', 'm_82', 'm_83',
-                        'std_1', 'std_2', 'std_3', 'std_4', 'std_5', 'std_6', 'std_7', 'std_8',
-                        'std_9', 'std_10', 'std_11', 'std_12', 'std_13', 'std_44', 'std_45', 'std_46',
-                        'std_47', 'std_48', 'std_49', 'std_50', 'std_51', 'std_52', 'std_53', 'std_54',
-                        'std_55', 'std_56', 'std_57', 'std_58', 'std_59', 'std_60', 'std_61', 'std_62',
-                        'std_63', 'std_64', 'std_65', 'std_66', 'std_67', 'std_68', 'std_69', 'std_70',
-                        'std_71', 'std_72', 'std_73', 'std_74', 'std_75', 'std_76', 'std_77', 'std_79',
-                        'std_80', 'std_81', 'std_82', 'std_83']
+# known_channels_2022 = ['m_1', 'm_2', 'm_3', 'm_4', 'm_5', 'm_6', 'm_7', 'm_8',
+#                         'm_9', 'm_10', 'm_11', 'm_12', 'm_13', 'm_44', 'm_45', 'm_46',
+#                         'm_47', 'm_48', 'm_49', 'm_50', 'm_51', 'm_52', 'm_53', 'm_54',
+#                         'm_55', 'm_56', 'm_57', 'm_58', 'm_59', 'm_60', 'm_61', 'm_62',
+#                         'm_63', 'm_64', 'm_65', 'm_66', 'm_67', 'm_68', 'm_69', 'm_70',
+#                         'm_71', 'm_72', 'm_73', 'm_74', 'm_75', 'm_76', 'm_77', 'm_79',
+#                         'm_80', 'm_81', 'm_82', 'm_83',
+#                         'std_1', 'std_2', 'std_3', 'std_4', 'std_5', 'std_6', 'std_7', 'std_8',
+#                         'std_9', 'std_10', 'std_11', 'std_12', 'std_13', 'std_44', 'std_45', 'std_46',
+#                         'std_47', 'std_48', 'std_49', 'std_50', 'std_51', 'std_52', 'std_53', 'std_54',
+#                         'std_55', 'std_56', 'std_57', 'std_58', 'std_59', 'std_60', 'std_61', 'std_62',
+#                         'std_63', 'std_64', 'std_65', 'std_66', 'std_67', 'std_68', 'std_69', 'std_70',
+#                         'std_71', 'std_72', 'std_73', 'std_74', 'std_75', 'std_76', 'std_77', 'std_79',
+#                         'std_80', 'std_81', 'std_82', 'std_83']
 
 
-def fix_for_2023_deployment(data: pd.DataFrame) -> pd.DataFrame:
-    median_loc = int(np.flatnonzero(np.array(known_channels_2022) == 'm_63')[0])
-    std_loc = int(np.flatnonzero(np.array(known_channels_2022) == 'std_63')[0])
+# def fix_for_2023_deployment(data: pd.DataFrame) -> pd.DataFrame:
+#     median_loc = int(np.flatnonzero(np.array(known_channels_2022) == 'm_63')[0])
+#     std_loc = int(np.flatnonzero(np.array(known_channels_2022) == 'std_63')[0])
 
-    data = data.loc[:, data.columns.isin(known_channels_2022)]
+#     data = data.loc[:, data.columns.isin(known_channels_2022)]
 
-    data.insert(median_loc, 'm_63', data['m_62'].to_numpy())
-    data.insert(std_loc, 'std_63', data['std_62'].to_numpy())
+#     data.insert(median_loc, 'm_63', data['m_62'].to_numpy())
+#     data.insert(std_loc, 'std_63', data['std_62'].to_numpy())
 
-    return data
+#     return data
 
 
 def polling_rate_parser(polling_rate_string: str):
@@ -244,7 +244,7 @@ if __name__ == '__main__':
                                                             timestamp,
                                                             data)
                     
-                    output_slice = fix_for_2023_deployment(output_slice)
+                    # output_slice = fix_for_2023_deployment(output_slice)
                     
                     reduced_data_buffer.push(output_slice)
                     

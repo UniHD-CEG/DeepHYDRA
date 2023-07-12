@@ -171,6 +171,7 @@ class BenchmarkAnomalyRegistry(AnomalyRegistry):
                         pred_pd.iloc[row] = 1
                 
         pred_clustering_np = pred_pd.to_numpy().astype(np.uint8).flatten()
+        
         _save_numpy_array(pred_clustering_np, f'{output_dir}/clustering.npy')
 
         if model_name == 'Informer-MSE':
