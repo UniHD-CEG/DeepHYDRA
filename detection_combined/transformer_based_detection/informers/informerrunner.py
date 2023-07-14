@@ -192,9 +192,9 @@ class InformerRunner():
                     self._anomaly_start =\
                             timestamp.strftime('%Y-%m-%d %H:%M:%S')
 
-                    self._logger.info('Transformer-based detection '
-                                        'encountered anomaly at timestamp '
-                                        f'{self._anomaly_start}')
+                    self._logger.warning('\031[1mTransformer-based detection '
+                                            'encountered anomaly at timestamp '
+                                            f'{self._anomaly_start}\031[0m')
 
                 self.detection_callback(0, AnomalyType.TransformerBased,
                                                         self._anomaly_start,
@@ -206,8 +206,8 @@ class InformerRunner():
 
                 if self._anomaly_duration != 0:
                     anomaly_end = timestamp.strftime('%Y-%m-%d %H:%M:%S')
-                    self._logger.info('Transformer-based detection '
-                                        f'anomaly ended at {anomaly_end}')
+                    self._logger.warning('\033[1mTransformer-based detection '
+                                            f'anomaly ended at {anomaly_end}\033[1m')
 
                 self._anomaly_duration = 0
 

@@ -42,11 +42,11 @@ class RunControlStateProvider():
 
             time_start = t.monotonic()
 
-            # request_time = dt.datetime.now()
+            request_time = dt.datetime.now()
             
-            request_time = ShiftedTimeSingleton(dt.datetime(2023, 6, 7, 14, 30, 0)).now()
+            request_time = ShiftedTimeSingleton(dt.datetime(2023, 7, 13, 14, 30, 0)).now()
 
-            print(request_time)
+            # print(request_time)
 
             self._logger.debug(f'Requesting Run Control status '
                                 f'from PBEAST at timestamp {request_time}')
@@ -98,12 +98,14 @@ class RunControlStateProvider():
                                     'Polling interval: '\
                                     f'{self._polling_interval.total_seconds()} s'
 
-                self._logger.error(error_string)
-                raise RuntimeError(error_string)
+                self._logger.warning(error_string)
 
-            delay_period = self._polling_interval.total_seconds() - request_duration
+                # self._logger.error(error_string)
+                # raise RuntimeError(error_string)
 
-            await aio.sleep(delay_period)
+            else:
+                delay_period = self._polling_interval.total_seconds() - request_duration
+                await aio.sleep(delay_period)
 
         await aio.sleep(return_delay.total_seconds())
 

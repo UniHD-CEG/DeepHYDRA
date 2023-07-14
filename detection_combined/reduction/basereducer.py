@@ -58,7 +58,7 @@ class BaseReducer(ABC):
                                 labels_reduced: np.array,
                                 data_reduced: np.array) -> np.array:
 
-        rack_count_expected = len(self._configuration_version)
+        rack_count_expected = len(self._rack_numbers_expected)
         rack_count_observed = len(labels_reduced)//2
 
         if rack_count_observed < rack_count_expected:
@@ -66,11 +66,11 @@ class BaseReducer(ABC):
                     [int(label.removeprefix('m_'))\
                         for label in labels_reduced[:rack_count_observed]]
 
-            missing_racks = np.setdiff1d(self._configuration_version,
+            missing_racks = np.setdiff1d(self._rack_numbers_expected,
                                                 rack_numbers_observed)
 
             indices_missing =\
-                    np.nonzero(np.isin(self._configuration_version,
+                    np.nonzero(np.isin(self._rack_numbers_expected,
                                                     missing_racks))[0]
 
             if not self._missing_racks_feedback_given:

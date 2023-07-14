@@ -30,8 +30,7 @@ class OnlinePBeastDataLoader():
                     delay: dt.timedelta = dt.timedelta(seconds=30),
                     window_length: dt.timedelta = dt.timedelta(seconds=10),
                     pbeast_server: str = 'https://atlasop.cern.ch',
-                    data_unavail_handling: str = 'raise_exception',
-                    polling_interval_first = None) -> None:
+                    timing_violation_handling: str = 'raise_exception') -> None:
 
         self._data_channel = data_channel
         self._polling_interval = polling_interval
@@ -39,23 +38,13 @@ class OnlinePBeastDataLoader():
         self._window_length = window_length
         self._pbeast_server = pbeast_server
         
-        if data_unavail_handling not in ['raise_exception',
-                                                'return_zeros']:
+        if timing_violation_handling not in ['skip',
+                                                'raise_exception']:
             
-            raise ValueError('Data unavailability handling type '
-                                f'{data_unavail_handling} is unknown')
+            raise ValueError('Timing violation handling type '
+                                f'{timing_violation_handling} is unknown')
         
-        self._data_unavail_handling = data_unavail_handling
-
-        # If no explicit polling interval for the first data item
-        # is passed, use double the regular polling interval.
-        # This is done to overcome the additional delay on the
-        # first read of the Beauty 
-
-        if polling_interval_first is not None:
-            self._polling_interval_first = polling_interval_first
-        else:
-            self._polling_interval_first = self._polling_interval*2
+        self._timing_violation_handling = timing_violation_handling
 
         os.environ['PBEAST_SERVER_SSO_SETUP_TYPE'] = 'AutoUpdateKerberos'
 
@@ -87,9 +76,12 @@ class OnlinePBeastDataLoader():
         data_channel_vars = _data_channel_vars_dict[self._data_channel]
 
         # requested_period_end = dt.datetime.now() - self._delay
+
         requested_period_end =\
-            ShiftedTimeSingleton(dt.datetime(2023, 6, 7, 14, 30, 0)).now() - self._delay
+            ShiftedTimeSingleton(dt.datetime(2023, 7, 13, 14, 30, 0)).now() - self._delay
+
         # requested_period_end = dt.datetime.now()
+        
         requested_period_start = requested_period_end - self._window_length
 
         self._logger.info('Initializing')
@@ -112,16 +104,8 @@ class OnlinePBeastDataLoader():
                                                                     all_publications=True)
 
         except RuntimeError as runtime_error:
-            if self._data_unavail_handling == 'return_zeros':
-                self._logger.warning(f'PBEAST data retrieval to obtain channel name '
-                                        'reference failed, trying backup request time. '
-                                        'The obtained channel names might not line up '
-                                        'with the current channels, which might '
-                                        'will cause the detection to fail.')
-
-            else:
-                self._logger.error(f'Could not read {self._data_channel} data from PBEAST')
-                raise
+            self._logger.error(f'Could not read {self._data_channel} data from PBEAST')
+            raise
 
 
         if len(dcm_rates_all_list) == 0:
@@ -172,9 +156,11 @@ class OnlinePBeastDataLoader():
         data_channel_vars = _data_channel_vars_dict[self._data_channel]
 
         # requested_period = dt.datetime.now() - self._delay
+
         requested_period =\
-            ShiftedTimeSingleton(dt.datetime(2023, 6, 7, 14, 30, 0)).now() -\
+            ShiftedTimeSingleton(dt.datetime(2023, 7, 13, 14, 30, 0)).now() -\
                                                                     self._delay
+        
         self._logger.info('Executing PBEAST request to force SSO login')
 
         self._logger.debug(f'Requesting PBEAST data from '
@@ -195,9 +181,8 @@ class OnlinePBeastDataLoader():
                                                                     all_publications=True)
             
         except RuntimeError as runtime_error:
-            if self._data_unavail_handling != 'return_zeros':
-                self._logger.error(f'Could not read {self._data_channel} data from PBEAST')
-                raise
+            self._logger.error(f'Could not read {self._data_channel} data from PBEAST')
+            raise
 
         if len(dcm_rates_all_list) != 0:
             self._logger.debug('Successfully retrieved PBEAST data')
@@ -209,8 +194,9 @@ class OnlinePBeastDataLoader():
         data_channel_vars = _data_channel_vars_dict[self._data_channel]
 
         # requested_period_end = dt.datetime.now() - self._delay - self._window_length
+
         requested_period_end =\
-            ShiftedTimeSingleton(dt.datetime(2023, 6, 7, 14, 30, 0)).now() -\
+            ShiftedTimeSingleton(dt.datetime(2023, 7, 13, 14, 30, 0)).now() -\
                                                                 self._delay -\
                                                                 self._window_length
         
@@ -236,9 +222,8 @@ class OnlinePBeastDataLoader():
                                                                     all_publications=True)
 
         except RuntimeError as runtime_error:
-            if self._data_unavail_handling != 'return_zeros':
-                self._logger.error(f'Could not read {self._data_channel} data from PBEAST')
-                raise
+            self._logger.error(f'Could not read {self._data_channel} data from PBEAST')
+            raise
 
         if len(dcm_rates_all_list) != 0:
             self._logger.debug('Successfully retrieved PBEAST data')
@@ -266,8 +251,6 @@ class OnlinePBeastDataLoader():
 
                 self._logger.info('Got smaller prefill chunk than '
                                     'requested. Pre-padding with zeros')
-
-                print(dcm_rates_all_pd.shape)
                 
                 pad_length = size - len(dcm_rates_all_pd)
 
@@ -301,22 +284,16 @@ class OnlinePBeastDataLoader():
         else:
             self._logger.warning('Prefill chunk data retrieval failed '
                                     'with chosen handling behavior '
-                                    f'{self._data_unavail_handling}.'
+                                    f'{self._timing_violation_handling}.'
                                     'Returning all-zero chunk.')
             
             index = pd.date_range(requested_period_start,
                                         requested_period_end,
                                         size)
-            
-            print(index)
 
             zeros = np.zeros((size, len(self._column_names)))
 
-            print(zeros.shape)
-
             dcm_rates_all_pd = pd.DataFrame(zeros, index)
-
-            print(dcm_rates_all_pd.shape)
             
         self._timestamp_last = dcm_rates_all_pd.index[-1]
 
@@ -342,8 +319,10 @@ class OnlinePBeastDataLoader():
             time_start = t.monotonic()
 
             # requested_period_end = dt.datetime.now() - self._delay
+
             requested_period_end =\
-                ShiftedTimeSingleton(dt.datetime(2023, 6, 7, 14, 30, 0)).now() - self._delay
+                ShiftedTimeSingleton(dt.datetime(2023, 7, 13, 14, 30, 0)).now() - self._delay
+            
             requested_period_start = requested_period_end - self._window_length
 
             self._logger.debug(f'Requesting PBEAST data from '
@@ -405,17 +384,34 @@ class OnlinePBeastDataLoader():
             request_duration = t.monotonic() - time_start
 
             if request_duration >= self._polling_interval.total_seconds():
+                if self._timing_violation_handling == 'raise_exception':
 
-                queue.put(None)
+                    queue.put(None)
 
-                error_string = 'Request processing time '\
-                                    'exceeded polling interval. '\
-                                    f'Request processing time: {request_duration:.3f} s\t'\
-                                    'Polling interval: '\
-                                    f'{self._polling_interval.total_seconds()} s'
+                    error_string = 'Request processing time '\
+                                        'exceeded polling interval '\
+                                        'with chosen timing violation handling '\
+                                        f'option {self._timing_violation_handling}.'\
+                                        f'Request processing time: {request_duration:.3f} s\t'\
+                                        'Polling interval: '\
+                                        f'{self._polling_interval.total_seconds()} s'
 
-                self._logger.error(error_string)
-                raise RuntimeError(error_string)
+                    self._logger.error(error_string)
+                    raise RuntimeError(error_string)
+                
+                else:
+                    warning_string = 'Request processing time '\
+                                        'exceeded polling interval '\
+                                        'with chosen timing violation handling '\
+                                        f'option {self._timing_violation_handling}.'\
+                                        f'Request processing time: {request_duration:.3f} s\t'\
+                                        'Polling interval: '\
+                                        f'{self._polling_interval.total_seconds()} s. '\
+                                        'This might lead to spurious detections '\
+                                        'within the next few timesteps.'
+
+                    self._logger.warning(warning_string)
+                    continue
 
             delay_period = self._polling_interval.total_seconds() - request_duration
 

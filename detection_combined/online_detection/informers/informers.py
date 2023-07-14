@@ -25,6 +25,7 @@ from utils.anomalyregistry import JSONAnomalyRegistry
 from utils.reduceddatabuffer import ReducedDataBuffer
 from utils.exceptions import NonCriticalPredictionException
 from utils.consolesingleton import ConsoleSingleton
+from utils.gradioserver import GradioServer
 
 
 # known_channels_2022 = ['m_1', 'm_2', 'm_3', 'm_4', 'm_5', 'm_6', 'm_7', 'm_8',
@@ -129,15 +130,21 @@ if __name__ == '__main__':
     logger.addHandler(file_logging_handler)
     logger.addHandler(console_logging_handler)
 
+#     gradio_server = GradioServer()
+# 
+#     gradio_server_proc = mp.Process(target=gradio_server.launch)
+#     gradio_server_proc.start()
+
     run_control_state_provider = RunControlStateProvider()
 
-    aio.run(wait_for_states(['CONNECTED', 'ONLINE'],
+    aio.run(wait_for_states(['CONNECTED', 'RUNNING'],
                             dt.timedelta(seconds=5)))
     
     data_loader = OnlinePBeastDataLoader('DCMRate',
                                             polling_interval=dt.timedelta(seconds=5),
                                             delay=dt.timedelta(seconds=30),
-                                            window_length=dt.timedelta(seconds=5))
+                                            window_length=dt.timedelta(seconds=5),
+                                            timing_violation_handling='skip')
 
     with console.status('Initializing dataloader', spinner='flip'):
         data_loader.init()
@@ -175,7 +182,7 @@ if __name__ == '__main__':
     informer_runner.register_detection_callback(
                     json_anomaly_registry.transformer_detection)
     
-    data_loader.force_sso()
+    data_loader.force_sso_login()
 
     aio.run(wait_for_states(['RUNNING'],
                     dt.timedelta(milliseconds=1)))

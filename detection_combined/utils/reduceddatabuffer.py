@@ -1,4 +1,5 @@
 
+import logging
 from collections.abc import Callable
 from collections import deque
 
@@ -16,6 +17,8 @@ class ReducedDataBuffer():
 
         self._buffer = deque([], maxlen=self._size)
 
+        self._logger = logging.getLogger(__name__)
+        self._buffer_filled_feedback_given = False
 
     def push(self, data: pd.DataFrame):
         
@@ -41,6 +44,9 @@ class ReducedDataBuffer():
             if not isinstance(self._buffer_filled_callback, type(None)):
                 return self._buffer_filled_callback(buffer_pd)
 
+            if not self._buffer_filled_feedback_given:
+                self._logger.info('Buffer filled')
+                self._buffer_filled_feedback_given = True
 
     def set_buffer_filled_callback(self,
                                     callback: Callable) -> None:

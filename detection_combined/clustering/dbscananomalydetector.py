@@ -119,8 +119,8 @@ class DBScanAnomalyDetector(BaseClusteringDetector):
             anomaly_start = self.timesteps[self.datapoints_processed - anomaly_duration + 1].strftime('%Y-%m-%d %H:%M:%S')
 
             if anomaly_duration == self.duration_threshold:
-                 self._logger.info(f'{machine_label}: General anomaly encountered '
-                                    f'at element {self.datapoints_processed}')
+                 self._logger.warning(f'\031[1m{machine_label}: General anomaly encountered '
+                                            f'at element {self.datapoints_processed}\031[0m')
 
             if anomaly_duration >= self.duration_threshold:
                 self.detection_callback(int(machine_label),
@@ -132,8 +132,8 @@ class DBScanAnomalyDetector(BaseClusteringDetector):
             anomaly_start = self.timesteps[self.datapoints_processed - anomaly_duration + 1].strftime('%Y-%m-%d %H:%M:%S')
 
             if anomaly_duration == self.duration_threshold:
-                 self._logger.info(f'{machine_label}: dropped to 0 '
-                                    f'at element {self.datapoints_processed}')
+                 self._logger.warning(f'\031[1m{machine_label}: dropped to 0 '
+                                        f'at element {self.datapoints_processed}\031[0m')
 
             if anomaly_duration >= self.duration_threshold:
                 self.detection_callback(int(machine_label),
