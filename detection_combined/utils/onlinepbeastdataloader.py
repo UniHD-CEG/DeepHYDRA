@@ -30,7 +30,8 @@ class OnlinePBeastDataLoader():
                     delay: dt.timedelta = dt.timedelta(seconds=30),
                     window_length: dt.timedelta = dt.timedelta(seconds=10),
                     pbeast_server: str = 'https://atlasop.cern.ch',
-                    data_unavail_handling: str = 'raise_exception') -> None:
+                    data_unavail_handling: str = 'raise_exception',
+                    polling_interval_first = None) -> None:
 
         self._data_channel = data_channel
         self._polling_interval = polling_interval
@@ -45,6 +46,16 @@ class OnlinePBeastDataLoader():
                                 f'{data_unavail_handling} is unknown')
         
         self._data_unavail_handling = data_unavail_handling
+
+        # If no explicit polling interval for the first data item
+        # is passed, use double the regular polling interval.
+        # This is done to overcome the additional delay on the
+        # first read of the Beauty 
+
+        if polling_interval_first is not None:
+            self._polling_interval_first = polling_interval_first
+        else:
+            self._polling_interval_first = self._polling_interval*2
 
         os.environ['PBEAST_SERVER_SSO_SETUP_TYPE'] = 'AutoUpdateKerberos'
 
@@ -144,6 +155,52 @@ class OnlinePBeastDataLoader():
         self._initialized = True
 
         self._logger.info('Initialization successful')
+
+
+    def force_sso_login(self) -> None:
+        '''
+        This function does a read on the selected data channel
+        with the regular delay applied while polling, but without
+        the real-time constraint enforcement.
+        This read, performed after the cluster is in state CONNECTED,
+        forces the SSO login, ensuring that the first read during
+        polling after the cluster transitioned to the RUNNING state
+        does not incur the delay caused by the SSO login that might
+        otherwise break the real-time requirement.
+        '''
+
+        data_channel_vars = _data_channel_vars_dict[self._data_channel]
+
+        # requested_period = dt.datetime.now() - self._delay
+        requested_period =\
+            ShiftedTimeSingleton(dt.datetime(2023, 6, 7, 14, 30, 0)).now() -\
+                                                                    self._delay
+        self._logger.info('Executing PBEAST request to force SSO login')
+
+        self._logger.debug(f'Requesting PBEAST data from '
+                            f'{requested_period} to {requested_period}')
+        self._logger.debug(f'Request vars: {data_channel_vars[0]}, {data_channel_vars[1]}, '
+                                            f'{data_channel_vars[2]}, {data_channel_vars[3]}')
+
+        dcm_rates_all_list = []
+
+        try:
+            dcm_rates_all_list = self._beauty_instance.timeseries(requested_period,
+                                                                    requested_period,
+                                                                    data_channel_vars[0],
+                                                                    data_channel_vars[1],
+                                                                    data_channel_vars[2],
+                                                                    data_channel_vars[3],
+                                                                    regex=True,
+                                                                    all_publications=True)
+            
+        except RuntimeError as runtime_error:
+            if self._data_unavail_handling != 'return_zeros':
+                self._logger.error(f'Could not read {self._data_channel} data from PBEAST')
+                raise
+
+        if len(dcm_rates_all_list) != 0:
+            self._logger.debug('Successfully retrieved PBEAST data')
 
 
     def get_prefill_chunk(self,

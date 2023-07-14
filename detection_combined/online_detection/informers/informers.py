@@ -131,7 +131,7 @@ if __name__ == '__main__':
 
     run_control_state_provider = RunControlStateProvider()
 
-    aio.run(wait_for_states(['CONNECTED' 'ONLINE'],
+    aio.run(wait_for_states(['CONNECTED', 'ONLINE'],
                             dt.timedelta(seconds=5)))
     
     data_loader = OnlinePBeastDataLoader('DCMRate',
@@ -174,9 +174,11 @@ if __name__ == '__main__':
                     json_anomaly_registry.clustering_detection)
     informer_runner.register_detection_callback(
                     json_anomaly_registry.transformer_detection)
+    
+    data_loader.force_sso()
 
     aio.run(wait_for_states(['RUNNING'],
-                    dt.timedelta(seconds=5)))
+                    dt.timedelta(milliseconds=1)))
 
 #     aio.run(wait_for_state('RUNNING',
 #                         dt.timedelta(minutes=5)))
