@@ -211,7 +211,6 @@ class InformerRunner():
 
                 self._anomaly_duration = 0
 
-
         self._data_x_last = data_x.detach().cpu().numpy()
 
 

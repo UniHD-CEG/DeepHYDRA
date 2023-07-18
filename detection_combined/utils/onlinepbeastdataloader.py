@@ -37,12 +37,17 @@ class OnlinePBeastDataLoader():
         self._delay = delay
         self._window_length = window_length
         self._pbeast_server = pbeast_server
+
+        self._logger = logging.getLogger(__name__)
         
         if timing_violation_handling not in ['skip',
                                                 'raise_exception']:
             
-            raise ValueError('Timing violation handling type '
-                                f'{timing_violation_handling} is unknown')
+            error_string = 'Timing violation handling type '\
+                                f'{timing_violation_handling} is unknown'
+
+            self._logger.error(error_string)
+            raise ValueError(error_string)
         
         self._timing_violation_handling = timing_violation_handling
 
@@ -54,8 +59,6 @@ class OnlinePBeastDataLoader():
         self._timestamp_last = None
         self._initialized = False
         self._stream_started = False
-
-        self._logger = logging.getLogger(__name__)
 
 
     def _get_idx_closest_consecutive_timestamp(self,

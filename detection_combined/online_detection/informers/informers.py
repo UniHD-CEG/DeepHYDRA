@@ -7,6 +7,7 @@ import time as t
 import datetime as dt
 import multiprocessing as mp
 import asyncio as aio
+import ipaddress
 import logging
 
 import numpy as np
@@ -89,6 +90,10 @@ if __name__ == '__main__':
     parser.add_argument('--log-dir', type=str, default='./log/')
     parser.add_argument('--anomaly-log-dump-interval', type=int, default=720)
 
+    parser.add_argument('--gradio-address', type=str, default='localhost')
+    parser.add_argument('--gradio-user', type=str, default='')
+    parser.add_argument('--gradio-password', type=str, default='')
+
     args = parser.parse_args()
 
     console = ConsoleSingleton().get_console()
@@ -130,10 +135,47 @@ if __name__ == '__main__':
     logger.addHandler(file_logging_handler)
     logger.addHandler(console_logging_handler)
 
-#     gradio_server = GradioServer()
-# 
-#     gradio_server_proc = mp.Process(target=gradio_server.launch)
-#     gradio_server_proc.start()
+    # This way of handling gradio authentication is very
+    # messy. In the future, the usage of gradio authentication
+    # should be handled by an argparse subparser.
+
+    username_defined = (len(args.gradio_user) == 0)
+    password_defined = (len(args.gradio_password) == 0)
+
+    if username_defined !=\
+                password_defined:
+        
+        missing_variable = 'username' if not username_defined else 'password'
+
+        error_string = 'No gradio {missing_variable} supplied. '\
+                                'If using gradio authentication, '\
+                                'both username and password need to be defined.'
+        
+        logger.error(error_string)
+        raise ValueError(error_string)
+
+    if username_defined:
+        gradio_auth_data = tuple(args.gradio_user,
+                                    args.gradio_password)
+    else:
+        gradio_auth_data = None
+
+    try:
+        gradio_address = ipaddress.ip_address(args.gradio_address)
+    except ValueError:
+        error_string = f'{args.gradio_address} '\
+                        'is not a valid IP address'
+        
+        logger.error(error_string)
+        raise ValueError(error_string)
+
+    gradio_server = GradioServer(address=str(gradio_address),
+                                    auth_data=gradio_auth_data)
+    
+    logger.addHandler(gradio_server.get_logging_handler())
+
+    gradio_server_proc = mp.Process(target=gradio_server.launch)
+    gradio_server_proc.start()
 
     run_control_state_provider = RunControlStateProvider()
 
@@ -291,6 +333,7 @@ if __name__ == '__main__':
         
         close_event.set()
         data_loader_proc.join()
+        gradio_server_proc.join()
         raise
 
     except Exception as e:
@@ -299,3 +342,4 @@ if __name__ == '__main__':
         raise
     else:
         data_loader_proc.join()
+        gradio_server_proc.join()
