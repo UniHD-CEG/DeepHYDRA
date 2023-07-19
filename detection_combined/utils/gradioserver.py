@@ -1,7 +1,9 @@
 import math
 import re
+import multiprocessing as mp
 import ipaddress
 import logging
+from collections import deque
 from collections.abc import Iterable
 
 import pandas as pd
@@ -10,7 +12,6 @@ import gradio as gr
 import datetime
 import numpy as np
 
-from .ringbufferloghandler import RingbufferLogHandler
 
 _rack_numbers_expected_2023 =   [[1, 2, 3, 4, 5, 6, 7, 8, 9],
                                     [10, 11, 12, 13, 17, 18, 19],
@@ -33,10 +34,29 @@ _rack_status =  [[0, 0, 0, 0, 0, 0, 0, 0, 0],
                         [0, 0, 0, 0, 0, 0]]
 
 
+def _color_text_by_level(text: str,
+                            level: int):
+    
+    if level <= 20:
+        color_string = '\033[32m'
+    elif level == 30:
+        color_string = '\033[33m'
+    else:
+        color_string = '\033[31m'
+
+    return f'\033[1m{color_string}{text}\033[0m'
+
+
+
 class GradioServer():
     def __init__(self,
+                    data_queue: mp.Queue,
+                    log_queue: mp.Queue,
                     address: str = 'localhost',
                     auth_data = None) -> None:
+
+        self._data_queue = data_queue
+        self._log_queue = log_queue
 
         self._logger = logging.getLogger(__name__)
 
@@ -64,6 +84,8 @@ class GradioServer():
 
         self._auth_data = auth_data
 
+        self._log_buffer = deque([], maxlen=25)
+
         self._dashboard = gr.Blocks(analytics_enabled=False)
 
         with self._dashboard:
@@ -74,6 +96,7 @@ class GradioServer():
                     with gr.Row():
                         gr.Textbox('Cluster Status',
                                             label='')
+                    with gr.Row():
                         cluster_status = gr.HTML()
             with gr.Row():
                 self._log_output = gr.Textbox(label='Log Output',
@@ -82,9 +105,9 @@ class GradioServer():
 
             self._dashboard.load(lambda: self._create_rack_grid(_rack_status),
                                                             None, cluster_status)
-        
-        self._log_handler = RingbufferLogHandler(
-                                self.update_log_output, 25)
+            
+            self._dashboard.load(self.get_log_string, None,
+                                    self._log_output, every=1)
 
 
     def _validate_username(self,
@@ -156,23 +179,42 @@ class GradioServer():
                         server_name=self._address)
         
     
-    def get_logging_handler(self):
-        return self._log_handler
+    def update_plot(self):
+        while not self._data_queue.empty():
+            data, label = self._data_queue.get()
+        
+        update = gr.LinePlot.update(
+        value=pd.DataFrame({"x": x, "y": y}),
+        x='Time',
+        y='DCM-Rate',
+        title='DCM-Rate',
+        width=600,
+        height=350)
+
+        return update
 
     
-    def update_plot(self,
-                        data: pd.DataFrame,
-                        labels: pd.DataFrame):
-        pass
+    def get_log_string(self):
 
-    
-    def update_log_output(self, log_records: Iterable[str]):
+        while not self._log_queue.empty():
+            record = self._log_queue.get()
+
+            if record.level >= 20:
+                message = f'{record.levelname}: {record.msg}'
+
+                message_highlighted =\
+                    _color_text_by_level(message, record.level)
+
+                self._log_buffer.append(message_highlighted)
+
         log_string = ''
-    
-        for record in log_records:
-            log_string += record + '\n'
 
-        self._dashboard.load(log_string, None, self._log_output)
+        for log in list(self._log_buffer):
+            log_string += log + '\n'
+
+        return log_string
+
+
 
 
 

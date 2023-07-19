@@ -169,10 +169,15 @@ if __name__ == '__main__':
         logger.error(error_string)
         raise ValueError(error_string)
 
-    gradio_server = GradioServer(address=str(gradio_address),
+    gradio_data_queue = mp.Queue()
+    gradio_log_queue = mp.Queue()
+
+    gradio_server = GradioServer(gradio_data_queue,
+                                    gradio_log_queue,
+                                    address=str(gradio_address),
                                     auth_data=gradio_auth_data)
     
-    logger.addHandler(gradio_server.get_logging_handler())
+    logger.addHandler(logging.handlers.QueueHandler(gradio_log_queue))
 
     gradio_server_proc = mp.Process(target=gradio_server.launch)
     gradio_server_proc.start()
@@ -315,7 +320,6 @@ if __name__ == '__main__':
             json_anomaly_registry.dump(anomaly_log_name)
 
     queue = mp.Queue()
-
     close_event = mp.Event()
 
     data_loader_proc = mp.Process(target=data_loader.poll,
