@@ -122,6 +122,10 @@ if __name__ == '__main__':
     file_logging_handler = logging.FileHandler(log_filename, mode='w')
     file_logging_handler.setLevel(log_level)
     file_logging_handler.setFormatter(file_logging_formatter)
+    file_logging_handler.addFilter(lambda record: 'http' not in record.module)
+    file_logging_handler.addFilter(lambda record: record.module != '_client')
+    file_logging_handler.addFilter(lambda record: record.module != '_trace')
+    file_logging_handler.addFilter(lambda record: record.module != 'font_manager')
 
     console_logging_format = '%(name)s: %(message)s'
 
@@ -131,6 +135,10 @@ if __name__ == '__main__':
     console_logging_handler = RichHandler(console=console)
     console_logging_handler.setLevel(log_level)
     console_logging_handler.setFormatter(console_logging_formatter)
+    console_logging_handler.addFilter(lambda record: 'http' not in record.module)
+    console_logging_handler.addFilter(lambda record: record.module != '_client')
+    console_logging_handler.addFilter(lambda record: record.module != '_trace')
+    console_logging_handler.addFilter(lambda record: record.module != 'font_manager')
 
     logger.addHandler(file_logging_handler)
     logger.addHandler(console_logging_handler)
@@ -169,15 +177,25 @@ if __name__ == '__main__':
         logger.error(error_string)
         raise ValueError(error_string)
 
-    gradio_data_queue = mp.Queue()
+    gradio_clustering_queue = mp.Queue()
+    gradio_time_series_queue = mp.Queue()
     gradio_log_queue = mp.Queue()
 
-    gradio_server = GradioServer(gradio_data_queue,
+    gradio_server = GradioServer(gradio_clustering_queue,
+                                    gradio_time_series_queue,
                                     gradio_log_queue,
                                     address=str(gradio_address),
                                     auth_data=gradio_auth_data)
     
-    logger.addHandler(logging.handlers.QueueHandler(gradio_log_queue))
+    queue_logging_handler =\
+        logging.handlers.QueueHandler(gradio_log_queue)
+    queue_logging_handler.setLevel(log_level)
+    queue_logging_handler.addFilter(lambda record: 'http' not in record.module)
+    queue_logging_handler.addFilter(lambda record: record.module != '_client')
+    queue_logging_handler.addFilter(lambda record: record.module != '_trace')
+    queue_logging_handler.addFilter(lambda record: record.module != 'font_manager')
+
+    logger.addHandler(queue_logging_handler)
 
     gradio_server_proc = mp.Process(target=gradio_server.launch)
     gradio_server_proc.start()
@@ -207,13 +225,15 @@ if __name__ == '__main__':
         informer_runner = InformerRunner(args.checkpoint_dir,
                                             loss_type=loss_type,
                                             use_spot_detection=args.spot_based_detection,
-                                            device=args.device)
+                                            device=args.device,
+                                            output_queue=gradio_time_series_queue)
 
     dbscan_anomaly_detector =\
         DBScanAnomalyDetector(tpu_labels,
                                 args.dbscan_eps,
                                 args.dbscan_min_samples,
-                                args.dbscan_duration_threshold)
+                                args.dbscan_duration_threshold,
+                                gradio_clustering_queue)
 
     reduced_data_buffer_size = 65 if args.model == 'Informer-SMSE' else 17
 

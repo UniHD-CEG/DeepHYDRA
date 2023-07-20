@@ -1,6 +1,6 @@
 import logging
 import json
-import pickle as pkl
+import multiprocessing as mp
 from collections.abc import Callable
 
 import numpy as np
@@ -21,13 +21,15 @@ class InformerRunner():
                     nan_output_tolerance_period: int = 10,
                     loss_type: str = 'mse',
                     use_spot_detection: bool = False,
-                    device: str='cuda:0') -> None:
+                    device: str = 'cuda:0',
+                    output_queue = None) -> None:
 
         self.checkpoint_dir = checkpoint_dir
         self._nan_output_tolerance_period =\
                         nan_output_tolerance_period
         self._loss_type = loss_type
         self._use_spot_detection = use_spot_detection
+        self._output_queue = output_queue
 
         self._logger = logging.getLogger(__name__)
 
@@ -174,6 +176,8 @@ class InformerRunner():
         else:
             self._nan_output_count = 0
 
+        l2_dist_detection = False
+
         if not isinstance(self._data_x_last, type(None)):
 
             l2_dist =\
@@ -212,6 +216,11 @@ class InformerRunner():
                 self._anomaly_duration = 0
 
         self._data_x_last = data_x.detach().cpu().numpy()
+
+        if self._output_queue is not None:
+            self._output_queue.put((self._data_x_last[:, -1, :],
+                                                    timestamp,
+                                                    l2_dist_detection))
 
 
     def _process_one_batch(self,

@@ -6,11 +6,10 @@ import logging
 from collections import deque
 from collections.abc import Iterable
 
-import pandas as pd
-
-import gradio as gr
-import datetime
 import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import gradio as gr
 
 
 _rack_numbers_expected_2023 =   [[1, 2, 3, 4, 5, 6, 7, 8, 9],
@@ -34,28 +33,60 @@ _rack_status =  [[0, 0, 0, 0, 0, 0, 0, 0, 0],
                         [0, 0, 0, 0, 0, 0]]
 
 
-def _color_text_by_level(text: str,
-                            level: int):
-    
-    if level <= 20:
-        color_string = '\033[32m'
-    elif level == 30:
-        color_string = '\033[33m'
+def get_anomalous_runs(x):
+    '''
+    Find runs of consecutive items in an array.
+    As published in https://gist.github.com/alimanfoo/c5977e87111abe8127453b21204c1065
+    '''
+
+    # Ensure array
+
+    x = np.asanyarray(x)
+
+    if x.ndim != 1:
+        raise ValueError('Only 1D arrays supported')
+
+    n = x.shape[0]
+
+    # Handle empty array
+
+    if n == 0:
+        return np.array([]), np.array([]), np.array([])
+
     else:
-        color_string = '\033[31m'
 
-    return f'\033[1m{color_string}{text}\033[0m'
+        # Find run starts
 
+        loc_run_start = np.empty(n, dtype=bool)
+        loc_run_start[0] = True
+
+        np.not_equal(x[:-1], x[1:], out=loc_run_start[1:])
+        run_starts = np.nonzero(loc_run_start)[0]
+
+        # Find run values
+        run_values = x[loc_run_start]
+
+        # Find run lengths
+        run_lengths = np.diff(np.append(run_starts, n))
+
+        run_starts = np.compress(run_values, run_starts)
+        run_lengths = np.compress(run_values, run_lengths)
+
+        run_ends = run_starts + run_lengths
+
+        return run_starts, run_ends
 
 
 class GradioServer():
     def __init__(self,
-                    data_queue: mp.Queue,
+                    clustering_queue: mp.Queue,
+                    time_series_queue: mp.Queue,
                     log_queue: mp.Queue,
                     address: str = 'localhost',
                     auth_data = None) -> None:
 
-        self._data_queue = data_queue
+        self._clustering_queue = clustering_queue
+        self._time_series_queue = time_series_queue
         self._log_queue = log_queue
 
         self._logger = logging.getLogger(__name__)
@@ -84,29 +115,40 @@ class GradioServer():
 
         self._auth_data = auth_data
 
+        self._time_series_buffer = deque([], maxlen=64)
         self._log_buffer = deque([], maxlen=25)
 
-        self._dashboard = gr.Blocks(analytics_enabled=False)
+        self._dashboard = gr.Blocks(title='STRADA Dashboard',
+                                        analytics_enabled=False)
 
         with self._dashboard:
             with gr.Row():
-                with gr.Column():
-                    self._plot = gr.LinePlot(show_label=False)
-                with gr.Column():
+                with gr.Column(scale=2):
                     with gr.Row():
-                        gr.Textbox('Cluster Status',
-                                            label='')
+                        gr.Textbox('Transformer-Based Detection',
+                                        label='', interactive=False)
                     with gr.Row():
-                        cluster_status = gr.HTML()
+                        self._plot =\
+                            gr.Plot()
+                with gr.Column(scale=1):
+                    with gr.Row():
+                        gr.Textbox('T-DBSCAN-Based Detection',
+                                        label='', interactive=False)
+                    with gr.Row():
+                        self._cluster_status =\
+                            gr.HTML(label='Clustering-Based Detection')
             with gr.Row():
                 self._log_output = gr.Textbox(label='Log Output',
                                                         lines=25,
                                                         interactive=False)
 
-            self._dashboard.load(lambda: self._create_rack_grid(_rack_status),
-                                                            None, cluster_status)
+            self._dashboard.load(self._get_rack_grid, None, 
+                                    self._cluster_status, every=5)
             
-            self._dashboard.load(self.get_log_string, None,
+            self._dashboard.load(self._get_time_series_plot, None,
+                                                self._plot, every=5)
+
+            self._dashboard.load(self._get_log_string, None,
                                     self._log_output, every=1)
 
 
@@ -153,16 +195,20 @@ class GradioServer():
             raise ValueError(error_string)
 
 
-    def _create_rack_grid(self, rack_states):
+    def _get_rack_grid(self):
+
+        clustering_anomalies = []
+
+        while not self._clustering_queue.empty():
+            clustering_anomalies = self._clustering_queue.get()
+
         html = "<div style='display: grid; grid-template-columns: repeat(10, 50px); grid-gap: 1px;'>"
-        for rack_row, rack_row_states in zip(
-                                    _rack_numbers_expected_2023,
-                                    rack_states):
+        for rack_row in _rack_numbers_expected_2023:
             
             for column in range(10):
                 if column < len(rack_row):
                     element = rack_row[column]
-                    color = "red" if rack_row_states[column] else "green"
+                    color = "red" if rack_row[column] in clustering_anomalies else "green"
                 else:
                     element = ""
                     color = "gray"
@@ -172,40 +218,101 @@ class GradioServer():
         html += "</div>"
         return html
 
-
-    def launch(self):
-        self._dashboard.queue().launch(
-                        auth=self._auth_data,
-                        server_name=self._address)
-        
     
-    def update_plot(self):
-        while not self._data_queue.empty():
-            data, label = self._data_queue.get()
+    def _get_time_series_plot(self):
+        while not self._time_series_queue.empty():
+            self._time_series_buffer.append(
+                            self._time_series_queue.get())
         
-        update = gr.LinePlot.update(
-        value=pd.DataFrame({"x": x, "y": y}),
-        x='Time',
-        y='DCM-Rate',
-        title='DCM-Rate',
-        width=600,
-        height=350)
+        fig, ax = plt.subplots(figsize=(6, 4), dpi=100)
 
-        return update
+        fig.set_facecolor('#1f2937')
+        ax.set_facecolor('#1f2937')
+
+        if len(self._time_series_buffer):
+            data, timestamps, label =\
+                tuple(map(list, zip(*list(self._time_series_buffer))))
+
+            data = np.vstack(data).squeeze()
+
+            data_dims = data.shape[-1]
+
+            data_median = data[:, :data_dims//2]
+            data_std = data[:, data_dims//2:]
+
+            timestamps =\
+                np.array([timestamp.strftime('%X') for timestamp in timestamps])
+            
+            label = np.array(label, dtype=np.uint8)
+
+            self._logger.info(f'{data}')
+            self._logger.info(f'{timestamps}')
+            self._logger.info(f'{label}')
+            
+            ax.grid(color='white')
+
+            ax.spines['bottom'].set_color('white')
+            ax.spines['top'].set_color('white') 
+            ax.spines['right'].set_color('white')
+            ax.spines['left'].set_color('white')
+
+            ax.xaxis.label.set_color('white')
+            ax.yaxis.label.set_color('white')
+
+            ax.tick_params(axis='x', colors='white')
+            ax.tick_params(axis='y', colors='white')
+
+            plt.yticks(rotation=30, ha='right')
+
+            ax.set_ylabel('Data')
+            ax.set_xlabel('Timestep')
+
+            ax.plot(np.arange(len(data_median)),
+                            data_median,
+                            linewidth=3)
+
+            ax.fill_between(np.arange(len(data_median)),
+                                    data_median - data_std,
+                                    data_median + data_std,
+                                    linewidth=0,
+                                    alpha=0.4)
+
+            ax.plot(timestamps,
+                        data,
+                        linewidth=0.9,
+                        color='k')
+
+            anomaly_starts, anomaly_ends =\
+                        get_anomalous_runs(label)
+
+            for start, end in zip(anomaly_starts,
+                                        anomaly_ends):
+                ax.axvspan(start, end, color='red', alpha=0.5)
+
+        else:
+            ax.axis('off')
+            ax.text(0.5, 0.5, 'Waiting for Buffer Fill', ha='center', va='center',
+                    fontsize=20, color='cyan')
+
+        return fig
 
     
-    def get_log_string(self):
+    def _get_log_string(self):
 
         while not self._log_queue.empty():
             record = self._log_queue.get()
 
-            if record.level >= 20:
-                message = f'{record.levelname}: {record.msg}'
+            if (record.levelno >= 10) and\
+                not ('http' in record.module) and\
+                not ('_client' in record.module):
+                message = f'{record.asctime} | {record.module} | {record.levelname}: {record.msg}'
 
-                message_highlighted =\
-                    _color_text_by_level(message, record.level)
+                # message_highlighted =\
+                #     _color_text_by_level(message, record.levelno)
 
-                self._log_buffer.append(message_highlighted)
+                # self._log_buffer.append(message_highlighted)
+
+                self._log_buffer.append(message)
 
         log_string = ''
 
@@ -215,7 +322,9 @@ class GradioServer():
         return log_string
 
 
-
-
-
-
+    def launch(self):
+        self._dashboard.queue().launch(
+                        auth=self._auth_data,
+                        server_name=self._address)
+        
+        raise KeyboardInterrupt

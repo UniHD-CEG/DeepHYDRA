@@ -3,6 +3,7 @@
 import re
 import json
 import logging
+import multiprocessing as mp
 from collections import defaultdict
 from statistics import multimode
 
@@ -26,12 +27,14 @@ class DBScanAnomalyDetector(BaseClusteringDetector):
                     node_labels: list,
                     eps: float = 3,
                     min_samples: int = 4,
-                    duration_threshold: int = 4) -> None:
+                    duration_threshold: int = 4,
+                    output_queue = None) -> None:
         super(DBScanAnomalyDetector, self).__init__()
 
         self.eps = eps
         self.min_samples = min_samples
         self.duration_threshold = duration_threshold
+        self.output_queue = output_queue
 
         self.timesteps = []
         self.node_labels = node_labels
@@ -115,6 +118,8 @@ class DBScanAnomalyDetector(BaseClusteringDetector):
         # Add subgroups that show anomalous behavior for longer than the
         # set threshold to the persistent anomaly registry
 
+        cluster_anomaly_set = set()
+
         for machine_label, anomaly_duration in self.anomaly_registry_general.items():
             anomaly_start = self.timesteps[self.datapoints_processed - anomaly_duration + 1].strftime('%Y-%m-%d %H:%M:%S')
 
@@ -127,6 +132,8 @@ class DBScanAnomalyDetector(BaseClusteringDetector):
                                             AnomalyType.ClusteringGeneral,
                                             anomaly_start,
                                             anomaly_duration)
+
+                cluster_anomaly_set.add(machine_label//1000)
 
         for machine_label, anomaly_duration in self.anomaly_registry_drop_to_0.items():
             anomaly_start = self.timesteps[self.datapoints_processed - anomaly_duration + 1].strftime('%Y-%m-%d %H:%M:%S')
@@ -141,4 +148,9 @@ class DBScanAnomalyDetector(BaseClusteringDetector):
                                             anomaly_start,
                                             anomaly_duration)
 
+                cluster_anomaly_set.add(machine_label//1000)
+
         self.datapoints_processed += 1
+
+        if self.output_queue is not None:
+            self.output_queue.put(cluster_anomaly_set)
