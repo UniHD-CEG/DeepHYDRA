@@ -1,6 +1,5 @@
 import logging
 import json
-import multiprocessing as mp
 from collections.abc import Callable
 
 import numpy as np
@@ -164,8 +163,7 @@ class InformerRunner():
 
             else:
                 self._logger.warning('Encountered NaN in '
-                                        'Informer predictions, skipping '
-                                        'kNN anomaly prediction step')
+                                        'Informer predictions')
                 self._logger.warning(f'Consecutive NaN predictions:'
                                             f'{self._nan_output_count} '
                                             'tolerated NaN predictions: '
@@ -196,9 +194,9 @@ class InformerRunner():
                     self._anomaly_start =\
                             timestamp.strftime('%Y-%m-%d %H:%M:%S')
 
-                    self._logger.warning('\031[1mTransformer-based detection '
+                    self._logger.warning('Transformer-based detection '
                                             'encountered anomaly at timestamp '
-                                            f'{self._anomaly_start}\031[0m')
+                                            f'{self._anomaly_start}')
 
                 self.detection_callback(0, AnomalyType.TransformerBased,
                                                         self._anomaly_start,
@@ -210,8 +208,8 @@ class InformerRunner():
 
                 if self._anomaly_duration != 0:
                     anomaly_end = timestamp.strftime('%Y-%m-%d %H:%M:%S')
-                    self._logger.warning('\033[1mTransformer-based detection '
-                                            f'anomaly ended at {anomaly_end}\033[1m')
+                    self._logger.warning('Transformer-based detection '
+                                            f'anomaly ended at {anomaly_end}')
 
                 self._anomaly_duration = 0
 
@@ -221,6 +219,9 @@ class InformerRunner():
             self._output_queue.put((self._data_x_last[:, -1, :],
                                                     timestamp,
                                                     l2_dist_detection))
+            # self._output_queue.put((data[-1, :],
+            #                             timestamp,
+            #                             l2_dist_detection))
 
 
     def _process_one_batch(self,

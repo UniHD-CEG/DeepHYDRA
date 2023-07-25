@@ -9,8 +9,15 @@ from collections.abc import Iterable
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
 import gradio as gr
 
+
+plt.rc('font', size=12)
+plt.rc('axes', titlesize=12)
+plt.rc('axes', labelsize=12)
+plt.rc('xtick', labelsize=12)
+plt.rc('ytick', labelsize=12)
 
 _rack_numbers_expected_2023 =   [[1, 2, 3, 4, 5, 6, 7, 8, 9],
                                     [10, 11, 12, 13, 17, 18, 19],
@@ -221,35 +228,50 @@ class GradioServer():
     
     def _get_time_series_plot(self):
         while not self._time_series_queue.empty():
-            self._time_series_buffer.append(
-                            self._time_series_queue.get())
+            data, timestamps, labels =\
+                self._time_series_queue.get()
+
+            data = np.atleast_1d(data)
+            timestamps = np.atleast_1d(timestamps)
+            labels = np.atleast_1d(labels)
+
+            # self._logger.info(f'{data}')
+            # self._logger.info(f'{timestamps}')
+            # self._logger.info(f'{labels}')
+            
+            for data_point, timestamp, label in\
+                        zip(data, timestamps, labels):
+                self._time_series_buffer.append(
+                        (data_point, timestamp, label))
         
+        plt.close()
+
         fig, ax = plt.subplots(figsize=(6, 4), dpi=100)
 
         fig.set_facecolor('#1f2937')
         ax.set_facecolor('#1f2937')
 
-        if len(self._time_series_buffer):
+        if len(self._time_series_buffer) > 1:
             data, timestamps, label =\
                 tuple(map(list, zip(*list(self._time_series_buffer))))
 
-            data = np.vstack(data).squeeze()
+            data = np.vstack(data)
+
+            self._logger.info(f'{data.shape}')
 
             data_dims = data.shape[-1]
 
             data_median = data[:, :data_dims//2]
             data_std = data[:, data_dims//2:]
 
-            timestamps =\
-                np.array([timestamp.strftime('%X') for timestamp in timestamps])
+            # timestamps =\
+            #     np.array([timestamp.strftime('%X') for timestamp in timestamps])
             
             label = np.array(label, dtype=np.uint8)
 
-            self._logger.info(f'{data}')
-            self._logger.info(f'{timestamps}')
-            self._logger.info(f'{label}')
+            ax.xaxis.set_major_formatter(mdates.DateFormatter('%X'))
             
-            ax.grid(color='white')
+            ax.grid(color='white', axis='y')
 
             ax.spines['bottom'].set_color('white')
             ax.spines['top'].set_color('white') 
@@ -262,37 +284,40 @@ class GradioServer():
             ax.tick_params(axis='x', colors='white')
             ax.tick_params(axis='y', colors='white')
 
-            plt.yticks(rotation=30, ha='right')
+            plt.xticks(rotation=30, ha='right')
+            # plt.yticks(rotation=30, ha='right')
 
             ax.set_ylabel('Data')
             ax.set_xlabel('Timestep')
 
-            ax.plot(np.arange(len(data_median)),
-                            data_median,
-                            linewidth=3)
+            ax.plot(timestamps,
+                        data_median,
+                        linewidth=1.5)
 
-            ax.fill_between(np.arange(len(data_median)),
+            ax.fill_between(timestamps,
                                     data_median - data_std,
                                     data_median + data_std,
                                     linewidth=0,
                                     alpha=0.4)
-
-            ax.plot(timestamps,
-                        data,
-                        linewidth=0.9,
-                        color='k')
 
             anomaly_starts, anomaly_ends =\
                         get_anomalous_runs(label)
 
             for start, end in zip(anomaly_starts,
                                         anomaly_ends):
-                ax.axvspan(start, end, color='red', alpha=0.5)
+                start = max(0, start - 1)
+                end = min(end, len(timestamps) - 1)
+                
+                ax.axvspan(timestamps[start],
+                                timestamps[end],
+                                color='red', alpha=0.5)
 
         else:
             ax.axis('off')
-            ax.text(0.5, 0.5, 'Waiting for Buffer Fill', ha='center', va='center',
+            ax.text(0.5, 0.5, 'Waiting for\nstart of detection...', ha='center', va='center',
                     fontsize=20, color='cyan')
+
+        plt.tight_layout()
 
         return fig
 
