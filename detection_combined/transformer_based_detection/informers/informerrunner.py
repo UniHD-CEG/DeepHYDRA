@@ -133,6 +133,8 @@ class InformerRunner():
 
         timestamp = data.index[-1]
 
+        self._logger.info(data.shape)
+
         viz_data = data.to_numpy()[:self.parameter_dict['seq_len'], :]
 
         preds, _ = self._process_one_batch(self.data_preprocessor,
@@ -180,7 +182,7 @@ class InformerRunner():
 
             # l2_dist =\
             #     np.mean((preds[:, 0, :] - self._data_x_last[:, -1, :])**2, 1)[0]
-
+            
             l2_dist =\
                 np.mean((preds[:, 0, :] - data_y.detach().cpu().numpy()[:, -1, :])**2, 1)[0]
 
@@ -216,15 +218,16 @@ class InformerRunner():
 
                 self._anomaly_duration = 0
 
-        self._data_x_last = data_x.detach().cpu().numpy()
+        self._data_x_last = data_y.detach().cpu().numpy()
 
         if self._output_queue is not None:
-            self._output_queue.put((self._data_x_last[:, -1, :],
+            # self._output_queue.put((self._data_x_last[:, -1, :],
+            #                                         timestamp,
+            #                                         l2_dist_detection))
+
+            self._output_queue.put((data.to_numpy()[[-1], :],
                                                     timestamp,
                                                     l2_dist_detection))
-            # self._output_queue.put((data[-1, :],
-            #                             timestamp,
-            #                             l2_dist_detection))
 
 
     def _process_one_batch(self,
