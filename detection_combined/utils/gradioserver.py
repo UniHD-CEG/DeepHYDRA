@@ -287,8 +287,8 @@ class GradioServer():
             plt.xticks(rotation=30, ha='right')
             # plt.yticks(rotation=30, ha='right')
 
-            ax.set_ylabel('Data')
-            ax.set_xlabel('Timestep')
+            ax.set_ylabel('DCM-Rate')
+            ax.set_xlabel('Time')
 
             ax.plot(timestamps,
                         data_median,
