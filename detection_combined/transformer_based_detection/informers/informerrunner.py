@@ -178,8 +178,11 @@ class InformerRunner():
 
         if not isinstance(self._data_x_last, type(None)):
 
+            # l2_dist =\
+            #     np.mean((preds[:, 0, :] - self._data_x_last[:, -1, :])**2, 1)[0]
+
             l2_dist =\
-                np.mean((preds[:, 0, :] - self._data_x_last[:, -1, :])**2, 1)[0]
+                np.mean((preds[:, 0, :] - data_y.detach().cpu().numpy()[:, -1, :])**2, 1)[0]
 
             self._predictions_all.append(l2_dist)
         
