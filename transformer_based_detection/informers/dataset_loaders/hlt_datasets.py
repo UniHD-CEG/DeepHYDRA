@@ -1,3 +1,4 @@
+import os
 import pickle
 
 import numpy as np
@@ -13,7 +14,7 @@ from utils.timefeatures import time_features
 import warnings
 warnings.filterwarnings('ignore')
 
-dataset_path_local = '../../datasets/hlt/'
+dataset_path_local = '/home/kstehle/Documents/phd/strada/datasets/hlt/'
 
 class HLTDataset(Dataset):
     def __init__(self,
@@ -30,6 +31,8 @@ class HLTDataset(Dataset):
                     applied_augmentations=[],
                     augmented_dataset_size_relative=1,
                     augmented_data_ratio=0):
+        
+        # print(os.getcwd())
 
         self.variant = variant
         self.mode = mode

@@ -385,7 +385,6 @@ def print_results(label: np.array,
     label_reduced =\
         np.any(np.greater_equal(label, 1), axis=1).astype(np.uint8)
     
-
     preds_clustering =\
         adjust_predicts(preds_clustering,
                             label_reduced, 0.1).astype(np.uint8)

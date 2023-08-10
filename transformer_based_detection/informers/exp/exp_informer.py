@@ -511,7 +511,6 @@ class ExpInformer(ExpBasic):
         f_dim = -1 if self.args.features == 'MS' else 0
         batch_y = batch_y[:, -self.args.pred_len:, f_dim:].to(self.device)
 
-
         if self.args.output_attention:
             return outputs, batch_y, attention
         else:

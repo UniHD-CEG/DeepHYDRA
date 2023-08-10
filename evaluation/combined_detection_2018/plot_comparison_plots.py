@@ -326,23 +326,26 @@ def plot_results(data: np.array,
     plt.rc('legend', fontsize=SMALL_SIZE)
     plt.rc('figure', titlesize=BIGGER_SIZE)
 
+    x = np.arange(len(data))*5/3600
+    
     for index, (xlim_lower, xlim_upper) in enumerate(tqdm(xlims,
                                                     desc='Plotting')):
 
         fig, (ax_data, ax_pred) = plt.subplots(2, 1, figsize=(10, 6), dpi=300)
 
-        plt.yticks(rotation=30, ha='right')
+        ax_data.set_title('Event Rate')
+        ax_data.set_xlabel('Time [h]')
+        ax_data.set_ylabel('Event Rate [Hz]')
 
-        ax_data.set_title('Data')
-        ax_data.set_xlabel('Timestep')
-
-        ax_data.set_xlim(xlim_lower,
-                            xlim_upper)
+        ax_data.set_xlim(x[xlim_lower],
+                            x[xlim_upper])
+        
         ax_data.set_ylim(-1, 100)
 
         ax_data.grid()
 
-        ax_data.plot(data,
+        ax_data.plot(x[xlim_lower:xlim_upper],
+                        data[xlim_lower:xlim_upper, :],
                         linewidth=0.9,
                         color='k')
 
@@ -351,18 +354,30 @@ def plot_results(data: np.array,
 
         for start, end in zip(anomaly_starts,
                                     anomaly_ends):
-            ax_data.axvspan(start, end, color='red', alpha=0.5)
-            ax_pred.axvspan(start, end, color='red', alpha=0.5)
+            ax_data.axvspan(x[start], x[end], color='red', alpha=0.5)
+            ax_pred.axvspan(x[start], x[end], color='red', alpha=0.5)
 
         ax_pred.set_yticks(list(positions.values()),
                                 list(positions.keys()))
 
         ax_pred.set_title('Predictions')
-        ax_pred.set_xlabel('Timestep')
+        ax_pred.set_xlabel('Time [h]')
         ax_pred.set_ylabel('Method')
 
-        ax_pred.set_xlim(xlim_lower,
-                            xlim_upper)
+        ax_pred.set_xlim(x[xlim_lower],
+                            x[xlim_upper])
+
+        # ax_pred.set_yticks(list(positions.values()),
+        #                         list(positions.keys()))
+        
+        ax_pred.set_yticks(list(positions.values()))
+        
+        ax_pred.set_yticklabels(list(positions.keys()))
+        
+        plt.setp(ax_pred.get_yticklabels(),
+                                rotation=30,
+                                ha="right",
+                                rotation_mode="anchor")
 
         for method, preds in preds_all.items():
             pred_starts, pred_ends =\
@@ -370,11 +385,11 @@ def plot_results(data: np.array,
                 
             for start, end in zip(pred_starts, pred_ends):
 
-                length = end - start
+                length = x[end] - x[start]
 
                 ax_pred.barh(positions[method],
                                 length,
-                                left=start,
+                                left=x[start],
                                 color=colors[method],
                                 edgecolor='k',
                                 linewidth=0.7,
@@ -394,7 +409,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     hlt_data_pd = pd.read_hdf(args.data_dir +\
-                                    '/unreduced_hlt_test_set_x.h5')
+                                    '/unreduced_hlt_test_set_2018_x.h5')
 
     hlt_data_pd.iloc[run_endpoints[-2]:-1,
                             channels_to_delete_last_run] = 0
@@ -404,7 +419,7 @@ if __name__ == '__main__':
     hlt_data_np = hlt_data_pd.to_numpy()
 
     labels_pd = pd.read_hdf(args.data_dir +\
-                            '/unreduced_hlt_test_set_y.h5')
+                            '/unreduced_hlt_test_set_2018_y.h5')
 
     labels_np = labels_pd.to_numpy()
 
