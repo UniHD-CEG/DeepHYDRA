@@ -614,7 +614,7 @@ if __name__ == '__main__':
 
     np.random.seed(42)
 
-    parser = argparse.ArgumentParser(description='Real-World DCM Rate Anomaly Dataset Generator')
+    parser = argparse.ArgumentParser(description='Hybrid DCM-Rate Anomaly Dataset Generator')
 
     parser.add_argument('--variant', type=str)
     parser.add_argument('--dataset-dir', type=str, default='../../../../atlas-hlt-datasets')

@@ -302,7 +302,9 @@ if __name__ == '__main__':
                     'attn': tune.choice(['prob', 'full']),
                     'no_mix': tune.choice([False, True]),
                     'learning_rate': tune.loguniform(1e-5, 1e-3),
-                    'batch_size': tune.choice([32, 64, 96, 128]),}
+                    'augmented_data_ratio': tune.choice([0.0, 0.1, 0.25, 0.5, 1.0])
+                    # 'batch_size': tune.choice([32, 64, 96, 128]),
+                    }
 
     args.s_layers ='3,1'
     args.epochs = 6
@@ -314,6 +316,7 @@ if __name__ == '__main__':
     args.des = 'nas'
     args.lradj = 'type1'
     args.inverse = False
+    args.batch_size = 64
 
     augmentation_string += f'_rel_size_{args.augmented_dataset_size_relative}'\
                                         f'_ratio_{args.augmented_data_ratio:.2f}'
@@ -337,7 +340,8 @@ if __name__ == '__main__':
         args.attn = nas_config['attn']
         args.no_mix = nas_config['no_mix']
         args.learning_rate = nas_config['learning_rate']
-        args.batch_size = nas_config['batch_size']
+        args.augmented_data_ratio = nas_config['augmented_data_ratio']
+        # args.batch_size = nas_config['batch_size']
 
         args.s_layers = [int(s_l) for s_l in args.s_layers.replace(' ','').split(',')]
         args.detail_freq = args.freq
@@ -414,6 +418,10 @@ if __name__ == '__main__':
                             MCC=mcc_best,
                             Precision=precision_best,
                             Recall=recall_best)
+        
+        rmtree(os.path.join('./results/', setting))
+        rmtree(os.path.join('./checkpoints/', setting))
+        rmtree('./runs')
 
     scheduler = AsyncHyperBandScheduler()
 
@@ -437,5 +445,3 @@ if __name__ == '__main__':
 
     best_trial = results.get_best_trial('MCC', 'max')
     print(f'Best trial config: {best_trial.config}')
-
-    rmtree(os.path.join('./results/', setting))
