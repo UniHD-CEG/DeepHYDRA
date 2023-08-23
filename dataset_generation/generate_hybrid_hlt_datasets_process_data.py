@@ -753,6 +753,13 @@ if __name__ == '__main__':
     print(f'Exclusive TPUs with failures test:\n{exclusive_tpus_with_failures_test}')
     print(f'Exclusive TPUs with failures val:\n{exclusive_tpus_with_failures_val}')
 
+    rack_numbers_train =\
+        np.array([int(label.split('|')[0]) for label in process_labels_train])
+    rack_numbers_test =\
+        np.array([int(label.split('|')[0]) for label in process_labels_test])
+    rack_numbers_val =\
+        np.array([int(label.split('|')[0]) for label in process_labels_val])
+
     processes_train =\
         np.array([label.split('|')[-1] for label in process_labels_train])
     processes_test =\
@@ -900,640 +907,642 @@ if __name__ == '__main__':
 
         writer.release()
 
-    # exit()
-
-    # Labeled train set
-
-    test_set_size = len(test_set_x_df)
-
-    train_set_labeled_x_df = test_set_x_df.iloc[:test_set_size//4, :]
-
-    for count in range(1, len(train_set_labeled_x_df.index)):
-        if train_set_labeled_x_df.index[count] <=\
-                train_set_labeled_x_df.index[count-1]:
-            print(f'Non-monotonic timestamp increase at {count-1}:\t'
-                    f'First timestamp: {train_set_labeled_x_df.index[count-1]}\t'
-                     f'Second timestamp: {train_set_labeled_x_df.index[count]}')
-
-    column_names = train_set_labeled_x_df.columns
-    timestamps = train_set_labeled_x_df.index
-
-    # Generate labels for actual anomalies
-
-    labels = generate_anomaly_labels(tpu_failure_log_df,
-                                                timestamps,
-                                                column_names,
-                                                np.array(process_labels_test),
-                                                prepad=5).to_numpy()
-    
-    # Generate synthetic anomalies and corresponding labels
-
-    anomaly_generator_train_labeled = MultivariateDataGenerator(train_set_labeled_x_df,
-                                                                                labels,
-                                                                                window_size_min=8,
-                                                                                window_size_max=128)
-
-    anomaly_generator_train_labeled.point_global_outliers(rack_count=3,
-                                                                ratio=0.001,
-                                                                factor=0.5,
-                                                                radius=50)
-    
-    anomaly_generator_train_labeled.point_contextual_outliers(rack_count=3,
-                                                                    ratio=0.001,
-                                                                    factor=0.5,
-                                                                    radius=50)
-
-    anomaly_generator_train_labeled.persistent_global_outliers(rack_count=3,
-                                                                    ratio=0.01,
-                                                                    factor=1,
-                                                                    radius=50)
-    
-    anomaly_generator_train_labeled.persistent_contextual_outliers(rack_count=3,
-                                                                        ratio=0.005,
-                                                                        factor=0.5,
-                                                                        radius=50)
-
-    anomaly_generator_train_labeled.collective_global_outliers(rack_count=3,
-                                                                    ratio=0.005,
-                                                                    option='square',
-                                                                    coef=5,
-                                                                    noise_amp=0.5,
-                                                                    level=10,
-                                                                    freq=0.1)
-
-    anomaly_generator_train_labeled.collective_trend_outliers(rack_count=3,
-                                                                    ratio=0.005,
-                                                                    factor=0.5)
-
-    # Reduce dataset and labels
-
-    dataset = anomaly_generator_train_labeled.get_dataset_np()
-    
-    labels = remove_undetectable_anomalies(
-                        np.nan_to_num(dataset),
-                        anomaly_generator_train_labeled.get_labels_np())
-
-    rack_data_train_labeled_all = []
-    rack_labels_train_labeled_all = []
-
-    columns_reduced_train_labeled = None
-    keys_last = None
-
-    for count, (row_x_data, row_x_labels)\
-            in enumerate(tqdm(zip(dataset, labels),
-                                total=len(dataset),
-                                desc='Generating labeled train set')):
-
-        rack_buckets_data = defaultdict(list)
-        rack_buckets_labels = defaultdict(list)
-
-        for index, datapoint in enumerate(row_x_data):
-            rack_buckets_data[processes_test[index]].append(datapoint)
-
-        for index, label in enumerate(row_x_labels):
-            rack_buckets_labels[processes_test[index]].append(label)
-
-        process_data_medians = {}
-        process_data_stdevs = {}
-        rack_labels = {}
-
-        for rack, rack_bucket in rack_buckets_data.items():
-            process_data_medians[rack] = np.nanmedian(rack_bucket)
-            process_data_stdevs[rack] = np.nanstd(rack_bucket)
-
-        for rack, rack_bucket in rack_buckets_labels.items():
-
-            rack_label = 0
-
-            for label in rack_bucket:
-                rack_label = rack_label | label
-                
-            rack_labels[rack] = rack_label
-
-        process_data_medians = dict(sorted(process_data_medians.items()))
-        process_data_stdevs = dict(sorted(process_data_stdevs.items()))
-
-        rack_labels = dict(sorted(rack_labels.items()))
-
-        if keys_last != None:
-            assert process_data_medians.keys() == keys_last,\
-                                                    'Rack bucket keys changed between slices'
-
-            assert (process_data_medians.keys() == process_data_stdevs.keys()) and\
-                                (process_data_medians.keys() == rack_labels.keys()),\
-                                                        'Rack bucket keys not identical'
-
-        keys_last = process_data_medians.keys()
-
-        if type(columns_reduced_train_labeled) == type(None):
-            columns_reduced_train_labeled = create_channel_names(process_data_medians.keys(),
-                                                            process_data_stdevs.keys())
-            
-            assert np.array_equal(columns_reduced_train_labeled, columns_reduced_train_unlabeled),\
-                                            "Labeled train columns don't match unlabeled train columns" 
-
-        rack_data_np = np.concatenate((np.array(list(process_data_medians.values())),
-                                            np.array(list(process_data_stdevs.values()))))
-
-        rack_data_train_labeled_all.append(rack_data_np)
-
-        rack_labels_train_labeled_all.append(np.array(list(rack_labels.values())))
-
-    rack_data_train_labeled_all_np = np.stack(rack_data_train_labeled_all)
-    rack_data_train_labeled_all_np = np.nan_to_num(rack_data_train_labeled_all_np, nan=-1)
-
-    nan_amount_train_labeled = 100*pd.isna(rack_data_train_labeled_all_np.flatten()).sum()/\
-                                                            rack_data_train_labeled_all_np.size
-
-    print('NaN amount reduced labeled train set: {:.3f} %'.format(nan_amount_train_labeled))
-
-    rack_labels_train_labeled_all_np = np.stack(rack_labels_train_labeled_all)
-
-    rack_labels_train_labeled_all_np = np.concatenate([rack_labels_train_labeled_all_np,\
-                                                        rack_labels_train_labeled_all_np],
-                                                        axis=1)
-    
-    # Save dataset and labels
-
-    train_set_labeled_x_df = pd.DataFrame(rack_data_train_labeled_all_np,
-                                                                timestamps,
-                                                                columns_reduced_train_labeled)
-
-    train_set_labeled_y_df = pd.DataFrame(rack_labels_train_labeled_all_np,
-                                                                timestamps,
-                                                                columns_reduced_train_labeled)
-
-    anomalies_per_column = np.count_nonzero(rack_labels_train_labeled_all_np, axis=0)
-
-    anomaly_ratio_per_column = anomalies_per_column/\
-                                len(rack_labels_train_labeled_all_np)
-
-    for anomalies, anomaly_ratio, column_name in zip(anomalies_per_column,
-                                                        anomaly_ratio_per_column,
-                                                        columns_reduced_train_labeled):
-
-        print(f'{column_name}: {anomalies} anomalies, {100*anomaly_ratio} % of all data')
-
-    train_set_labeled_x_df.to_hdf(f'{args.dataset_dir}/reduced_hlt_ppd_'\
-                                        f'labeled_train_set_{args.variant}_x.h5',
-                                    key='reduced_hlt_ppd_labeled_train_set_x',
-                                    mode='w')
-
-    train_set_labeled_y_df.to_hdf(f'{args.dataset_dir}/reduced_hlt_ppd_'\
-                                        f'labeled_train_set_{args.variant}_y.h5',
-                                    key='reduced_hlt_ppd_labeled_train_set_y',
-                                    mode='w')
-
-    if args.generate_videos:
-
-        writer = cv.VideoWriter(f'{args.video_output_dir}/reduced_hlt_ppd_'
-                                        f'labeled_train_set_{args.variant}.mp4',
-                                    four_cc, 60, (image_width, image_height))
-
-
-        for count in tqdm(range(len(rack_data_train_labeled_all_np)),
-                        desc='Generating labeled train set animation'):
-
-            lower_bound = max(count - plot_window_size, 0)
-            upper_bound_axis = max(count, plot_window_size) + 10
-
-            fig, ax = plt.subplots(figsize=(8, 4.5), dpi=240)
-
-            max_val_slice = np.max(rack_data_train_labeled_all_np[lower_bound:count, :])\
-                                if len(rack_data_train_labeled_all_np[lower_bound:count, :])\
-                                else 10
-
-            max_val_slice = min(max_val_slice, 200)
-
-            ax.set_xlim(lower_bound, upper_bound_axis)
-            ax.set_ylim(-2, max_val_slice + 10)
-
-            ax.grid(True)
-
-            ax.set_title("Per-Rack Median DCM Rates")
-            ax.set_xlabel("Timestep")
-            ax.set_ylabel("DCM Rate")
-
-            ax.plot(np.arange(lower_bound, count),
-                                rack_data_train_labeled_all_np[lower_bound:count, :])
-
-            # plt.tight_layout()
-
-            frame = fig_to_numpy_array(fig)
-
-            writer.write(frame)
-
-            plt.close()
-
-        writer.release()
-
-    # Unreduced test set
-
-    column_names = test_set_x_df.columns
-    timestamps = test_set_x_df.index
-
-    # Generate labels for actual anomalies
-
-    labels_actual = generate_anomaly_labels(tpu_failure_log_df,
-                                                    timestamps,
-                                                    column_names,
-                                                    np.array(process_labels_test),
-                                                    prepad=5).to_numpy()
-
-    # Generate synthetic anomalies and corresponding labels
-
-    anomaly_generator_test = MultivariateDataGenerator(test_set_x_df,
-                                                            labels_actual,
-                                                            window_size_min=4,
-                                                            window_size_max=64)
-
-    anomaly_generator_test.point_global_outliers(rack_count=1,
-                                                        ratio=0.001,
-                                                        factor=0.5,
-                                                        radius=8)
-    
-    anomaly_generator_test.point_contextual_outliers(rack_count=1,
-                                                        ratio=0.001,
-                                                        factor=0.5,
-                                                        radius=8)
-
-    anomaly_generator_test.persistent_global_outliers(rack_count=1,
-                                                            ratio=0.005,
-                                                            factor=0.5,
-                                                            radius=8)
-    
-    anomaly_generator_test.persistent_contextual_outliers(rack_count=1,
-                                                                ratio=0.005,
-                                                                factor=0.5,
-                                                                radius=8)
-
-    anomaly_generator_test.collective_global_outliers(rack_count=1,
-                                                            ratio=0.005,
-                                                            option='square',
-                                                            coef=5,
-                                                            noise_amp=0.05,
-                                                            level=10,
-                                                            freq=0.1)
-
-    anomaly_generator_test.collective_trend_outliers(rack_count=1,
-                                                            ratio=0.005,
-                                                            factor=0.5)
-
-    anomaly_generator_test.intra_rack_outliers(ratio_temporal=0.001,
-                                                    ratio_channels=0.05,
-                                                    average_duration=4.,
-                                                    stdev_duration=1.)
-
-    labels_unreduced =\
-        remove_undetectable_anomalies(
-            np.nan_to_num(anomaly_generator_test.get_dataset_np()),
-            anomaly_generator_test.get_labels_np())
-
-    # Save dataset and labels
-
-    test_set_unreduced_x_df =\
-        pd.DataFrame(anomaly_generator_test.get_dataset_np(),
-                        anomaly_generator_test.get_timestamps_pd(),
-                        test_set_x_df.columns)
-
-    test_set_unreduced_y_df =\
-        pd.DataFrame(labels_unreduced,
-                        anomaly_generator_test.get_timestamps_pd(),
-                        test_set_x_df.columns)
-
-    test_set_unreduced_x_df.to_hdf(
-            f'{args.dataset_dir}/unreduced_hlt_ppd_test_set_{args.variant}_x.h5',
-            key='unreduced_hlt_ppd_test_set_x', mode='w')
-
-    test_set_unreduced_y_df.to_hdf(
-            f'{args.dataset_dir}/unreduced_hlt_ppd_test_set_{args.variant}_y.h5',
-            key='unreduced__hlt_ppd_test_set_y', mode='w')
-    
-    # Reduced test set
-
-    # Generate synthetic anomalies and corresponding labels
-
-    anomaly_generator_test = MultivariateDataGenerator(test_set_x_df,
-                                                            labels_actual,
-                                                            window_size_min=4,
-                                                            window_size_max=32)
-
-    anomaly_generator_test.point_global_outliers(rack_count=3,
-                                                        ratio=0.001,
-                                                        factor=0.5,
-                                                        radius=25)
-    
-    anomaly_generator_test.point_contextual_outliers(rack_count=1,
-                                                        ratio=0.001,
-                                                        factor=0.5,
-                                                        radius=25)
-
-    anomaly_generator_test.persistent_global_outliers(rack_count=1,
-                                                            ratio=0.005,
-                                                            factor=0.5,
-                                                            radius=25)
-    
-    anomaly_generator_test.persistent_contextual_outliers(rack_count=1,
-                                                                ratio=0.005,
-                                                                factor=0.5,
-                                                                radius=25)
-
-    anomaly_generator_test.collective_global_outliers(rack_count=1,
-                                                            ratio=0.005,
-                                                            option='square',
-                                                            coef=5,
-                                                            noise_amp=0.05,
-                                                            level=10,
-                                                            freq=0.1)
-
-    anomaly_generator_test.collective_trend_outliers(rack_count=1,
-                                                            ratio=0.005,
-                                                            factor=0.5)
-
-    # Reduce dataset and labels
-
-    dataset = anomaly_generator_test.get_dataset_np()
-
-    labels = remove_undetectable_anomalies(
-                        np.nan_to_num(dataset),
-                        anomaly_generator_test.get_labels_np())
-
-    rack_data_test_all = []
-    rack_labels_test_all = []
-
-    columns_reduced_test = None
-    keys_last = None
-
-    for count, (row_x_data, row_x_labels)\
-            in enumerate(tqdm(zip(dataset, labels),
-                                total=len(dataset),
-                                desc='Generating test set')):
-
-        rack_buckets_data = defaultdict(list)
-        rack_buckets_labels = defaultdict(list)
-
-        for index, datapoint in enumerate(row_x_data):
-            rack_buckets_data[processes_test[index]].append(datapoint)
-
-        for index, label in enumerate(row_x_labels):
-            rack_buckets_labels[processes_test[index]].append(label)
-
-        process_data_medians = {}
-        process_data_stdevs = {}
-        rack_labels = {}
-
-        for rack, rack_bucket in rack_buckets_data.items():
-            process_data_medians[rack] = np.nanmedian(rack_bucket)
-            process_data_stdevs[rack] = np.nanstd(rack_bucket)
-
-        for rack, rack_bucket in rack_buckets_labels.items():
-
-            rack_label = 0
-
-            for label in rack_bucket:
-                rack_label = rack_label | label
-                
-            rack_labels[rack] = rack_label
-
-        process_data_medians = dict(sorted(process_data_medians.items()))
-        process_data_stdevs = dict(sorted(process_data_stdevs.items()))
-
-        rack_labels = dict(sorted(rack_labels.items()))
-
-        if keys_last != None:
-            assert process_data_medians.keys() == keys_last,\
-                            'Rack bucket keys changed between slices'
-
-            assert (process_data_medians.keys() == process_data_stdevs.keys()) and\
-                                (process_data_medians.keys() == rack_labels.keys()),\
-                                                        'Rack bucket keys not identical'
-
-        keys_last = process_data_medians.keys()
-
-        if type(columns_reduced_test) == type(None):
-            columns_reduced_test = create_channel_names(process_data_medians.keys(),
-                                                            process_data_stdevs.keys())
-            
-            assert np.array_equal(columns_reduced_test, columns_reduced_train_unlabeled),\
-                                                    "Test columns don't match train columns" 
-
-        rack_data_np = np.concatenate((np.array(list(process_data_medians.values())),
-                                            np.array(list(process_data_stdevs.values()))))
-
-        rack_data_test_all.append(rack_data_np)
-
-        rack_labels_test_all.append(np.array(list(rack_labels.values())))
-
-    rack_data_test_all_np = np.stack(rack_data_test_all)
-    rack_data_test_all_np = np.nan_to_num(rack_data_test_all_np, nan=-1)
-
-    nan_amount_test = 100*pd.isna(rack_data_test_all_np.flatten()).sum()/\
-                                                    rack_data_test_all_np.size
-
-    print('NaN amount reduced test set: {:.3f} %'.format(nan_amount_test))
-
-    rack_labels_test_all_np = np.stack(rack_labels_test_all)
-
-    rack_labels_test_all_np = np.concatenate([rack_labels_test_all_np,\
-                                                rack_labels_test_all_np],
-                                                axis=1)
-    
-    # Save dataset and labels
-
-    test_set_reduced_x_df = pd.DataFrame(rack_data_test_all_np,
-                                            anomaly_generator_test.get_timestamps_pd(),
-                                            columns_reduced_test)
-
-    test_set_reduced_y_df = pd.DataFrame(rack_labels_test_all_np,
-                                            anomaly_generator_test.get_timestamps_pd(),
-                                            columns_reduced_test)
-
-    anomalies_per_column = np.count_nonzero(rack_labels_test_all_np, axis=0)
-
-    anomaly_ratio_per_column = anomalies_per_column/\
-                                    len(rack_labels_test_all_np)
-
-    for anomalies, anomaly_ratio, column_name in zip(anomalies_per_column,
-                                                        anomaly_ratio_per_column,
-                                                        columns_reduced_test):
-
-        print(f'{column_name}: {anomalies} anomalies, {100*anomaly_ratio} % of all data')
-
-    test_set_reduced_x_df.to_hdf(f'{args.dataset_dir}/reduced_hlt_ppd_'
-                                        f'test_set_{args.variant}_x.h5',
-                                    key='reduced_hlt_ppd_test_set_x',
-                                    mode='w')
-
-    test_set_reduced_y_df.to_hdf(f'{args.dataset_dir}/reduced_hlt_ppd_'
-                                        f'test_set_{args.variant}_y.h5',
-                                    key='reduced_hlt_ppd_test_set_y',
-                                    mode='w')
-
-    if args.generate_videos:
-
-        writer = cv.VideoWriter(f'{args.video_output_dir}/reduced_hlt_ppd_'
-                                        f'test_set_{args.variant}.mp4',
-                                    four_cc, 60, (image_width, image_height))
-
-        for count in tqdm(range(len(rack_data_test_all_np)),
-                                    desc='Generating test set animation'):
-
-            lower_bound = max(count - plot_window_size, 0)
-            upper_bound_axis = max(count, plot_window_size) + 10
-
-            fig, ax = plt.subplots(figsize=(8, 4.5), dpi=240)
-
-            max_val_slice = np.max(rack_data_test_all_np[lower_bound:count, :])\
-                                if len(rack_data_test_all_np[lower_bound:count, :])\
-                                else 10
-
-            max_val_slice = min(max_val_slice, 200)
-
-            ax.set_xlim(lower_bound, upper_bound_axis)
-            ax.set_ylim(-2, max_val_slice + 10)
-
-            ax.grid(True)
-
-            ax.set_title("Per-Rack Median DCM Rates")
-            ax.set_xlabel("Timestep")
-            ax.set_ylabel("DCM Rate")
-
-            ax.plot(np.arange(lower_bound, count),
-                                rack_data_test_all_np[lower_bound:count, :])
-
-            # plt.tight_layout()
-
-            frame = fig_to_numpy_array(fig)
-
-            writer.write(frame)
-
-            plt.close()
-
-        writer.release()
-
-    # Clean val set
-
-    # Reduce dataset
-
-    clean_val_set_x_df = val_set_x_df
-
-    column_names = clean_val_set_x_df.columns
-    timestamps = clean_val_set_x_df.index
-
-    rack_data_clean_val_all = []
-
-    columns_reduced_clean_val = None
-    keys_last = None
-
-    for count, row_x_data in enumerate(tqdm(val_set_x_df.to_numpy(),
-                                                desc='Generating clean val set')):
-
-        rack_buckets_data = defaultdict(list)
-
-        for index, datapoint in enumerate(row_x_data):
-            rack_buckets_data[processes_val[index]].append(datapoint)
-
-        process_data_medians = {}
-        process_data_stdevs = {}
-
-        for rack, rack_bucket in rack_buckets_data.items():
-            process_data_medians[rack] = np.nanmedian(rack_bucket)
-            process_data_stdevs[rack] = np.nanstd(rack_bucket)
-
-        process_data_medians = dict(sorted(process_data_medians.items()))
-        process_data_stdevs = dict(sorted(process_data_stdevs.items()))
-
-        if keys_last != None:
-            assert process_data_medians.keys() == keys_last,\
-                                                    'Rack bucket keys changed between slices'
-
-            assert process_data_medians.keys() == process_data_stdevs.keys(),\
-                                                    'Rack bucket keys not identical'
-
-        keys_last = process_data_medians.keys()
-
-        if type(columns_reduced_clean_val) == type(None):
-            columns_reduced_clean_val = create_channel_names(process_data_medians.keys(),
-                                                                process_data_stdevs.keys())
-
-            assert np.array_equal(columns_reduced_clean_val, columns_reduced_train_unlabeled),\
-                                                        "Val columns don't match train columns" 
-
-        rack_data_np = np.concatenate((np.array(list(process_data_medians.values())),
-                                            np.array(list(process_data_stdevs.values()))))
-
-        rack_data_clean_val_all.append(rack_data_np)
-
-    rack_data_clean_val_all_np = np.stack(rack_data_clean_val_all)
-    rack_data_clean_val_all_np = np.nan_to_num(rack_data_clean_val_all_np, nan=-1)
-
-    nan_amount_clean_val = 100*pd.isna(rack_data_clean_val_all_np.flatten()).sum()/\
-                                                    rack_data_clean_val_all_np.size
-
-    print('NaN amount reduced clean val set: {:.3f} %'.format(nan_amount_clean_val))
-
-    # Save dataset
-
-    clean_val_set_x_df = pd.DataFrame(rack_data_clean_val_all_np,
-                                                val_set_x_df.index,
-                                                columns_reduced_clean_val)
-
-    clean_val_set_x_df.to_hdf(f'{args.dataset_dir}/reduced_hlt_ppd_'
-                                    f'clean_val_set_{args.variant}_x.h5',
-                                key='reduced_hlt_ppd_clean_val_set_x',
-                                mode='w')
-
-    if args.generate_videos:
-
-        writer = cv.VideoWriter(f'{args.video_output_dir}/reduced_hlt_ppd_'
-                                        f'clean_val_set_{args.variant}.mp4',
-                                    four_cc, 60, (image_width, image_height))
-
-        for count in tqdm(range(len(rack_data_clean_val_all_np)),
-                                    desc='Generating clean val set animation'):
-
-            lower_bound = max(count - plot_window_size, 0)
-            upper_bound_axis = max(count, plot_window_size) + 10
-
-            fig, ax = plt.subplots(figsize=(8, 4.5), dpi=240)
-
-            max_val_slice = np.max(rack_data_clean_val_all_np[lower_bound:count, :])\
-                                    if len(rack_data_clean_val_all_np[lower_bound:count, :])\
-                                    else 10
-
-            max_val_slice = min(max_val_slice, 200)
-
-            ax.set_xlim(lower_bound, upper_bound_axis)
-            ax.set_ylim(-2, max_val_slice + 10)
-
-            ax.grid(True)
-
-            ax.set_title("Per-Rack Median DCM Rates")
-            ax.set_xlabel("Timestep")
-            ax.set_ylabel("DCM Rate")
-
-            ax.plot(np.arange(lower_bound, count),
-                                rack_data_clean_val_all_np[lower_bound:count, :])
-
-            # plt.tight_layout()
-
-            frame = fig_to_numpy_array(fig)
-
-            writer.write(frame)
-
-            plt.close()
-
-        writer.release()
+#     # Labeled train set
+# 
+#     test_set_size = len(test_set_x_df)
+# 
+#     train_set_labeled_x_df = test_set_x_df.iloc[:test_set_size//4, :]
+# 
+#     for count in range(1, len(train_set_labeled_x_df.index)):
+#         if train_set_labeled_x_df.index[count] <=\
+#                 train_set_labeled_x_df.index[count-1]:
+#             print(f'Non-monotonic timestamp increase at {count-1}:\t'
+#                     f'First timestamp: {train_set_labeled_x_df.index[count-1]}\t'
+#                      f'Second timestamp: {train_set_labeled_x_df.index[count]}')
+# 
+#     column_names = train_set_labeled_x_df.columns
+#     timestamps = train_set_labeled_x_df.index
+# 
+#     # Generate labels for actual anomalies
+# 
+#     labels = generate_anomaly_labels(tpu_failure_log_df,
+#                                                 timestamps,
+#                                                 column_names,
+#                                                 np.array(rack_numbers_test),
+#                                                 prepad=5).to_numpy()
+#     
+#     # Generate synthetic anomalies and corresponding labels
+# 
+#     anomaly_generator_train_labeled = MultivariateDataGenerator(train_set_labeled_x_df,
+#                                                                                 labels,
+#                                                                                 window_size_min=4,
+#                                                                                 window_size_max=16)
+# 
+#     anomaly_generator_train_labeled.point_global_outliers(rack_count=1,
+#                                                                 ratio=0.001,
+#                                                                 factor=0.5,
+#                                                                 radius=50)
+#     
+#     anomaly_generator_train_labeled.point_contextual_outliers(rack_count=1,
+#                                                                     ratio=0.001,
+#                                                                     factor=0.5,
+#                                                                     radius=50)
+# 
+#     anomaly_generator_train_labeled.persistent_global_outliers(rack_count=1,
+#                                                                     ratio=0.01,
+#                                                                     factor=1,
+#                                                                     radius=50)
+#     
+#     anomaly_generator_train_labeled.persistent_contextual_outliers(rack_count=1,
+#                                                                         ratio=0.005,
+#                                                                         factor=0.5,
+#                                                                         radius=50)
+# 
+#     anomaly_generator_train_labeled.collective_global_outliers(rack_count=1,
+#                                                                     ratio=0.005,
+#                                                                     option='square',
+#                                                                     coef=5,
+#                                                                     noise_amp=0.5,
+#                                                                     level=10,
+#                                                                     freq=0.1)
+# 
+#     anomaly_generator_train_labeled.collective_trend_outliers(rack_count=1,
+#                                                                     ratio=0.005,
+#                                                                     factor=0.5)
+# 
+#     # Reduce dataset and labels
+# 
+#     dataset = anomaly_generator_train_labeled.get_dataset_np()
+#     
+#     labels = remove_undetectable_anomalies(
+#                         np.nan_to_num(dataset),
+#                         anomaly_generator_train_labeled.get_labels_np())
+# 
+#     rack_data_train_labeled_all = []
+#     rack_labels_train_labeled_all = []
+# 
+#     columns_reduced_train_labeled = None
+#     keys_last = None
+# 
+#     for count, (row_x_data, row_x_labels)\
+#             in enumerate(tqdm(zip(dataset, labels),
+#                                 total=len(dataset),
+#                                 desc='Generating labeled train set')):
+# 
+#         rack_buckets_data = defaultdict(list)
+#         rack_buckets_labels = defaultdict(list)
+# 
+#         for index, datapoint in enumerate(row_x_data):
+#             rack_buckets_data[processes_test[index]].append(datapoint)
+# 
+#         for index, label in enumerate(row_x_labels):
+#             rack_buckets_labels[processes_test[index]].append(label)
+# 
+#         process_data_medians = {}
+#         process_data_stdevs = {}
+#         rack_labels = {}
+# 
+#         for rack, rack_bucket in rack_buckets_data.items():
+#             process_data_medians[rack] = np.nanmedian(rack_bucket)
+#             process_data_stdevs[rack] = np.nanstd(rack_bucket)
+# 
+#         for rack, rack_bucket in rack_buckets_labels.items():
+# 
+#             rack_label = 0
+# 
+#             for label in rack_bucket:
+#                 rack_label = rack_label | label
+#                 
+#             rack_labels[rack] = rack_label
+# 
+#         process_data_medians = dict(sorted(process_data_medians.items()))
+#         process_data_stdevs = dict(sorted(process_data_stdevs.items()))
+# 
+#         rack_labels = dict(sorted(rack_labels.items()))
+# 
+#         if keys_last != None:
+#             assert process_data_medians.keys() == keys_last,\
+#                                                     'Rack bucket keys changed between slices'
+# 
+#             assert (process_data_medians.keys() == process_data_stdevs.keys()) and\
+#                                 (process_data_medians.keys() == rack_labels.keys()),\
+#                                                         'Rack bucket keys not identical'
+# 
+#         keys_last = process_data_medians.keys()
+# 
+#         if type(columns_reduced_train_labeled) == type(None):
+#             columns_reduced_train_labeled = create_channel_names(process_data_medians.keys(),
+#                                                             process_data_stdevs.keys())
+#             
+#             assert np.array_equal(columns_reduced_train_labeled, columns_reduced_train_unlabeled),\
+#                                             "Labeled train columns don't match unlabeled train columns" 
+# 
+#         rack_data_np = np.concatenate((np.array(list(process_data_medians.values())),
+#                                             np.array(list(process_data_stdevs.values()))))
+# 
+#         rack_data_train_labeled_all.append(rack_data_np)
+# 
+#         rack_labels_train_labeled_all.append(np.array(list(rack_labels.values())))
+# 
+#     rack_data_train_labeled_all_np = np.stack(rack_data_train_labeled_all)
+#     rack_data_train_labeled_all_np = np.nan_to_num(rack_data_train_labeled_all_np, nan=-1)
+# 
+#     nan_amount_train_labeled = 100*pd.isna(rack_data_train_labeled_all_np.flatten()).sum()/\
+#                                                             rack_data_train_labeled_all_np.size
+# 
+#     print('NaN amount reduced labeled train set: {:.3f} %'.format(nan_amount_train_labeled))
+# 
+#     rack_labels_train_labeled_all_np = np.stack(rack_labels_train_labeled_all)
+# 
+#     rack_labels_train_labeled_all_np = np.concatenate([rack_labels_train_labeled_all_np,\
+#                                                         rack_labels_train_labeled_all_np],
+#                                                         axis=1)
+#     
+#     # Save dataset and labels
+# 
+#     train_set_labeled_x_df = pd.DataFrame(rack_data_train_labeled_all_np,
+#                                                                 timestamps,
+#                                                                 columns_reduced_train_labeled)
+# 
+#     train_set_labeled_y_df = pd.DataFrame(rack_labels_train_labeled_all_np,
+#                                                                 timestamps,
+#                                                                 columns_reduced_train_labeled)
+# 
+#     anomalies_per_column = np.count_nonzero(rack_labels_train_labeled_all_np, axis=0)
+# 
+#     anomaly_ratio_per_column = anomalies_per_column/\
+#                                 len(rack_labels_train_labeled_all_np)
+# 
+#     for anomalies, anomaly_ratio, column_name in zip(anomalies_per_column,
+#                                                         anomaly_ratio_per_column,
+#                                                         columns_reduced_train_labeled):
+# 
+#         print(f'{column_name}: {anomalies} anomalies, {100*anomaly_ratio} % of all data')
+# 
+#     train_set_labeled_x_df.to_hdf(f'{args.dataset_dir}/reduced_hlt_ppd_'\
+#                                         f'labeled_train_set_{args.variant}_x.h5',
+#                                     key='reduced_hlt_ppd_labeled_train_set_x',
+#                                     mode='w')
+# 
+#     train_set_labeled_y_df.to_hdf(f'{args.dataset_dir}/reduced_hlt_ppd_'\
+#                                         f'labeled_train_set_{args.variant}_y.h5',
+#                                     key='reduced_hlt_ppd_labeled_train_set_y',
+#                                     mode='w')
+# 
+#     if args.generate_videos:
+# 
+#         writer = cv.VideoWriter(f'{args.video_output_dir}/reduced_hlt_ppd_'
+#                                         f'labeled_train_set_{args.variant}.mp4',
+#                                     four_cc, 60, (image_width, image_height))
+# 
+# 
+#         for count in tqdm(range(len(rack_data_train_labeled_all_np)),
+#                         desc='Generating labeled train set animation'):
+# 
+#             lower_bound = max(count - plot_window_size, 0)
+#             upper_bound_axis = max(count, plot_window_size) + 10
+# 
+#             fig, ax = plt.subplots(figsize=(8, 4.5), dpi=240)
+# 
+#             max_val_slice = np.max(rack_data_train_labeled_all_np[lower_bound:count, :])\
+#                                 if len(rack_data_train_labeled_all_np[lower_bound:count, :])\
+#                                 else 10
+# 
+#             max_val_slice = min(max_val_slice, 200)
+# 
+#             ax.set_xlim(lower_bound, upper_bound_axis)
+#             ax.set_ylim(-2, max_val_slice + 10)
+# 
+#             ax.grid(True)
+# 
+#             ax.set_title("Per-Rack Median DCM Rates")
+#             ax.set_xlabel("Timestep")
+#             ax.set_ylabel("DCM Rate")
+# 
+#             ax.plot(np.arange(lower_bound, count),
+#                                 rack_data_train_labeled_all_np[lower_bound:count, :])
+# 
+#             # plt.tight_layout()
+# 
+#             frame = fig_to_numpy_array(fig)
+# 
+#             writer.write(frame)
+# 
+#             plt.close()
+# 
+#         writer.release()
+# 
+#     # Unreduced test set
+# 
+#     column_names = test_set_x_df.columns
+#     timestamps = test_set_x_df.index
+# 
+#     # Generate labels for actual anomalies
+# 
+#     labels_actual = generate_anomaly_labels(tpu_failure_log_df,
+#                                                     timestamps,
+#                                                     column_names,
+#                                                     np.array(rack_numbers_test),
+#                                                     prepad=5).to_numpy()
+# 
+#     # Generate synthetic anomalies and corresponding labels
+# 
+#     anomaly_generator_test = MultivariateDataGenerator(test_set_x_df,
+#                                                             labels_actual,
+#                                                             window_size_min=4,
+#                                                             window_size_max=16)
+# 
+#     anomaly_generator_test.point_global_outliers(rack_count=1,
+#                                                         ratio=0.001,
+#                                                         factor=0.5,
+#                                                         radius=8)
+#     
+#     anomaly_generator_test.point_contextual_outliers(rack_count=1,
+#                                                         ratio=0.001,
+#                                                         factor=0.5,
+#                                                         radius=8)
+# 
+#     anomaly_generator_test.persistent_global_outliers(rack_count=1,
+#                                                             ratio=0.005,
+#                                                             factor=0.5,
+#                                                             radius=8)
+#     
+#     anomaly_generator_test.persistent_contextual_outliers(rack_count=1,
+#                                                                 ratio=0.005,
+#                                                                 factor=0.5,
+#                                                                 radius=8)
+# 
+#     anomaly_generator_test.collective_global_outliers(rack_count=1,
+#                                                             ratio=0.005,
+#                                                             option='square',
+#                                                             coef=5,
+#                                                             noise_amp=0.05,
+#                                                             level=10,
+#                                                             freq=0.1)
+# 
+#     anomaly_generator_test.collective_trend_outliers(rack_count=1,
+#                                                             ratio=0.005,
+#                                                             factor=0.5)
+# 
+#     anomaly_generator_test.intra_rack_outliers(ratio_temporal=0.001,
+#                                                     ratio_channels=0.05,
+#                                                     average_duration=4.,
+#                                                     stdev_duration=1.)
+# 
+#     labels_unreduced =\
+#         remove_undetectable_anomalies(
+#             np.nan_to_num(anomaly_generator_test.get_dataset_np()),
+#             anomaly_generator_test.get_labels_np())
+# 
+#     # Save dataset and labels
+# 
+#     test_set_unreduced_x_df =\
+#         pd.DataFrame(anomaly_generator_test.get_dataset_np(),
+#                         anomaly_generator_test.get_timestamps_pd(),
+#                         test_set_x_df.columns)
+# 
+#     test_set_unreduced_y_df =\
+#         pd.DataFrame(labels_unreduced,
+#                         anomaly_generator_test.get_timestamps_pd(),
+#                         test_set_x_df.columns)
+# 
+#     test_set_unreduced_x_df.to_hdf(
+#             f'{args.dataset_dir}/unreduced_hlt_ppd_test_set_{args.variant}_x.h5',
+#             key='unreduced_hlt_ppd_test_set_x', mode='w')
+# 
+#     test_set_unreduced_y_df.to_hdf(
+#             f'{args.dataset_dir}/unreduced_hlt_ppd_test_set_{args.variant}_y.h5',
+#             key='unreduced__hlt_ppd_test_set_y', mode='w')
+#     
+#     # Reduced test set
+# 
+#     # Generate synthetic anomalies and corresponding labels
+# 
+#     anomaly_generator_test = MultivariateDataGenerator(test_set_x_df,
+#                                                             labels_actual,
+#                                                             window_size_min=4,
+#                                                             window_size_max=16)
+# 
+#     anomaly_generator_test.point_global_outliers(rack_count=1,
+#                                                         ratio=0.001,
+#                                                         factor=0.5,
+#                                                         radius=25)
+#     
+#     anomaly_generator_test.point_contextual_outliers(rack_count=1,
+#                                                         ratio=0.001,
+#                                                         factor=0.5,
+#                                                         radius=25)
+# 
+#     anomaly_generator_test.persistent_global_outliers(rack_count=1,
+#                                                             ratio=0.005,
+#                                                             factor=0.5,
+#                                                             radius=25)
+#     
+#     anomaly_generator_test.persistent_contextual_outliers(rack_count=1,
+#                                                                 ratio=0.005,
+#                                                                 factor=0.5,
+#                                                                 radius=25)
+# 
+#     anomaly_generator_test.collective_global_outliers(rack_count=1,
+#                                                             ratio=0.005,
+#                                                             option='square',
+#                                                             coef=5,
+#                                                             noise_amp=0.05,
+#                                                             level=10,
+#                                                             freq=0.1)
+# 
+#     anomaly_generator_test.collective_trend_outliers(rack_count=1,
+#                                                             ratio=0.005,
+#                                                             factor=0.5)
+# 
+#     # Reduce dataset and labels
+# 
+#     dataset = anomaly_generator_test.get_dataset_np()
+# 
+#     labels = remove_undetectable_anomalies(
+#                         np.nan_to_num(dataset),
+#                         anomaly_generator_test.get_labels_np())
+# 
+#     rack_data_test_all = []
+#     rack_labels_test_all = []
+# 
+#     columns_reduced_test = None
+#     keys_last = None
+# 
+#     for count, (row_x_data, row_x_labels)\
+#             in enumerate(tqdm(zip(dataset, labels),
+#                                 total=len(dataset),
+#                                 desc='Generating test set')):
+# 
+#         rack_buckets_data = defaultdict(list)
+#         rack_buckets_labels = defaultdict(list)
+# 
+#         for index, datapoint in enumerate(row_x_data):
+#             rack_buckets_data[processes_test[index]].append(datapoint)
+# 
+#         for index, label in enumerate(row_x_labels):
+#             rack_buckets_labels[processes_test[index]].append(label)
+# 
+#         process_data_medians = {}
+#         process_data_stdevs = {}
+#         rack_labels = {}
+# 
+#         for rack, rack_bucket in rack_buckets_data.items():
+#             process_data_medians[rack] = np.nanmedian(rack_bucket)
+#             process_data_stdevs[rack] = np.nanstd(rack_bucket)
+# 
+#         for rack, rack_bucket in rack_buckets_labels.items():
+# 
+#             rack_label = 0
+# 
+#             for label in rack_bucket:
+#                 rack_label = rack_label | label
+#                 
+#             rack_labels[rack] = rack_label
+# 
+#         process_data_medians = dict(sorted(process_data_medians.items()))
+#         process_data_stdevs = dict(sorted(process_data_stdevs.items()))
+# 
+#         rack_labels = dict(sorted(rack_labels.items()))
+# 
+#         if keys_last != None:
+#             assert process_data_medians.keys() == keys_last,\
+#                             'Rack bucket keys changed between slices'
+# 
+#             assert (process_data_medians.keys() == process_data_stdevs.keys()) and\
+#                                 (process_data_medians.keys() == rack_labels.keys()),\
+#                                                         'Rack bucket keys not identical'
+# 
+#         keys_last = process_data_medians.keys()
+# 
+#         if type(columns_reduced_test) == type(None):
+#             columns_reduced_test = create_channel_names(process_data_medians.keys(),
+#                                                             process_data_stdevs.keys())
+#             
+#             assert np.array_equal(columns_reduced_test, columns_reduced_train_unlabeled),\
+#                                                     "Test columns don't match train columns" 
+# 
+#         rack_data_np = np.concatenate((np.array(list(process_data_medians.values())),
+#                                             np.array(list(process_data_stdevs.values()))))
+# 
+#         rack_data_test_all.append(rack_data_np)
+# 
+#         rack_labels_test_all.append(np.array(list(rack_labels.values())))
+# 
+#     rack_data_test_all_np = np.stack(rack_data_test_all)
+#     rack_data_test_all_np = np.nan_to_num(rack_data_test_all_np, nan=-1)
+# 
+#     nan_amount_test = 100*pd.isna(rack_data_test_all_np.flatten()).sum()/\
+#                                                     rack_data_test_all_np.size
+# 
+#     print('NaN amount reduced test set: {:.3f} %'.format(nan_amount_test))
+# 
+#     rack_labels_test_all_np = np.stack(rack_labels_test_all)
+# 
+#     rack_labels_test_all_np = np.concatenate([rack_labels_test_all_np,\
+#                                                 rack_labels_test_all_np],
+#                                                 axis=1)
+#     
+#     # Save dataset and labels
+# 
+#     test_set_reduced_x_df = pd.DataFrame(rack_data_test_all_np,
+#                                             anomaly_generator_test.get_timestamps_pd(),
+#                                             columns_reduced_test)
+# 
+#     test_set_reduced_y_df = pd.DataFrame(rack_labels_test_all_np,
+#                                             anomaly_generator_test.get_timestamps_pd(),
+#                                             columns_reduced_test)
+# 
+#     anomalies_per_column = np.count_nonzero(rack_labels_test_all_np, axis=0)
+# 
+#     anomaly_ratio_per_column = anomalies_per_column/\
+#                                     len(rack_labels_test_all_np)
+# 
+#     for anomalies, anomaly_ratio, column_name in zip(anomalies_per_column,
+#                                                         anomaly_ratio_per_column,
+#                                                         columns_reduced_test):
+# 
+#         print(f'{column_name}: {anomalies} anomalies, {100*anomaly_ratio} % of all data')
+# 
+#     test_set_reduced_x_df.to_hdf(f'{args.dataset_dir}/reduced_hlt_ppd_'
+#                                         f'test_set_{args.variant}_x.h5',
+#                                     key='reduced_hlt_ppd_test_set_x',
+#                                     mode='w')
+# 
+#     test_set_reduced_y_df.to_hdf(f'{args.dataset_dir}/reduced_hlt_ppd_'
+#                                         f'test_set_{args.variant}_y.h5',
+#                                     key='reduced_hlt_ppd_test_set_y',
+#                                     mode='w')
+# 
+#     if args.generate_videos:
+# 
+#         writer = cv.VideoWriter(f'{args.video_output_dir}/reduced_hlt_ppd_'
+#                                         f'test_set_{args.variant}.mp4',
+#                                     four_cc, 60, (image_width, image_height))
+# 
+#         for count in tqdm(range(len(rack_data_test_all_np)),
+#                                     desc='Generating test set animation'):
+# 
+#             lower_bound = max(count - plot_window_size, 0)
+#             upper_bound_axis = max(count, plot_window_size) + 10
+# 
+#             fig, ax = plt.subplots(figsize=(8, 4.5), dpi=240)
+# 
+#             max_val_slice = np.max(rack_data_test_all_np[lower_bound:count, :])\
+#                                 if len(rack_data_test_all_np[lower_bound:count, :])\
+#                                 else 10
+# 
+#             max_val_slice = min(max_val_slice, 200)
+# 
+#             ax.set_xlim(lower_bound, upper_bound_axis)
+#             # ax.set_ylim(-2, max_val_slice + 10)
+# 
+#             ax.grid(True)
+# 
+#             ax.set_title("Per-Rack Median DCM Rates")
+#             ax.set_xlabel("Timestep")
+#             ax.set_ylabel("DCM Rate")
+# 
+#             ax.plot(np.arange(lower_bound, count),
+#                                 rack_data_test_all_np[lower_bound:count, :])
+# 
+#             # plt.tight_layout()
+# 
+#             frame = fig_to_numpy_array(fig)
+# 
+#             writer.write(frame)
+# 
+#             plt.close()
+# 
+#         writer.release()
+# 
+#     # Clean val set
+# 
+#     # Reduce dataset
+# 
+#     clean_val_set_x_df = val_set_x_df
+# 
+#     column_names = clean_val_set_x_df.columns
+#     timestamps = clean_val_set_x_df.index
+# 
+#     rack_data_clean_val_all = []
+# 
+#     columns_reduced_clean_val = None
+#     keys_last = None
+# 
+#     for count, row_x_data in enumerate(tqdm(val_set_x_df.to_numpy(),
+#                                                 desc='Generating clean val set')):
+# 
+#         rack_buckets_data = defaultdict(list)
+# 
+#         for index, datapoint in enumerate(row_x_data):
+#             rack_buckets_data[processes_val[index]].append(datapoint)
+# 
+#         process_data_medians = {}
+#         process_data_stdevs = {}
+# 
+#         for rack, rack_bucket in rack_buckets_data.items():
+#             process_data_medians[rack] = np.nanmedian(rack_bucket)
+#             process_data_stdevs[rack] = np.nanstd(rack_bucket)
+# 
+#         process_data_medians = dict(sorted(process_data_medians.items()))
+#         process_data_stdevs = dict(sorted(process_data_stdevs.items()))
+# 
+#         if keys_last != None:
+#             assert process_data_medians.keys() == keys_last,\
+#                                                     'Rack bucket keys changed between slices'
+# 
+#             assert process_data_medians.keys() == process_data_stdevs.keys(),\
+#                                                     'Rack bucket keys not identical'
+# 
+#         keys_last = process_data_medians.keys()
+# 
+#         if type(columns_reduced_clean_val) == type(None):
+#             columns_reduced_clean_val = create_channel_names(process_data_medians.keys(),
+#                                                                 process_data_stdevs.keys())
+# 
+#             assert np.array_equal(columns_reduced_clean_val, columns_reduced_train_unlabeled),\
+#                                                         "Val columns don't match train columns" 
+# 
+#         rack_data_np = np.concatenate((np.array(list(process_data_medians.values())),
+#                                             np.array(list(process_data_stdevs.values()))))
+# 
+#         rack_data_clean_val_all.append(rack_data_np)
+# 
+#     rack_data_clean_val_all_np = np.stack(rack_data_clean_val_all)
+#     rack_data_clean_val_all_np = np.nan_to_num(rack_data_clean_val_all_np, nan=-1)
+# 
+#     nan_amount_clean_val = 100*pd.isna(rack_data_clean_val_all_np.flatten()).sum()/\
+#                                                     rack_data_clean_val_all_np.size
+# 
+#     print('NaN amount reduced clean val set: {:.3f} %'.format(nan_amount_clean_val))
+# 
+#     # Save dataset
+# 
+#     clean_val_set_x_df = pd.DataFrame(rack_data_clean_val_all_np,
+#                                                 val_set_x_df.index,
+#                                                 columns_reduced_clean_val)
+# 
+#     clean_val_set_x_df.to_hdf(f'{args.dataset_dir}/reduced_hlt_ppd_'
+#                                     f'clean_val_set_{args.variant}_x.h5',
+#                                 key='reduced_hlt_ppd_clean_val_set_x',
+#                                 mode='w')
+# 
+#     if args.generate_videos:
+# 
+#         writer = cv.VideoWriter(f'{args.video_output_dir}/reduced_hlt_ppd_'
+#                                         f'clean_val_set_{args.variant}.mp4',
+#                                     four_cc, 60, (image_width, image_height))
+# 
+#         for count in tqdm(range(len(rack_data_clean_val_all_np)),
+#                                     desc='Generating clean val set animation'):
+# 
+#             lower_bound = max(count - plot_window_size, 0)
+#             upper_bound_axis = max(count, plot_window_size) + 10
+# 
+#             fig, ax = plt.subplots(figsize=(8, 4.5), dpi=240)
+# 
+#             max_val_slice = np.max(rack_data_clean_val_all_np[lower_bound:count, :])\
+#                                     if len(rack_data_clean_val_all_np[lower_bound:count, :])\
+#                                     else 10
+# 
+#             max_val_slice = min(max_val_slice, 200)
+# 
+#             ax.set_xlim(lower_bound, upper_bound_axis)
+#             # ax.set_ylim(-2, max_val_slice + 10)
+# 
+#             ax.grid(True)
+# 
+#             ax.set_title("Per-Rack Median DCM Rates")
+#             ax.set_xlabel("Timestep")
+#             ax.set_ylabel("DCM Rate")
+# 
+#             ax.plot(np.arange(lower_bound, count),
+#                                 rack_data_clean_val_all_np[lower_bound:count, :])
+# 
+#             # plt.tight_layout()
+# 
+#             frame = fig_to_numpy_array(fig)
+# 
+#             writer.write(frame)
+# 
+#             plt.close()
+# 
+#         writer.release()
 
     # Dirty val set
 
-    val_set_x_df = pd.concat((val_set_x_df.iloc[:9270, :],
-                                test_set_x_df.iloc[-8570:, :]))
+    val_set_x_df = pd.concat((val_set_x_df.iloc[:776, :],
+                                test_set_x_df.iloc[-716:, :]))
 
     column_names_val = list((val_set_x_df).columns.values)
-    process_labels_val = [get_tpu_number(label) for label in column_names_val]
-    process_labels_val_unique = np.array(list(set(process_labels_val)))
-    processes_val = np.floor_divide(process_labels_val, 1000)
+    process_labels_val = [get_process_name(label) for label in column_names_val]
+
+    rack_numbers_val =\
+        np.array([int(label.split('|')[0]) for label in process_labels_val])
+
+    processes_val =\
+        np.array([label.split('|')[-1] for label in process_labels_val])
 
     for count in range(1, len(val_set_x_df.index)):
         if val_set_x_df.index[count] <=\
@@ -1550,37 +1559,37 @@ if __name__ == '__main__':
     labels_actual = generate_anomaly_labels(tpu_failure_log_df,
                                                     timestamps,
                                                     column_names,
-                                                    np.array(process_labels_val),
+                                                    np.array(rack_numbers_val),
                                                     prepad=5).to_numpy()
     
     # Generate synthetic anomalies and corresponding labels
 
     anomaly_generator_val = MultivariateDataGenerator(val_set_x_df,
                                                         labels_actual,
-                                                        window_size_min=8,
-                                                        window_size_max=128)
+                                                        window_size_min=4,
+                                                        window_size_max=16)
 
-    anomaly_generator_val.point_global_outliers(rack_count=3,
+    anomaly_generator_val.point_global_outliers(rack_count=1,
                                                         ratio=0.001,
                                                         factor=0.5,
                                                         radius=25)
     
-    anomaly_generator_val.point_contextual_outliers(rack_count=3,
+    anomaly_generator_val.point_contextual_outliers(rack_count=1,
                                                         ratio=0.001,
                                                         factor=0.5,
                                                         radius=25)
 
-    anomaly_generator_val.persistent_global_outliers(rack_count=3,
+    anomaly_generator_val.persistent_global_outliers(rack_count=1,
                                                             ratio=0.005,
                                                             factor=0.5,
                                                             radius=25)
     
-    anomaly_generator_val.persistent_contextual_outliers(rack_count=3,
+    anomaly_generator_val.persistent_contextual_outliers(rack_count=1,
                                                                 ratio=0.005,
                                                                 factor=0.5,
                                                                 radius=25)
 
-    anomaly_generator_val.collective_global_outliers(rack_count=3,
+    anomaly_generator_val.collective_global_outliers(rack_count=1,
                                                         ratio=0.005,
                                                         option='square',
                                                         coef=5,
@@ -1588,10 +1597,10 @@ if __name__ == '__main__':
                                                         level=10,
                                                         freq=0.1)
 
-    anomaly_generator_val.collective_trend_outliers(rack_count=3,
+    anomaly_generator_val.collective_trend_outliers(rack_count=1,
                                                         ratio=0.005,
                                                         factor=0.5)
-    
+#     
     # Reduce dataset and labels
     
     dataset = anomaly_generator_val.get_dataset_np()
@@ -1655,6 +1664,9 @@ if __name__ == '__main__':
         if type(columns_reduced_val) == type(None):
             columns_reduced_val = create_channel_names(process_data_medians.keys(),
                                                         process_data_stdevs.keys())
+
+            print(columns_reduced_train_unlabeled)
+            print(columns_reduced_val)
 
             assert np.array_equal(columns_reduced_val, columns_reduced_train_unlabeled),\
                                                     "Val columns don't match train columns" 
@@ -1726,7 +1738,7 @@ if __name__ == '__main__':
             max_val_slice = min(max_val_slice, 200)
 
             ax.set_xlim(lower_bound, upper_bound_axis)
-            ax.set_ylim(-2, max_val_slice + 10)
+            # ax.set_ylim(-2, max_val_slice + 10)
 
             ax.grid(True)
 
