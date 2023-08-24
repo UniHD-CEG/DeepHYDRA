@@ -109,9 +109,17 @@ def get_tpu_number(channel_name):
     return parameters[-1]
 
 
-def get_process_name(channel_name):
+def get_process_label(channel_name):
     tpu_number = [int(substring) for substring in re.findall(r'\d+', channel_name)][-1]
     process_name = [substring for substring in re.findall(r'(?<=\|)[^:]+(?=:)', channel_name)][-1]
+
+    if 'DCM' in process_name or\
+            'MuCalReader' in process_name or\
+            'NodeCoralProxy' in process_name or\
+            'HLTMPPU' in process_name or\
+            'HLTRC' in process_name:
+        process_name = f'{process_name}_{tpu_number//1000}'
+
     # print(f'{tpu_number}|{process_name}')
     return f'{tpu_number}|{process_name}'
 
@@ -706,9 +714,9 @@ if __name__ == '__main__':
     print(f'\tTest set: {100*nan_amount_test:.3f} %')
     print(f'\tVal set: {100*nan_amount_val:.3f} %')
 
-    process_labels_train = [get_process_name(label) for label in column_names_train]
-    process_labels_test = [get_process_name(label) for label in column_names_test]
-    process_labels_val = [get_process_name(label) for label in column_names_val]
+    process_labels_train = [get_process_label(label) for label in column_names_train]
+    process_labels_test = [get_process_label(label) for label in column_names_test]
+    process_labels_val = [get_process_label(label) for label in column_names_val]
 
     process_labels_train_unique = np.array(list(set(process_labels_train)))
     process_labels_test_unique = np.array(list(set(process_labels_test)))
@@ -854,7 +862,7 @@ if __name__ == '__main__':
                                                         train_set_unlabeled_x_df.index,
                                                         columns_reduced_train_unlabeled)
 
-    train_set_unlabeled_x_df.to_hdf(f'{args.dataset_dir}/reduced_ppd_'\
+    train_set_unlabeled_x_df.to_hdf(f'{args.dataset_dir}/reduced_hlt_ppd_'\
                                             f'train_set_{args.variant}_x.h5',
                                         key='reduced_hlt_ppd_train_set_x',
                                         mode='w')
@@ -929,7 +937,7 @@ if __name__ == '__main__':
                                                 timestamps,
                                                 column_names,
                                                 np.array(rack_numbers_test),
-                                                prepad=5).to_numpy()
+                                                prepad=0).to_numpy()
     
     # Generate synthetic anomalies and corresponding labels
 
@@ -1143,7 +1151,7 @@ if __name__ == '__main__':
                                                     timestamps,
                                                     column_names,
                                                     np.array(rack_numbers_test),
-                                                    prepad=5).to_numpy()
+                                                    prepad=0).to_numpy()
 
     # Generate synthetic anomalies and corresponding labels
 
@@ -1536,7 +1544,7 @@ if __name__ == '__main__':
                                 test_set_x_df.iloc[-716:, :]))
 
     column_names_val = list((val_set_x_df).columns.values)
-    process_labels_val = [get_process_name(label) for label in column_names_val]
+    process_labels_val = [get_process_label(label) for label in column_names_val]
 
     rack_numbers_val =\
         np.array([int(label.split('|')[0]) for label in process_labels_val])
@@ -1560,7 +1568,7 @@ if __name__ == '__main__':
                                                     timestamps,
                                                     column_names,
                                                     np.array(rack_numbers_val),
-                                                    prepad=5).to_numpy()
+                                                    prepad=0).to_numpy()
     
     # Generate synthetic anomalies and corresponding labels
 
@@ -1600,7 +1608,7 @@ if __name__ == '__main__':
     anomaly_generator_val.collective_trend_outliers(rack_count=1,
                                                         ratio=0.005,
                                                         factor=0.5)
-#     
+     
     # Reduce dataset and labels
     
     dataset = anomaly_generator_val.get_dataset_np()

@@ -12,7 +12,10 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Informer-MSE/Informer-SMSE Anomaly Detection')
 
-    parser.add_argument('--data', type=str, required=True, choices=['HLT_2018', 'HLT_2022', 'HLT_2023', 'SMD'], default='HLT', help='data')
+    parser.add_argument('--data', type=str, required=True, choices=\
+                                    ['HLT_DCM_2018', 'HLT_DCM_2022', 'HLT_DCM_2023', 
+                                        'HLT_PPD_2018', 'HLT_PPD_2022', 'HLT_PPD_2023','SMD'],
+                                                                    default='HLT', help='dataset')
     parser.add_argument('--seed', type=float, default=42, help='Random seed')
     
     parser.add_argument('--features', type=str, default='M', help='forecasting task, options:[M, S, MS]; M:multivariate predict multivariate, S:univariate predict univariate, MS:multivariate predict univariate')
@@ -135,8 +138,10 @@ if __name__ == '__main__':
 
     variant = int(args.data.split('_')[-1])
 
-    if 'HLT' in args.data:
-        subfolder = f'reduced_detection_{variant}'
+    if 'HLT_DCM' in args.data:
+        subfolder = f'reduced_detection_dcm_{variant}'
+    elif 'HLT_PPD' in args.data:
+        subfolder = f'reduced_detection_ppd_{variant}'
     else:
         subfolder = 'smd'
 
@@ -144,8 +149,12 @@ if __name__ == '__main__':
                 f'l2_dist_train_{args.loss.lower()}{augment_label}seed_{int(args.seed)}.npy',
                                                                                 l2_distances_all_train)
     
-    if 'HLT' in args.data:
-        np.save(f'{output_dir}/combined_detection_{variant}/predictions/'
+    if 'HLT_DCM' in args.data:
+        np.save(f'{output_dir}/combined_detection_dcm_{variant}/predictions/'
+                    f'l2_dist_train_{args.loss.lower()}{augment_label}seed_{int(args.seed)}.npy',
+                                                                                    l2_distances_all_train)
+    elif 'HLT_PPD' in args.data:
+        np.save(f'{output_dir}/combined_detection_dcm_{variant}/predictions/'
                     f'l2_dist_train_{args.loss.lower()}{augment_label}seed_{int(args.seed)}.npy',
                                                                                     l2_distances_all_train)
 
