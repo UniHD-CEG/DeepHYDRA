@@ -308,7 +308,7 @@ def plot_results(data: np.array,
 
     
 
-    # preds_strada_tranad = np.logical_or(preds_clustering,
+    # preds_deep_hydra_tranad = np.logical_or(preds_clustering,
     #                                             preds_tranad)
 
     # pbar.update(1)
@@ -317,7 +317,7 @@ def plot_results(data: np.array,
     #     get_thresholded(preds_l2_dist_train_mse[:spot_train_size],
     #                                             preds_l2_dist_mse, label, 0.0025)
 
-    # preds_strada_mse = np.logical_or(preds_clustering,
+    # preds_deep_hydra_mse = np.logical_or(preds_clustering,
     #                                     preds_l2_dist_mse)
 
     # pbar.update(1)
@@ -326,7 +326,7 @@ def plot_results(data: np.array,
     #     get_thresholded(preds_l2_dist_train_smse[:spot_train_size],
     #                                             preds_l2_dist_smse, label, 0.008)
     
-    # preds_strada_smse = np.logical_or(preds_clustering,
+    # preds_deep_hydra_smse = np.logical_or(preds_clustering,
     #                                     preds_l2_dist_smse)
 
     # pbar.update(1)
@@ -336,7 +336,7 @@ def plot_results(data: np.array,
     #                             label, 0.008,
     #                             0.8, 60)
     
-    # preds_strada_dagmm =\
+    # preds_deep_hydra_dagmm =\
     #     np.logical_or(preds_clustering,
     #                         preds_dagmm)
 
@@ -348,7 +348,7 @@ def plot_results(data: np.array,
     #                                     preds_omni_anomaly,
     #                                     label, 0.0001, 0.8, 1.3)
 
-    # preds_strada_omni_anomaly =\
+    # preds_deep_hydra_omni_anomaly =\
     #     np.logical_or(preds_clustering,
     #                         preds_omni_anomaly)
 
@@ -358,56 +358,56 @@ def plot_results(data: np.array,
     #                                         preds_usad,
     #                                         label, 0.01, 0.02, 18,)
 
-    # preds_strada_usad =\
+    # preds_deep_hydra_usad =\
     #     np.logical_or(preds_clustering,
     #                             preds_usad)
 
     # pbar.close()
 
     # save_numpy_array(preds_tranad, 'predictions_thresholded/preds_tranad.npy')
-    # save_numpy_array(preds_strada_tranad, 'predictions_thresholded/preds_strada_tranad.npy')
+    # save_numpy_array(preds_deep_hydra_tranad, 'predictions_thresholded/preds_deep_hydra_tranad.npy')
     # save_numpy_array(preds_l2_dist_mse, 'predictions_thresholded/preds_l2_dist_mse.npy')
-    # save_numpy_array(preds_strada_mse, 'predictions_thresholded/preds_strada_mse.npy')
+    # save_numpy_array(preds_deep_hydra_mse, 'predictions_thresholded/preds_deep_hydra_mse.npy')
     # save_numpy_array(preds_l2_dist_smse, 'predictions_thresholded/preds_l2_dist_smse.npy')
-    # save_numpy_array(preds_strada_smse, 'predictions_thresholded/preds_strada_smse.npy')
+    # save_numpy_array(preds_deep_hydra_smse, 'predictions_thresholded/preds_deep_hydra_smse.npy')
     # save_numpy_array(preds_omni_anomaly, 'predictions_thresholded/preds_omni_anomaly.npy')
-    # save_numpy_array(preds_strada_omni_anomaly, 'predictions_thresholded/preds_strada_omni_anomaly.npy')
+    # save_numpy_array(preds_deep_hydra_omni_anomaly, 'predictions_thresholded/preds_deep_hydra_omni_anomaly.npy')
     # save_numpy_array(preds_dagmm, 'predictions_thresholded/preds_dagmm.npy')
-    # save_numpy_array(preds_strada_dagmm, 'predictions_thresholded/preds_strada_dagmm.npy')
+    # save_numpy_array(preds_deep_hydra_dagmm, 'predictions_thresholded/preds_deep_hydra_dagmm.npy')
     # save_numpy_array(preds_usad, 'predictions_thresholded/preds_usad.npy')
-    # save_numpy_array(preds_strada_usad, 'predictions_thresholded/preds_strada_usad.npy')
+    # save_numpy_array(preds_deep_hydra_usad, 'predictions_thresholded/preds_deep_hydra_usad.npy')
 
     # exit()
 
     preds_tranad = load_numpy_array('predictions_thresholded/preds_tranad.npy')
-    preds_strada_tranad = load_numpy_array(f'predictions_thresholded/preds_strada_tranad.npy')
+    preds_deep_hydra_tranad = load_numpy_array(f'predictions_thresholded/preds_deep_hydra_tranad.npy')
     preds_l2_dist_mse = load_numpy_array(f'predictions_thresholded/preds_l2_dist_mse.npy')
-    preds_strada_mse = load_numpy_array(f'predictions_thresholded/preds_strada_mse.npy')
+    preds_deep_hydra_mse = load_numpy_array(f'predictions_thresholded/preds_deep_hydra_mse.npy')
     preds_l2_dist_smse = load_numpy_array(f'predictions_thresholded/preds_l2_dist_smse.npy')
-    preds_strada_smse = load_numpy_array(f'predictions_thresholded/preds_strada_smse.npy')
+    preds_deep_hydra_smse = load_numpy_array(f'predictions_thresholded/preds_deep_hydra_smse.npy')
     preds_omni_anomaly = load_numpy_array('predictions_thresholded/preds_omni_anomaly.npy')
-    preds_strada_omni_anomaly = load_numpy_array(f'predictions_thresholded/preds_strada_omni_anomaly.npy')
+    preds_deep_hydra_omni_anomaly = load_numpy_array(f'predictions_thresholded/preds_deep_hydra_omni_anomaly.npy')
     preds_dagmm = load_numpy_array('predictions_thresholded/preds_dagmm.npy')
-    preds_strada_dagmm = load_numpy_array(f'predictions_thresholded/preds_strada_dagmm.npy')
+    preds_deep_hydra_dagmm = load_numpy_array(f'predictions_thresholded/preds_deep_hydra_dagmm.npy')
     preds_usad = load_numpy_array('predictions_thresholded/preds_usad.npy')
-    preds_strada_usad = load_numpy_array(f'predictions_thresholded/preds_strada_usad.npy')
+    preds_deep_hydra_usad = load_numpy_array(f'predictions_thresholded/preds_deep_hydra_usad.npy')
 
     preds_all = {   '1L-Method 3': preds_method_3,
                     '1L-Method 4': preds_method_4,
                     'MERLIN': preds_merlin,
                     'T-DBSCAN': preds_clustering,
                     'OmniAnomaly': preds_omni_anomaly,
-                    'DeepHYDRA-OmniAnomaly': preds_strada_omni_anomaly,
+                    'DeepHYDRA-OmniAnomaly': preds_deep_hydra_omni_anomaly,
                     'DAGMM': preds_dagmm,
-                    'DeepHYDRA-DAGMM': preds_strada_dagmm,
+                    'DeepHYDRA-DAGMM': preds_deep_hydra_dagmm,
                     'USAD': preds_usad,
-                    'DeepHYDRA-USAD': preds_strada_usad,
+                    'DeepHYDRA-USAD': preds_deep_hydra_usad,
                     'Informer-MSE': preds_l2_dist_mse,
-                    'DeepHYDRA-MSE': preds_strada_mse,
+                    'DeepHYDRA-MSE': preds_deep_hydra_mse,
                     'Informer-SMSE': preds_l2_dist_smse,
-                    'DeepHYDRA-SMSE': preds_strada_smse,
+                    'DeepHYDRA-SMSE': preds_deep_hydra_smse,
                     'TranAD': preds_tranad,
-                    'DeepHYDRA-TranAD': preds_strada_tranad}
+                    'DeepHYDRA-TranAD': preds_deep_hydra_tranad}
 
     # These colors are specifically chosen to improve
     # accessibility for readers with colorblindness

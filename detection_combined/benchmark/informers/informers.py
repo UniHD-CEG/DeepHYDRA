@@ -81,7 +81,7 @@ if __name__ == '__main__':
 
     log_model_name = args.model.lower().replace('-', '_')
 
-    log_filename = f'{args.log_dir}/strada_{log_model_name}'\
+    log_filename = f'{args.log_dir}/deep_hydra_{log_model_name}'\
                             f'benchmark_log_{time_now_string}.log'
 
     logging_format = '[%(asctime)s] %(levelname)s: %(name)s: %(message)s'

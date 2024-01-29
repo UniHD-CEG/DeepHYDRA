@@ -82,7 +82,7 @@ if __name__ == '__main__':
 
     time_now_string = dt.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
 
-    log_filename = f'{args.log_dir}/strada_{args.model.lower()}_'\
+    log_filename = f'{args.log_dir}/deep_hydra_{args.model.lower()}_'\
                                  f'benchmark_log_{time_now_string}.log'
 
     logging_format = '[%(asctime)s] %(levelname)s: %(name)s: %(message)s'

@@ -32,7 +32,7 @@ if __name__ == '__main__':
 
     sizes_hlt.rename('Size', inplace=True)
 
-    flops_strada_reduction = flops_hlt.loc['Reduction'] + flops_hlt.loc['T-DBSCAN']
+    flops_deep_hydra_reduction = flops_hlt.loc['Reduction'] + flops_hlt.loc['T-DBSCAN']
 
     flops_hlt.loc['Informer-MSE (Unreduced)'] = flops_hlt.loc['Informer-MSE (Reduced)'] + flops_hlt.loc['Reduction']
     flops_hlt.loc['Informer-SMSE (Unreduced)'] = flops_hlt.loc['Informer-SMSE (Reduced)'] + flops_hlt.loc['Reduction']
@@ -41,12 +41,12 @@ if __name__ == '__main__':
     flops_hlt.loc['USAD (Unreduced)'] = flops_hlt.loc['USAD (Reduced)'] + flops_hlt.loc['Reduction']
     flops_hlt.loc['OmniAnomaly (Unreduced)'] = flops_hlt.loc['OmniAnomaly (Reduced)'] + flops_hlt.loc['Reduction']
 
-    flops_hlt.loc['STRADA-MSE'] = flops_hlt.loc['Informer-MSE (Reduced)'] + flops_strada_reduction
-    flops_hlt.loc['STRADA-SMSE'] = flops_hlt.loc['Informer-SMSE (Reduced)'] + flops_strada_reduction
-    flops_hlt.loc['STRADA-TranAD'] = flops_hlt.loc['TranAD (Reduced)'] + flops_strada_reduction
-    flops_hlt.loc['T-DBSCAN/DAGMM'] = flops_hlt.loc['DAGMM (Reduced)'] + flops_strada_reduction
-    flops_hlt.loc['T-DBSCAN/USAD'] = flops_hlt.loc['USAD (Reduced)'] + flops_strada_reduction
-    flops_hlt.loc['T-DBSCAN/OmniAnomaly'] = flops_hlt.loc['OmniAnomaly (Reduced)'] + flops_strada_reduction
+    flops_hlt.loc['STRADA-MSE'] = flops_hlt.loc['Informer-MSE (Reduced)'] + flops_deep_hydra_reduction
+    flops_hlt.loc['STRADA-SMSE'] = flops_hlt.loc['Informer-SMSE (Reduced)'] + flops_deep_hydra_reduction
+    flops_hlt.loc['STRADA-TranAD'] = flops_hlt.loc['TranAD (Reduced)'] + flops_deep_hydra_reduction
+    flops_hlt.loc['T-DBSCAN/DAGMM'] = flops_hlt.loc['DAGMM (Reduced)'] + flops_deep_hydra_reduction
+    flops_hlt.loc['T-DBSCAN/USAD'] = flops_hlt.loc['USAD (Reduced)'] + flops_deep_hydra_reduction
+    flops_hlt.loc['T-DBSCAN/OmniAnomaly'] = flops_hlt.loc['OmniAnomaly (Reduced)'] + flops_deep_hydra_reduction
 
     sizes_reduced_hlt = sizes_hlt.loc[~(sizes_hlt.index.str.contains(unreduced_data_regex))]
     flops_reduced_hlt = flops_hlt.loc[~(flops_hlt.index.str.contains(unreduced_data_regex))]

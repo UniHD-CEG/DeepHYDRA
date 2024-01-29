@@ -591,13 +591,13 @@ def print_results(label: np.array,
     
     # print('DeepHYDRA-TranAD:')
 
-    # preds_strada_tranad =\
+    # preds_deep_hydra_tranad =\
     #     np.logical_or(preds_clustering,
     #                         preds_tranad)
     
-    # get_scores_thresholded('strada_tranad',
+    # get_scores_thresholded('deep_hydra_tranad',
     #                                 seed,
-    #                                 preds_strada_tranad,
+    #                                 preds_deep_hydra_tranad,
     #                                 label,
     #                                 to_csv)
 
@@ -617,13 +617,13 @@ def print_results(label: np.array,
 
     # print('DeepHYDRA-MSE:')
 
-    # preds_strada_mse =\
+    # preds_deep_hydra_mse =\
     #     np.logical_or(preds_clustering,
     #                     preds_l2_dist_mse)
     
-    # get_scores_thresholded('strada_mse',
+    # get_scores_thresholded('deep_hydra_mse',
     #                                 seed,
-    #                                 preds_strada_mse,
+    #                                 preds_deep_hydra_mse,
     #                                 label,
     #                                 to_csv)
     
@@ -643,13 +643,13 @@ def print_results(label: np.array,
     
     # print('DeepHYDRA-SMSE:')
 
-    # preds_strada_smse =\
+    # preds_deep_hydra_smse =\
     #     np.logical_or(preds_clustering,
     #                     preds_l2_dist_smse)
 
-    # get_scores_thresholded('strada_smse',
+    # get_scores_thresholded('deep_hydra_smse',
     #                                 seed,
-    #                                 preds_strada_smse,
+    #                                 preds_deep_hydra_smse,
     #                                 label,
     #                                 to_csv)
 
@@ -678,13 +678,13 @@ def print_results(label: np.array,
     
     # print('DeepHYDRA-DAGMM:')
 
-    # preds_strada_dagmm =\
+    # preds_deep_hydra_dagmm =\
     #     np.logical_or(preds_clustering,
     #                         preds_dagmm)
 
-    # get_scores_thresholded('strada_dagmm',
+    # get_scores_thresholded('deep_hydra_dagmm',
     #                                 seed,
-    #                                 preds_strada_dagmm,
+    #                                 preds_deep_hydra_dagmm,
     #                                 label,
     #                                 to_csv)
 
@@ -716,13 +716,13 @@ def print_results(label: np.array,
     
     # print('DeepHYDRA-OmniAnomaly:')
 
-    # preds_strada_omni_anomaly =\
+    # preds_deep_hydra_omni_anomaly =\
     #     np.logical_or(preds_clustering,
     #                         preds_omni_anomaly)
     
-    # get_scores_thresholded('strada_omnianomaly',
+    # get_scores_thresholded('deep_hydra_omnianomaly',
     #                                         seed,
-    #                                         preds_strada_omni_anomaly,
+    #                                         preds_deep_hydra_omni_anomaly,
     #                                         label,
     #                                         to_csv)
 
@@ -752,13 +752,13 @@ def print_results(label: np.array,
 
     print('DeepHYDRA-USAD:')
 
-    preds_strada_usad =\
+    preds_deep_hydra_usad =\
         np.logical_or(preds_clustering,
                             preds_usad)
     
-    get_scores_thresholded('strada_usad',
+    get_scores_thresholded('deep_hydra_usad',
                                     seed,
-                                    preds_strada_usad,
+                                    preds_deep_hydra_usad,
                                     label,
                                     to_csv)
 
