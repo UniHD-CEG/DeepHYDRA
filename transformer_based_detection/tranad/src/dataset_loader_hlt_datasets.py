@@ -16,6 +16,8 @@ dataset_path = '../../datasets/hlt/'
 
 class HLTDataset(Dataset):
     def __init__(self,
+                    data_source,
+                    variant,
                     mode,
                     inverse,
                     scaling_type,
@@ -24,6 +26,8 @@ class HLTDataset(Dataset):
                     augmented_dataset_size_relative=1,
                     augmented_data_ratio=0):
 
+        self.data_source = data_source.lower()
+        self.variant = variant
         self.mode = mode
         self.inverse = inverse
 
@@ -38,7 +42,8 @@ class HLTDataset(Dataset):
         if mode == 'train' or mode == 'unlabeled_train':
 
             data_train_set_x_pd = pd.read_hdf(dataset_path +\
-                                                'reduced_hlt_train_set_x.h5')
+                                                f'reduced_hlt_{self.data_source}'
+                                                f'_train_set_{self.variant}_x.h5')
             
             data_train_set_x_pd.index =\
                         self._remove_timestamp_jumps(
@@ -66,7 +71,8 @@ class HLTDataset(Dataset):
 
             data_labeled_train_set_x_pd =\
                                 pd.read_hdf(dataset_path +\
-                                            'reduced_hlt_labeled_train_set_x.h5')
+                                            f'reduced_hlt_{self.data_source}_'
+                                            f'labeled_train_set_{self.variant}_x.h5')
 
             data_labeled_train_set_x_pd.index =\
                         self._remove_timestamp_jumps(
@@ -74,7 +80,8 @@ class HLTDataset(Dataset):
 
             
             labels_pd = pd.read_hdf(dataset_path +\
-                                    'reduced_hlt_labeled_train_set_y.h5')
+                                    f'reduced_hlt_{self.data_source}_'
+                                    f'labeled_train_set_{self.variant}_y.h5')
 
             
             labels_pd.index = self._remove_timestamp_jumps(
@@ -109,7 +116,8 @@ class HLTDataset(Dataset):
             if scaling_source == 'train_set_fit':
                 data_unlabeled_train_set_x_pd =\
                         pd.read_hdf(dataset_path +\
-                                        'reduced_hlt_train_set_x.h5')
+                                        f'reduced_hlt_{self.data_source}_'
+                                        f'train_set_{self.variant}_x.h5')
 
                 data_unlabeled_train_set_x_np =\
                             data_unlabeled_train_set_x_pd.to_numpy()
@@ -127,10 +135,12 @@ class HLTDataset(Dataset):
             
         elif mode == 'test':
             data_x_pd = pd.read_hdf(dataset_path +\
-                                        'reduced_hlt_test_set_x.h5')
+                                        f'reduced_hlt_{self.data_source}_'
+                                        f'test_set_{self.variant}_x.h5')
 
             labels_pd = pd.read_hdf(dataset_path +\
-                                        'reduced_hlt_test_set_y.h5')
+                                        f'reduced_hlt_{self.data_source}_'
+                                        f'test_set_{self.variant}_y.h5')
 
 
             data_x_pd.index =\
@@ -143,7 +153,8 @@ class HLTDataset(Dataset):
 
             if scaling_source == 'train_set_fit':
                 data_train_set_x_pd = pd.read_hdf(dataset_path +\
-                                                    'reduced_hlt_train_set_x.h5')
+                                                    f'reduced_hlt_{self.data_source}_'
+                                                    f'train_set_{self.variant}_x.h5')
 
                 data_train_set_x_np = data_train_set_x_pd.to_numpy()
 
@@ -158,7 +169,8 @@ class HLTDataset(Dataset):
         elif mode == 'val':
 
             data_x_pd =  pd.read_hdf(dataset_path +\
-                                        'reduced_hlt_clean_val_set_x.h5')
+                                        f'reduced_hlt_{self.data_source}_'
+                                        f'clean_val_set_{self.variant}_x.h5')
 
             data_x_pd.index =\
                         self._remove_timestamp_jumps(
@@ -168,7 +180,8 @@ class HLTDataset(Dataset):
 
             if scaling_source == 'train_set_fit':
                 data_train_set_x_pd = pd.read_hdf(dataset_path +\
-                                                    'reduced_hlt_train_set_x.h5')
+                                                    f'reduced_hlt_{self.data_source}_'
+                                                    f'train_set_{self.variant}_x.h5')
 
                 data_train_set_x_np = data_train_set_x_pd.to_numpy()
 

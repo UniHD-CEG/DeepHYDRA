@@ -170,10 +170,20 @@ videos/
 *.npy
 *.csv
 
+# MacOS-specific files
+
+*.DS_Store
+
+# GitLense (?) Files
+
+**/._*.*
+**/._*
+
 # Datasets and checkpoints 
 
 **/datasets/
 !datasets/
+datasets/hlt/
 runs/
 checkpoints/
 

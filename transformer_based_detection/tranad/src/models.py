@@ -9,7 +9,10 @@ from torch.nn import TransformerEncoder
 from torch.nn import TransformerDecoder
 from src.dlutils import *
 from src.constants import *
-torch.manual_seed(1)
+# torch.manual_seed(1)
+
+device='cuda:0'
+
 
 ## Separate LSTM for each variable
 class LSTM_Univariate(nn.Module):
@@ -133,6 +136,7 @@ class OmniAnomaly(nn.Module):
         self.n_hidden = 32
         self.n_latent = 8
         self.lstm = nn.GRU(feats, self.n_hidden, 2)
+
         self.encoder = nn.Sequential(
             nn.Linear(self.n_hidden, self.n_hidden), nn.PReLU(),
             nn.Linear(self.n_hidden, self.n_hidden), nn.PReLU(),
@@ -146,7 +150,12 @@ class OmniAnomaly(nn.Module):
         )
 
     def forward(self, x, hidden = None):
-        hidden = torch.rand(2, 1, self.n_hidden, dtype=torch.float64) if hidden is not None else hidden
+        hidden = torch.rand(2, 1, self.n_hidden, dtype=torch.float64, device=device)\
+                                                        if hidden is not None else hidden
+        
+        # if hidden is not None:
+        #     hidden.to(device)
+
         out, hidden = self.lstm(x.view(1, 1, -1), hidden)
         ## Encode
         x = self.encoder(out)
@@ -227,6 +236,29 @@ class MSCRED(nn.Module):
         x = self.decoder(z)
         return x.view(-1)
 
+
+# https://github.com/Zhang-Zhi-Jie/Pytorch-MSCRED/blob/master/model/mscred.py
+
+class MSCREDFull(nn.Module):
+    def __init__(self, feats):
+        super(MSCREDFull, self).__init__()
+        self.name = 'MSCREDFull'
+        self.lr = 0.001
+        self.batch = 64
+        self.n_feats = feats
+        self.n_window = feats
+
+        self.cnn_encoder = MSCREDEncoder(3)
+        self.conv_lstm = MSCREDConvLSTM()
+        self.cnn_decoder = MSCREDDecoder(256)
+    
+    def forward(self, x):
+        enc_out = self.cnn_encoder(x)
+        lstm_out = self.conv_lstm(*enc_out)
+        gen_x = self.cnn_decoder(*lstm_out)
+        return gen_x
+
+
 ## CAE-M Model (TKDE 21)
 class CAE_M(nn.Module):
     def __init__(self, feats):
@@ -298,12 +330,12 @@ class GDN(nn.Module):
         self.g = dgl.add_self_loop(self.g)
         self.feature_gat = GATConv(1, 1, feats)
         self.attention = nn.Sequential(
-            nn.Linear(self.n, self.n_hidden), nn.LeakyReLU(True),
-            nn.Linear(self.n_hidden, self.n_hidden), nn.LeakyReLU(True),
+            nn.Linear(self.n, self.n_hidden), nn.ReLU(True), # nn.LeakyReLU(True),
+            nn.Linear(self.n_hidden, self.n_hidden), nn.ReLU(True), # nn.LeakyReLU(True),
             nn.Linear(self.n_hidden, self.n_window), nn.Softmax(dim=0),
         )
         self.fcn = nn.Sequential(
-            nn.Linear(self.n_feats, self.n_hidden), nn.LeakyReLU(True),
+            nn.Linear(self.n_feats, self.n_hidden), nn.ReLU(True), # nn.LeakyReLU(True),
             nn.Linear(self.n_hidden, self.n_window), nn.Sigmoid(),
         )
 
@@ -331,14 +363,14 @@ class MAD_GAN(nn.Module):
         self.n = self.n_feats * self.n_window
         self.generator = nn.Sequential(
             nn.Flatten(),
-            nn.Linear(self.n, self.n_hidden), nn.LeakyReLU(True),
-            nn.Linear(self.n_hidden, self.n_hidden), nn.LeakyReLU(True),
+            nn.Linear(self.n, self.n_hidden), nn.ReLU(True), # nn.LeakyReLU(True),
+            nn.Linear(self.n_hidden, self.n_hidden), nn.ReLU(True), # nn.LeakyReLU(True),
             nn.Linear(self.n_hidden, self.n), nn.Sigmoid(),
         )
         self.discriminator = nn.Sequential(
             nn.Flatten(),
-            nn.Linear(self.n, self.n_hidden), nn.LeakyReLU(True),
-            nn.Linear(self.n_hidden, self.n_hidden), nn.LeakyReLU(True),
+            nn.Linear(self.n, self.n_hidden), nn.ReLU(True), # nn.LeakyReLU(True),
+            nn.Linear(self.n_hidden, self.n_hidden), nn.ReLU(True), # nn.LeakyReLU(True),
             nn.Linear(self.n_hidden, 1), nn.Sigmoid(),
         )
 
@@ -494,6 +526,7 @@ class TranAD(nn.Module):
         self.name = 'TranAD'
         self.lr = lr
         self.batch = 128
+        # self.batch = 1
         self.n_feats = feats
 
         self.n_window = 10

@@ -6,9 +6,9 @@ import datetime as dt
 import json
 import logging
 
-
 import numpy as np
 import pandas as pd
+import pylikwid
 from tqdm import tqdm
 from tqdm.contrib import tzip
 from tqdm.contrib.logging import logging_redirect_tqdm
@@ -23,14 +23,14 @@ from utils.reduceddatabuffer import ReducedDataBuffer
 from utils.exceptions import NonCriticalPredictionException
 
 
-run_endpoints = [1404,
-                    8928,
-                    19296,
-                    28948]
-
-channels_to_delete_last_run = [1357,
-                                3685,
-                                3184]
+# run_endpoints = [1404,
+#                     8928,
+#                     19296,
+#                     28948]
+# 
+# channels_to_delete_last_run = [1357,
+#                                 3685,
+#                                 3184]
 
 
 def _remove_timestamp_jumps(index: pd.DatetimeIndex) -> pd.DatetimeIndex:
@@ -72,6 +72,7 @@ if __name__ == '__main__':
     parser.add_argument('--dbscan-min-samples', type=int, default=4)
     parser.add_argument('--dbscan-duration-threshold', type=int, default=4)
 
+    parser.add_argument('--variant', type=str, choices=['2018', '2022', '2023'], default='2018')
     parser.add_argument('--seed', type=int)
 
     args = parser.parse_args()
@@ -96,19 +97,23 @@ if __name__ == '__main__':
                                     datefmt='%Y-%m-%d %H:%M:%S')
 
     hlt_data_pd = pd.read_hdf(args.data_dir +\
-                                    '/unreduced_hlt_test_set_x.h5')
+                                    f'/unreduced_hlt_dcm_test_set_{args.variant}_x.h5')
 
     # This removes a few actual anomalous dropouts in the last run.
     # These are very easy to detect, so we remove them to not
     # overshadow the the more subtle injected anomalies
 
-    hlt_data_pd.iloc[run_endpoints[-2]:-1,
-                            channels_to_delete_last_run] = np.nan
+    # hlt_data_pd.iloc[run_endpoints[-2]:-1,
+    #                         channels_to_delete_last_run] = np.nan
 
     hlt_data_pd.index = _remove_timestamp_jumps(
                             pd.DatetimeIndex(hlt_data_pd.index))
+    
+    # hlt_data_pd = hlt_data_pd.iloc[10000:20000, :]
 
-    median_std_reducer = MedianStdReducer()
+    rack_config = '2018' if args.variant in ['2018', '2022'] else '2023'
+
+    median_std_reducer = MedianStdReducer(rack_config)
     
     informer_runner = InformerRunner(args.checkpoint_dir)
 
@@ -142,27 +147,99 @@ if __name__ == '__main__':
 
     hlt_data_np = hlt_data_pd.to_numpy()
 
+    flops_dbscan = []
+    flops_reduction = []
+
     with logging_redirect_tqdm():
         for count, (timestamp, data) in enumerate(tzip(timestamps, hlt_data_np)):
 
+            # if count == 4096:
+            #     dbscan_anomaly_detector.write_memory_size()
+            #     break
+
             try:
+                # pylikwid.markerinit()
+                # pylikwid.markerthreadinit()
+
+                # pylikwid.markerstartregion("DBSCAN")
+
                 dbscan_anomaly_detector.process(timestamp, data)
+
+                # pylikwid.markerstopregion("DBSCAN")
+
+                # nr_events, eventlist, time, count = pylikwid.markergetregion("DBSCAN")
+
+                # for i, e in enumerate(eventlist):
+                #     print(i, e)
+
+                # flops_dbscan.append(eventlist[3])
+
+                # pylikwid.markerclose()
+
+                # pylikwid.markerinit()
+                # pylikwid.markerthreadinit()
+
+                # pylikwid.markerstartregion("reduction")
 
                 output_slice =\
                     median_std_reducer.reduce_numpy(tpu_labels,
                                                         timestamp,
                                                         data)
-                reduced_data_buffer.push(output_slice)
+                                    
+                # pylikwid.markerstopregion("reduction")
+
+                # nr_events, eventlist, time, count = pylikwid.markergetregion("reduction")
+
+                # flops_reduction.append(eventlist[3])
+
+                # for i, e in enumerate(eventlist):
+                #     print(i, e)
+                # pylikwid.markerclose()
                 
             except NonCriticalPredictionException:
                 break
 
-    preds = informer_runner.get_predictions()
+#     informer_runner.model.attention_visualizer.render_projection('smse_dcm_rate_data_2022_'\
+#                                                                         'attention_viz_projection.mp4',
+#                                                                     'Kevin Franz Stehle',
+#                                                                     channels_upper=52,
+#                                                                     fps=24,
+#                                                                     label_size=20,
+#                                                                     title_size=20,
+#                                                                     cmap='plasma')
+# 
+#     informer_runner.model.attention_visualizer.render_combined('smse_dcm_rate_data_2022_'\
+#                                                                     'attention_viz_combined.mp4',
+#                                                                 'Kevin Franz Stehle',
+#                                                                 fps=24,
+#                                                                 label_size=20,
+#                                                                 title_size=20,
+#                                                                 cmap='plasma')
+# 
+#     informer_runner.model.attention_visualizer.render_individual_heads('smse_dcm_rate_data_2022_'\
+#                                                                             'attention_viz_individual.mp4',
+#                                                                         'Kevin Franz Stehle',
+#                                                                         fps=24,
+#                                                                         label_size=20,
+#                                                                         title_size=20,
+#                                                                         cmap='plasma')
 
-    with open(args.checkpoint_dir +\
-                '/model_parameters.json', 'r') as parameter_dict_file:
-        parameter_dict = json.load(parameter_dict_file)
 
-        benchmark_anomaly_registry.evaluate(preds,
-                                                args.model,
-                                                args.seed)
+    # flops = pd.DataFrame(np.column_stack((flops_dbscan, flops_reduction)).astype(np.uint64),
+    #                                                         columns=['DBSCAN', 'Reduction'])
+
+    # flops.to_csv('flops.csv')
+
+    # print(flops_dbscan)
+    # print(flops_reduction)
+
+    # preds = informer_runner.get_predictions()
+
+    # with open(args.checkpoint_dir +\
+    #             '/model_parameters.json', 'r') as parameter_dict_file:
+    #     parameter_dict = json.load(parameter_dict_file)
+
+    #     benchmark_anomaly_registry.evaluate(preds,
+    #                                             args.model,
+    #                                             args.variant,
+    #                                             args.seed)

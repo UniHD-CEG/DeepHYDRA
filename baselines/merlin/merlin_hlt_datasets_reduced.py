@@ -13,6 +13,7 @@ from sklearn.metrics import roc_auc_score,\
 from tqdm import trange
 
 from merlin import merlin
+import pylikwid
 
 
 def save_numpy_array(array: np.array,
@@ -221,15 +222,25 @@ def run_merlin(data: np.ndarray,
     distances_all = []
     lengths_all = []
 
+    parameters_all = []
+
     for channel in trange(columns):
-        discords, distances, lengths = merlin(data[:, channel],
-                                                    l_min, l_max,
-                                                    sanitize=near_constant_fix)
+        discords, distances, lengths, parameters =\
+                                merlin(data[:, channel],
+                                            l_min, l_max,
+                                            sanitize=near_constant_fix)
 
-        discords_all.append(discords)
-        distances_all.append(distances)
-        lengths_all.append(lengths)
+        parameters_all.append(parameters)
 
+        # discords_all.append(discords)
+        # distances_all.append(distances)
+        # lengths_all.append(lengths)
+
+    print(f'Size MERLIN sequential: {np.max(parameters_all)}')
+    print(f'Size MERLIN parallel: {np.sum(parameters_all)}')
+
+    exit()
+    
     discords_all = np.column_stack(discords_all)
     distances_all = np.column_stack(distances_all)
     lengths_all = np.column_stack(lengths_all)
@@ -355,10 +366,10 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='MERLIN HLT Test')
 
     parser.add_argument('--dataset', type=str, default=\
-                            '../../datasets/hlt/reduced_hlt_test_set_x.h5')
+                            '../../datasets/hlt/reduced_hlt_dcm_test_set_2018_x.h5')
     
     parser.add_argument('--labels', type=str, default=\
-                            '../../datasets/hlt/reduced_hlt_test_set_y.h5')
+                            '../../datasets/hlt/reduced_hlt_dcm_test_set_2018_y.h5')
 
     parser.add_argument('--l-min', type=int, default=8)
     parser.add_argument('--l-max', type=int, default=96)

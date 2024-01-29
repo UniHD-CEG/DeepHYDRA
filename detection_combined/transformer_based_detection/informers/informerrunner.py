@@ -5,12 +5,11 @@ from collections.abc import Callable
 import numpy as np
 import pandas as pd
 import torch
-import torch.nn as nn
-from torch import optim
-from torch.utils.data import DataLoader
 
 from .models.model import Informer
 from .utils.datapreprocessor import DataPreprocessor
+import utils.spotunpickler as supkl
+from utils.spot import SPOT
 from utils.exceptions import NonCriticalPredictionException
 from utils.anomalyclassification import AnomalyType
 from utils.tqdmloggingdecorator import tqdmloggingdecorator
@@ -18,39 +17,77 @@ from utils.tqdmloggingdecorator import tqdmloggingdecorator
 class InformerRunner():
     def __init__(self,
                     checkpoint_dir,
-                    nan_output_tolerance_period: int = 10) -> None:
+                    nan_output_tolerance_period: int = 10,
+                    loss_type: str = 'mse',
+                    use_spot_detection: bool = False,
+                    device: str = 'cuda:0',
+                    output_queue = None) -> None:
 
         self.checkpoint_dir = checkpoint_dir
         self._nan_output_tolerance_period =\
                         nan_output_tolerance_period
+        self._loss_type = loss_type
+        self._use_spot_detection = use_spot_detection
+        self._output_queue = output_queue
 
-        with open(self.checkpoint_dir +\
-                    '/model_parameters.json', 'r') as parameter_dict_file:
+        self._logger = logging.getLogger(__name__)
+
+        param_file_string = self.checkpoint_dir +\
+                                '/model_parameters.json'
+        
+        self._logger.debug(f'Reading informer hyperparameters from {param_file_string}')
+
+        with open(param_file_string, 'r') as parameter_dict_file:
             self.parameter_dict = json.load(parameter_dict_file)
 
-        # self.device = torch.device('cpu')
-        self.device = torch.device('cuda:0')
+            self._logger.debug(f'Successfully read informer parameters')
+
+            parameter_string = ''
+
+            for key, val in self.parameter_dict.items():
+                parameter_string += f'{key}: {val}, '
+
+            self._logger.info(f'Informer model hyperparameters: {parameter_string}')
+
+        self.device = torch.device(device)
 
         self.parameter_dict['timeenc'] = 0\
                     if self.parameter_dict['embed'] != 'timeF' else 1
         
+        self._logger.debug(f'Loading DataPreprocessor instance from {self.checkpoint_dir}')
+        
         self.data_preprocessor = DataPreprocessor(self.parameter_dict,
                                                     self.checkpoint_dir)
         
+        self._logger.debug('Successfully loaded DataPreprocessor instance')
+        self._logger.debug(f'Instantiating model and copying to device {self.device}')
+
         self.model = self.load_model().to(self.device)
 
-        path = self.checkpoint_dir
+        self._logger.debug(f'Successfully instantiated model and copied model to device')
 
-        best_model_path = path + '/checkpoint_informer.pth'
-        self.model.load_state_dict(torch.load(best_model_path,
+        path = self.checkpoint_dir
+        model_path = path + '/checkpoint_informer.pth'
+
+        self._logger.debug(f'Loading Informer model state_dict from {model_path}')
+
+        self.model.load_state_dict(torch.load(model_path,
                                                 map_location=self.device))
+        
+        self._logger.debug('Successfully loaded Informer state_dict')
 
         self._predictions_all = []
 
         self.model.eval()
 
-        self._logger = logging.getLogger(__name__)
+        self._spot = None
 
+        if self._use_spot_detection:
+            spot_path = f'{path}/spot_informer_{self._loss_type}.pkl'
+            self._logger.debug(f'Loading SPOT instance from file {spot_path}')
+            self._spot = supkl.load(open(spot_path, 'rb'))
+            self._logger.debug('Successfully loaded SPOT instance')
+            
         self._data_x_last = None
 
         self._anomaly_start = None
@@ -78,7 +115,7 @@ class InformerRunner():
                                 self.parameter_dict['embed'],
                                 self.parameter_dict['freq'],
                                 self.parameter_dict['activation'],
-                                False,
+                                True,
                                 self.parameter_dict['distil'],
                                 self.parameter_dict['mix'],
                                 self.device).float()
@@ -96,11 +133,16 @@ class InformerRunner():
 
         timestamp = data.index[-1]
 
+        self._logger.info(data.shape)
+
+        viz_data = data.to_numpy()[:self.parameter_dict['seq_len'], :]
+
         preds, _ = self._process_one_batch(self.data_preprocessor,
                                                             data_x,
                                                             data_y,
                                                             data_x_mark,
-                                                            data_y_mark)
+                                                            data_y_mark,
+                                                            viz_data)
                 
         preds = preds.detach().cpu().numpy()
 
@@ -123,8 +165,7 @@ class InformerRunner():
 
             else:
                 self._logger.warning('Encountered NaN in '
-                                        'Informer predictions, skipping '
-                                        'kNN anomaly prediction step')
+                                        'Informer predictions')
                 self._logger.warning(f'Consecutive NaN predictions:'
                                             f'{self._nan_output_count} '
                                             'tolerated NaN predictions: '
@@ -135,35 +176,58 @@ class InformerRunner():
         else:
             self._nan_output_count = 0
 
+        l2_dist_detection = False
+
         if not isinstance(self._data_x_last, type(None)):
 
+            # l2_dist =\
+            #     np.mean((preds[:, 0, :] - self._data_x_last[:, -1, :])**2, 1)[0]
+            
             l2_dist =\
-                np.mean((preds[:, 0, :] - self._data_x_last[:, -1, :])**2, 1)[0]
+                np.mean((preds[:, 0, :] - data_y.detach().cpu().numpy()[:, -1, :])**2, 1)[0]
 
             self._predictions_all.append(l2_dist)
         
-            # Note: This is currently not using proper SPOT thresholding.
-            # The generated logs for transformer-based detection are not
-            # used for evaluation. Instead, we directly use the generated
-            # predictions.
+            if self._use_spot_detection:
+                l2_dist_detection = self._spot.run_online([l2_dist])
+            else:
+                l2_dist_detection = (l2_dist > 0.5)
 
-            if l2_dist > 0.5:
+            if l2_dist_detection:
 
                 if self._anomaly_duration == 0:
                     self._anomaly_start =\
                             timestamp.strftime('%Y-%m-%d %H:%M:%S')
 
-                    self._logger.info('Transformer-based detection '
-                                        'encountered anomaly at timestamp '
-                                        f'{self._anomaly_start} '
-                                        'using L2 dist')
+                    self._logger.warning('Transformer-based detection '
+                                            'encountered anomaly at timestamp '
+                                            f'{self._anomaly_start}')
+
+                self.detection_callback(0, AnomalyType.TransformerBased,
+                                                        self._anomaly_start,
+                                                        self._anomaly_duration)
 
                 self._anomaly_duration += 1
 
             else:
+
+                if self._anomaly_duration != 0:
+                    anomaly_end = timestamp.strftime('%Y-%m-%d %H:%M:%S')
+                    self._logger.warning('Transformer-based detection '
+                                            f'anomaly ended at {anomaly_end}')
+
                 self._anomaly_duration = 0
 
-        self._data_x_last = data_x.detach().cpu().numpy()
+        self._data_x_last = data_y.detach().cpu().numpy()
+
+        if self._output_queue is not None:
+            # self._output_queue.put((self._data_x_last[:, -1, :],
+            #                                         timestamp,
+            #                                         l2_dist_detection))
+
+            self._output_queue.put((data.to_numpy()[[-1], :],
+                                                    timestamp,
+                                                    l2_dist_detection))
 
 
     def _process_one_batch(self,
@@ -171,7 +235,8 @@ class InformerRunner():
                             batch_x,
                             batch_y,
                             batch_x_mark,
-                            batch_y_mark):
+                            batch_y_mark,
+                            viz_data):
 
         batch_x = batch_x.float().to(self.device)
         batch_y = batch_y.float()
@@ -195,7 +260,8 @@ class InformerRunner():
 
         # Encoder - decoder
 
-        outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)
+        outputs, _ = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark,
+                                                            viz_data=viz_data)
 
         if self.parameter_dict['inverse']:
             outputs = dataset_object.inverse_transform(outputs)
