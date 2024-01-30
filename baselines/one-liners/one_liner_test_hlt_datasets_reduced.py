@@ -14,7 +14,7 @@ from sklearn.metrics import roc_auc_score,\
                                 matthews_corrcoef
 
 from tqdm.auto import trange
-import pylikwid
+# import pylikwid
 
 run_endpoints = [1404,
                     8928,
@@ -493,32 +493,32 @@ def run_with_best_parameters_method_3(data: np.array,
     results_best_method_3 =\
         pd.read_csv('parameters_best_method_3_hlt_reduced.csv', sep='\t')
 
-    pylikwid.markerinit()
-    pylikwid.markerthreadinit()
+    # pylikwid.markerinit()
+    # pylikwid.markerthreadinit()
 
-    pylikwid.markerstartregion("1lm3_0")
+    # pylikwid.markerstartregion("1lm3_0")
     diff = np.diff(data, axis=0)
-    pylikwid.markerstopregion("1lm3_0")
+    # pylikwid.markerstopregion("1lm3_0")
 
-    nr_events, eventlist, time, count = pylikwid.markergetregion("1lm3_0")
+    # nr_events, eventlist, time, count = pylikwid.markergetregion("1lm3_0")
 
-    for i, e in enumerate(eventlist):
-        print(i, e)
-    pylikwid.markerclose()
+    # for i, e in enumerate(eventlist):
+    #     print(i, e)
+    # pylikwid.markerclose()
 
     labels = labels[1:, :]
 
-    pylikwid.markerinit()
-    pylikwid.markerthreadinit()
-    pylikwid.markerstartregion("1lm3_1")
+    # pylikwid.markerinit()
+    # pylikwid.markerthreadinit()
+    # pylikwid.markerstartregion("1lm3_1")
     abs_diff = np.abs(diff)
-    pylikwid.markerstopregion("1lm3_1")
+    # pylikwid.markerstopregion("1lm3_1")
 
-    nr_events, eventlist, time, count = pylikwid.markergetregion("1lm3_1")
+    # nr_events, eventlist, time, count = pylikwid.markergetregion("1lm3_1")
 
-    for i, e in enumerate(eventlist):
-        print(i, e)
-    pylikwid.markerclose()
+    # for i, e in enumerate(eventlist):
+    #     print(i, e)
+    # pylikwid.markerclose()
 
     abs_diff_normalized = MinMaxScaler().fit_transform(abs_diff)
     
@@ -533,9 +533,9 @@ def run_with_best_parameters_method_3(data: np.array,
 
     bs_included = bs[included_indices]
 
-    pylikwid.markerinit()
-    pylikwid.markerthreadinit()
-    pylikwid.markerstartregion("1lm3_2")
+    # pylikwid.markerinit()
+    # pylikwid.markerthreadinit()
+    # pylikwid.markerstartregion("1lm3_2")
 
     for channel, b in zip(included_indices,
                                 bs_included):
@@ -547,13 +547,13 @@ def run_with_best_parameters_method_3(data: np.array,
             adjust_predicts(data_channel,
                                 labels_channel, b)
 
-    pylikwid.markerstopregion("1lm3_2")
+    # pylikwid.markerstopregion("1lm3_2")
 
-    nr_events, eventlist, time, count = pylikwid.markergetregion("1lm3_2")
+    # nr_events, eventlist, time, count = pylikwid.markergetregion("1lm3_2")
 
-    for i, e in enumerate(eventlist):
-        print(i, e)
-    pylikwid.markerclose()
+    # for i, e in enumerate(eventlist):
+    #     print(i, e)
+    # pylikwid.markerclose()
 
 
     # save_numpy_array(preds_all, '../../evaluation/combined_detection/predictions/method_3.npy')
@@ -563,31 +563,31 @@ def run_with_best_parameters_method_4(data: np.array,
                                         labels: np.array,
                                         threshold: np.float64):
 
-    pylikwid.markerinit()
-    pylikwid.markerthreadinit()
+    # pylikwid.markerinit()
+    # pylikwid.markerthreadinit()
 
     results_best_method_4 =\
         pd.read_csv('parameters_best_method_4_hlt_reduced.csv', sep='\t')
 
-    pylikwid.markerstartregion("1lm4_0")
-    diff = np.diff(data, axis=0)
-    pylikwid.markerstopregion("1lm4_0")
+    # pylikwid.markerstartregion("1lm4_0")
+    # diff = np.diff(data, axis=0)
+    # pylikwid.markerstopregion("1lm4_0")
 
-    nr_events, eventlist, time, count = pylikwid.markergetregion("1lm4_0")
+    # nr_events, eventlist, time, count = pylikwid.markergetregion("1lm4_0")
 
-    for i, e in enumerate(eventlist):
-        print(i, e)
-    pylikwid.markerclose()
+    # for i, e in enumerate(eventlist):
+    #     print(i, e)
+    # pylikwid.markerclose()
 
     labels = labels[1:, :]
 
-    pylikwid.markerinit()
-    pylikwid.markerthreadinit()
-    pylikwid.markerstartregion("1lm4_1")
-    abs_diff = np.abs(diff)
-    pylikwid.markerstopregion("1lm4_1")
+    # pylikwid.markerinit()
+    # pylikwid.markerthreadinit()
+    # pylikwid.markerstartregion("1lm4_1")
+    # abs_diff = np.abs(diff)
+    # pylikwid.markerstopregion("1lm4_1")
 
-    nr_events, eventlist, time, count = pylikwid.markergetregion("1lm4_1")
+    # nr_events, eventlist, time, count = pylikwid.markergetregion("1lm4_1")
 
     for i, e in enumerate(eventlist):
         print(i, e)
@@ -605,22 +605,22 @@ def run_with_best_parameters_method_4(data: np.array,
 
     included_indices = np.where(mccs > threshold)[0]
 
-    pylikwid.markerinit()
-    pylikwid.markerthreadinit()
-    pylikwid.markerstartregion("1lm4_2")
+    # pylikwid.markerinit()
+    # pylikwid.markerthreadinit()
+    # pylikwid.markerstartregion("1lm4_2")
 
     preds_all[:, included_indices] =\
                 method_4_combined(abs_diff_normalized[:, included_indices],
                                                 labels[:, included_indices],
                                                 parameters[included_indices, :])
     
-    pylikwid.markerstopregion("1lm4_2")
+    # pylikwid.markerstopregion("1lm4_2")
 
-    nr_events, eventlist, time, count = pylikwid.markergetregion("1lm4_2")
+    # nr_events, eventlist, time, count = pylikwid.markergetregion("1lm4_2")
 
-    for i, e in enumerate(eventlist):
-        print(i, e)
-    pylikwid.markerclose()
+    # for i, e in enumerate(eventlist):
+    #     print(i, e)
+    # pylikwid.markerclose()
 
 
 if __name__ == '__main__':
@@ -647,20 +647,20 @@ if __name__ == '__main__':
 
     labels_np = np.greater_equal(labels_np, 1)
 
-    # parameter_exploration(hlt_data_np,
-    #                             labels_np,
-    #                             k_lower=args.k_lower,
-    #                             k_upper=args.k_upper)
+    parameter_exploration(hlt_data_np,
+                                labels_np,
+                                k_lower=args.k_lower,
+                                k_upper=args.k_upper)
 
-    # test_thresholds_method_3(hlt_data_np,
-    #                                 labels_np)
+    test_thresholds_method_3(hlt_data_np,
+                                    labels_np)
 
-    # test_thresholds_method_4(hlt_data_np,
-    #                                 labels_np)
+    test_thresholds_method_4(hlt_data_np,
+                                    labels_np)
 
-    # run_with_best_parameters_method_3(hlt_data_np,
-    #                                             labels_np,
-    #                                             0.675)
+    run_with_best_parameters_method_3(hlt_data_np,
+                                                labels_np,
+                                                0.675)
 
     run_with_best_parameters_method_4(hlt_data_np,
                                                 labels_np,

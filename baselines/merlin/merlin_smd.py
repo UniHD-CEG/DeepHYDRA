@@ -232,31 +232,24 @@ def run_merlin(data: np.ndarray,
 
     parameters_all = []
 
-    # pylikwid.markerinit()
-    # pylikwid.markerthreadinit()
-    # pylikwid.markerstartregion("MERLIN")
-
     flops_all = []
 
     for channel in trange(columns):
 
-        pylikwid.markerinit()
-        pylikwid.markerthreadinit()
-        pylikwid.markerstartregion("MERLIN")
+        # pylikwid.markerinit()
+        # pylikwid.markerthreadinit()
+        # pylikwid.markerstartregion("MERLIN")
 
         discords, distances, lengths, parameters =\
                                 merlin(data[:, channel],
                                             l_min, l_max,
                                             sanitize=near_constant_fix)
         
-        pylikwid.markerstopregion("MERLIN")
+        # pylikwid.markerstopregion("MERLIN")
 
-        nr_events, eventlist, time, count = pylikwid.markergetregion("MERLIN")
+        # nr_events, eventlist, time, count = pylikwid.markergetregion("MERLIN")
 
-        flops_all.append(eventlist[4])
-
-        # for i, e in enumerate(eventlist):
-            #print(i, e)
+        # flops_all.append(eventlist[4])
         
         pylikwid.markerclose()
 
@@ -271,9 +264,9 @@ def run_merlin(data: np.ndarray,
     # print(f'Size MERLIN sequential: {np.max(parameters_all)}')
     # print(f'Size MERLIN parallel: {np.sum(parameters_all)}')
 
-    print(flops_all)
+    # print(flops_all)
     
-    exit()
+    # exit()
 
     discords_all = np.column_stack(discords_all)
     distances_all = np.column_stack(distances_all)

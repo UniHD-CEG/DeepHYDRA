@@ -27,12 +27,6 @@ from exp.exp_basic import ExpBasic
 from models.model import Informer
 from models.sad_like_loss import *
 from utils.tools import EarlyStopping, adjust_learning_rate
-# from utils.torch_profiling import add_sub_mul_div_op_handler,\
-#                                                 sum_op_handler,\
-#                                                 mean_op_handler,\
-#                                                 cumsum_op_handler
-# from utils.fvcorewriter import FVCoreWriter
-# from utils.torchinfowriter import TorchinfoWriter
 
 from torch_profiling_utils.torchinfowriter import TorchinfoWriter
 from torch_profiling_utils.fvcorewriter import FVCoreWriter
@@ -550,47 +544,42 @@ class ExpInformer(ExpBasic):
                                 f'emb_{self.args.embed}_'\
                                 f'act_{self.args.activation.lower()}'
 
-        fvcore_writer = FVCoreWriter(self.model, (batch_x,
-                                                    batch_x_mark,
-                                                    dec_inp,
-                                                    batch_y_mark))
+        # fvcore_writer = FVCoreWriter(self.model, (batch_x,
+        #                                             batch_x_mark,
+        #                                             dec_inp,
+        #                                             batch_y_mark))
 
-        print(fvcore_writer.get_flop_dict('by_module'))
-        print(fvcore_writer.get_flop_dict('by_operator'))
-        print(fvcore_writer.get_activation_dict('by_module'))
-        print(fvcore_writer.get_activation_dict('by_operator'))
+        # fvcore_writer.write_flops_to_json('../../evaluation/computational_intensity_analysis/'
+        #                                                 f'data/by_module/{output_filename}.json',
+        #                                     'by_module')
 
-        fvcore_writer.write_flops_to_json('../../evaluation/computational_intensity_analysis/'
-                                                        f'data/by_module/{output_filename}.json',
-                                            'by_module')
+        # fvcore_writer.write_flops_to_json('../../evaluation/computational_intensity_analysis/'
+        #                                                 f'data/by_operator/{output_filename}.json',
+        #                                     'by_operator')
 
-        fvcore_writer.write_flops_to_json('../../evaluation/computational_intensity_analysis/'
-                                                        f'data/by_operator/{output_filename}.json',
-                                            'by_operator')
+        # fvcore_writer.write_activations_to_json('../../evaluation/activation_analysis/'
+        #                                                 f'data/by_module/{output_filename}.json',
+        #                                             'by_module')
 
-        fvcore_writer.write_activations_to_json('../../evaluation/activation_analysis/'
-                                                        f'data/by_module/{output_filename}.json',
-                                                    'by_module')
+        # fvcore_writer.write_activations_to_json('../../evaluation/activation_analysis/'
+        #                                                 f'data/by_operator/{output_filename}.json',
+        #                                             'by_operator')
 
-        fvcore_writer.write_activations_to_json('../../evaluation/activation_analysis/'
-                                                        f'data/by_operator/{output_filename}.json',
-                                                    'by_operator')
+        # torchinfo_writer = TorchinfoWriter(self.model,
+        #                                     input_data=(batch_x,
+        #                                                     batch_x_mark,
+        #                                                     dec_inp,
+        #                                                     batch_y_mark),
+        #                                     verbose=0)
 
-        torchinfo_writer = TorchinfoWriter(self.model,
-                                            input_data=(batch_x,
-                                                            batch_x_mark,
-                                                            dec_inp,
-                                                            batch_y_mark),
-                                            verbose=0)
+        # torchinfo_writer.construct_model_tree()
 
-        torchinfo_writer.construct_model_tree()
+        # torchinfo_writer.show_model_tree(attr_list=['Parameters', 'MACs'])
 
-        torchinfo_writer.show_model_tree(attr_list=['Parameters', 'MACs'])
+        # torchinfo_writer.get_dataframe().to_pickle(
+        #     f'../../evaluation/parameter_analysis/{output_filename}.pkl')
 
-        torchinfo_writer.get_dataframe().to_pickle(
-            f'../../evaluation/parameter_analysis/{output_filename}.pkl')
-
-        exit()
+        # exit()
 
         if self.args.use_amp:
             with torch.cuda.amp.autocast():

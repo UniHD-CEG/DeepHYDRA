@@ -12,6 +12,7 @@ import pylikwid
 from tqdm import tqdm
 from tqdm.contrib import tzip
 from tqdm.contrib.logging import logging_redirect_tqdm
+# import pylikwid
 
 sys.path.append('../../')
 
@@ -23,14 +24,14 @@ from utils.reduceddatabuffer import ReducedDataBuffer
 from utils.exceptions import NonCriticalPredictionException
 
 
-# run_endpoints = [1404,
-#                     8928,
-#                     19296,
-#                     28948]
-# 
-# channels_to_delete_last_run = [1357,
-#                                 3685,
-#                                 3184]
+run_endpoints = [1404,
+                    8928,
+                    19296,
+                    28948]
+
+channels_to_delete_last_run = [1357,
+                                3685,
+                                3184]
 
 
 def _remove_timestamp_jumps(index: pd.DatetimeIndex) -> pd.DatetimeIndex:
@@ -103,8 +104,8 @@ if __name__ == '__main__':
     # These are very easy to detect, so we remove them to not
     # overshadow the the more subtle injected anomalies
 
-    # hlt_data_pd.iloc[run_endpoints[-2]:-1,
-    #                         channels_to_delete_last_run] = np.nan
+    hlt_data_pd.iloc[run_endpoints[-2]:-1,
+                            channels_to_delete_last_run] = np.nan
 
     hlt_data_pd.index = _remove_timestamp_jumps(
                             pd.DatetimeIndex(hlt_data_pd.index))
@@ -147,8 +148,8 @@ if __name__ == '__main__':
 
     hlt_data_np = hlt_data_pd.to_numpy()
 
-    flops_dbscan = []
-    flops_reduction = []
+    # flops_dbscan = []
+    # flops_reduction = []
 
     with logging_redirect_tqdm():
         for count, (timestamp, data) in enumerate(tzip(timestamps, hlt_data_np)):
@@ -168,9 +169,6 @@ if __name__ == '__main__':
                 # pylikwid.markerstopregion("DBSCAN")
 
                 # nr_events, eventlist, time, count = pylikwid.markergetregion("DBSCAN")
-
-                # for i, e in enumerate(eventlist):
-                #     print(i, e)
 
                 # flops_dbscan.append(eventlist[3])
 
@@ -199,32 +197,6 @@ if __name__ == '__main__':
             except NonCriticalPredictionException:
                 break
 
-#     informer_runner.model.attention_visualizer.render_projection('smse_dcm_rate_data_2022_'\
-#                                                                         'attention_viz_projection.mp4',
-#                                                                     'Kevin Franz Stehle',
-#                                                                     channels_upper=52,
-#                                                                     fps=24,
-#                                                                     label_size=20,
-#                                                                     title_size=20,
-#                                                                     cmap='plasma')
-# 
-#     informer_runner.model.attention_visualizer.render_combined('smse_dcm_rate_data_2022_'\
-#                                                                     'attention_viz_combined.mp4',
-#                                                                 'Kevin Franz Stehle',
-#                                                                 fps=24,
-#                                                                 label_size=20,
-#                                                                 title_size=20,
-#                                                                 cmap='plasma')
-# 
-#     informer_runner.model.attention_visualizer.render_individual_heads('smse_dcm_rate_data_2022_'\
-#                                                                             'attention_viz_individual.mp4',
-#                                                                         'Kevin Franz Stehle',
-#                                                                         fps=24,
-#                                                                         label_size=20,
-#                                                                         title_size=20,
-#                                                                         cmap='plasma')
-
-
     # flops = pd.DataFrame(np.column_stack((flops_dbscan, flops_reduction)).astype(np.uint64),
     #                                                         columns=['DBSCAN', 'Reduction'])
 
@@ -233,13 +205,13 @@ if __name__ == '__main__':
     # print(flops_dbscan)
     # print(flops_reduction)
 
-    # preds = informer_runner.get_predictions()
+    preds = informer_runner.get_predictions()
 
-    # with open(args.checkpoint_dir +\
-    #             '/model_parameters.json', 'r') as parameter_dict_file:
-    #     parameter_dict = json.load(parameter_dict_file)
+    with open(args.checkpoint_dir +\
+                '/model_parameters.json', 'r') as parameter_dict_file:
+        parameter_dict = json.load(parameter_dict_file)
 
-    #     benchmark_anomaly_registry.evaluate(preds,
-    #                                             args.model,
-    #                                             args.variant,
-    #                                             args.seed)
+        benchmark_anomaly_registry.evaluate(preds,
+                                                args.model,
+                                                args.variant,
+                                                args.seed)
