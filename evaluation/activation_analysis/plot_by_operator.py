@@ -92,7 +92,7 @@ if __name__ == '__main__':
         results_all_pd.loc[model_name, 'Activations'] = activations_summed
 
     # results_all_pd.to_csv(
-    #     '../characterization_plots_combined/data/activations_hlt_dcm_2018.csv')
+    #     '../characterization_plots_combined/data/activations_hlt.csv')
     
     results_all_pd.to_csv(
         '../characterization_plots_combined/data/activations_smd.csv')
@@ -102,7 +102,7 @@ if __name__ == '__main__':
     # ax.set_xscale('log')
     # ax.set_xlim(1, 1e12)
 
-    # ax.set_title('Activations per Sample by Operator for HLT_DCM_2018 Dataset')
+    # ax.set_title('Activations per Sample by Operator for HLT Dataset')
     # ax.set_xlabel('Activations')
     # ax.set_ylabel('Model')
 

@@ -110,7 +110,7 @@ if __name__ == '__main__':
                             columns=['Parameters'])
 
     # results_all_pd.to_csv(
-    #     '../characterization_plots_combined/data/parameters_hlt_dcm_2018.csv')
+    #     '../characterization_plots_combined/data/parameters_hlt.csv')
 
     results_all_pd.to_csv(
         '../characterization_plots_combined/data/parameters_smd.csv')

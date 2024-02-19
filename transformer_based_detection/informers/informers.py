@@ -13,7 +13,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Informer-MSE/Informer-SMSE Anomaly Detection')
 
     parser.add_argument('--data', type=str, required=True, choices=\
-                                    ['HLT_DCM_2018', 'HLT_DCM_2022', 'HLT_DCM_2023', 
+                                    ['HLT', 'HLT_DCM_2022', 'HLT_DCM_2023', 
                                         'HLT_PPD_2018', 'HLT_PPD_2022', 'HLT_PPD_2023',
                                         'ECLIPSE', 'machine-1-1'],
                                     default='HLT', help='dataset')

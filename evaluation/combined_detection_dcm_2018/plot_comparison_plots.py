@@ -559,7 +559,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     hlt_data_pd = pd.read_hdf(args.data_dir +\
-                                    '/unreduced_hlt_dcm_test_set_2018_x.h5')
+                                    '/unreduced_hlt_test_set_x.h5')
 
     hlt_data_pd.iloc[run_endpoints[-2]:-1,
                             channels_to_delete_last_run] = 0
@@ -569,7 +569,7 @@ if __name__ == '__main__':
     hlt_data_np = hlt_data_pd.to_numpy()
 
     labels_pd = pd.read_hdf(args.data_dir +\
-                            '/unreduced_hlt_dcm_test_set_2018_y.h5')
+                            '/unreduced_hlt_test_set_y.h5')
 
     labels_np = labels_pd.to_numpy()
 

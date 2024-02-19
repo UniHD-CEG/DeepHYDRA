@@ -123,7 +123,7 @@ if __name__ == '__main__':
     # print(results_all_pd)
 
     # results_all_pd.to_csv(
-    #     '../characterization_plots_combined/data/flops_hlt_dcm_2018.csv')
+    #     '../characterization_plots_combined/data/flops_hlt_dcm.csv')
 
     results_all_pd.to_csv(
         '../characterization_plots_combined/data/flops_smd.csv')
@@ -133,7 +133,7 @@ if __name__ == '__main__':
     # ax.set_xscale('log')
     # ax.set_xlim(1, 5e16)
 
-    # ax.set_title('FLOPs per Sample by Operator on HLT_DCM_2018 Dataset')
+    # ax.set_title('FLOPs per Sample by Operator on HLT Dataset')
     # ax.set_xlabel('FLOPs')
     # ax.set_ylabel('Model')
 

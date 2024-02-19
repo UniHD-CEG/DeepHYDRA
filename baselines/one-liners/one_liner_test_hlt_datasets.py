@@ -329,12 +329,12 @@ def parameter_exploration(data: np.array,
                         cs_best_per_channel_pd),
                         keys=('mcc', 'b', 'c'))
 
-    data_per_channel_pd.to_hdf('results_hlt_2018_one_liner_test.h5',
-                                    key='results_hlt_2018_one_liner_test',
+    data_per_channel_pd.to_hdf('results_hlt_one_liner_test.h5',
+                                    key='results_hlt_one_liner_test',
                                     mode='w')
 
-    data_per_channel_pd = pd.read_hdf('results_hlt_2018_one_liner_test.h5',
-                                        key='results_hlt_2018_one_liner_test')
+    data_per_channel_pd = pd.read_hdf('results_hlt_one_liner_test.h5',
+                                        key='results_hlt_one_liner_test')
 
     # Get index of per-column best MCC
     # to determine best combination
@@ -630,7 +630,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     hlt_data_pd = pd.read_hdf(args.data_dir +\
-                                    '/unreduced_hlt_dcm_test_set_2018_x.h5')
+                                    '/unreduced_hlt_test_set_x.h5')
 
     # This removes a few actual anomalous dropouts in the last run.
     # These are very easy to detect, so we remove them to not
@@ -648,7 +648,7 @@ if __name__ == '__main__':
     # exit()
 
     labels_pd = pd.read_hdf(args.data_dir +\
-                            '/unreduced_hlt_dcm_test_set_2018_y.h5')
+                            '/unreduced_hlt_test_set_y.h5')
 
     labels_np = labels_pd.to_numpy()
 

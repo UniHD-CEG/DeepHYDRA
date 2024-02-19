@@ -82,13 +82,7 @@ class ExpInformer(ExpBasic):
 
         data_dict = {
             'machine-1-1': OmniAnomalyDataset,
-            'HLT_DCM_2018': HLTDataset,
-            'HLT_PPD_2018': HLTDataset,
-            'HLT_DCM_2022': HLTDataset,
-            'HLT_PPD_2022': HLTDataset,
-            'HLT_DCM_2023': HLTDataset,
-            'HLT_PPD_2023': HLTDataset,
-            'ECLIPSE': EclipseDataset,}
+            'HLT': HLTDataset,}
 
         Data = data_dict[self.args.data]
 

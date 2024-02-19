@@ -778,7 +778,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     labels_pd = pd.read_hdf(args.data_dir +\
-                            '/unreduced_hlt_dcm_test_set_2018_y.h5')
+                            '/unreduced_hlt_test_set_y.h5')
 
     labels_np = labels_pd.to_numpy()
 
