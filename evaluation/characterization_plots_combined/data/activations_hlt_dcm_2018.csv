@@ -1,0 +1,19 @@
+,Activations
+Informer-MSE (Reduced),480694
+Informer-MSE (Unreduced),480694
+STRADA-MSE,480694
+Informer-SMSE (Reduced),712405560
+Informer-SMSE (Unreduced),712405560
+STRADA-SMSE,712405560
+TranAD (Reduced),60568
+TranAD (Unreduced),60568
+STRADA-TranAD,60568
+DAGMM (Reduced),1108
+DAGMM (Unreduced),1108
+T-DBSCAN/DAGMM,1108
+USAD (Reduced),1700
+USAD (Unreduced),1700
+T-DBSCAN/USAD,1700
+OmniAnomaly (Reduced),1270
+OmniAnomaly (Unreduced),1270
+T-DBSCAN/OmniAnomaly,1270

@@ -18,8 +18,47 @@ import torch.nn as nn
 from torch.utils.tensorboard import SummaryWriter
 from sklearn.preprocessing import MinMaxScaler
 
+from torch_profiling_utils.torchinfowriter import TorchinfoWriter
+from torch_profiling_utils.fvcorewriter import FVCoreWriter
 
 device='cuda:0'
+
+
+def _save_model_attributes(model,
+                            data,
+                            dataset_name):
+
+    output_filename = f'{model.name.lower()}_{dataset_name.lower()}'
+
+    fvcore_writer = FVCoreWriter(model, data)
+
+    fvcore_writer.write_flops_to_json('../../evaluation/computational_intensity_analysis/'
+                                                    f'data/by_module/{output_filename}.json',
+                                        'by_module')
+
+    fvcore_writer.write_flops_to_json('../../evaluation/computational_intensity_analysis/'
+                                                    f'data/by_operator/{output_filename}.json',
+                                        'by_operator')
+
+    fvcore_writer.write_activations_to_json('../../evaluation/activation_analysis/'
+                                                    f'data/by_module/{output_filename}.json',
+                                                'by_module')
+
+    fvcore_writer.write_activations_to_json('../../evaluation/activation_analysis/'
+                                                    f'data/by_operator/{output_filename}.json',
+                                                'by_operator')
+
+    torchinfo_writer = TorchinfoWriter(model,
+                                        input_data=data,
+                                        verbose=0)
+
+    torchinfo_writer.construct_model_tree()
+
+    torchinfo_writer.show_model_tree(attr_list=['Parameters', 'MACs'])
+
+    torchinfo_writer.get_dataframe().to_pickle(
+        f'../../evaluation/parameter_analysis/{output_filename}.pkl')
+
 
 def _save_numpy_array(array: np.array,
                         filename: str):
@@ -47,7 +86,7 @@ def load_dataset(dataset):
 
     loader = []
 
-    if dataset != 'HLT':
+    if 'HLT' not in dataset:
 
         folder = '../../datasets/smd'
 
@@ -61,14 +100,18 @@ def load_dataset(dataset):
 
     else:
 
-            train_set = HLTDataset('train', False,
-                                        'minmax', 'train_set_fit',
-                                        applied_augmentations=\
-                                                args.augmentations,
-                                        augmented_dataset_size_relative=\
-                                                args.augmented_dataset_size_relative,
-                                        augmented_data_ratio=\
-                                                args.augmented_data_ratio)
+            data_source = dataset.split('_')[1]
+            variant = int(dataset.split('_')[-1])
+
+            train_set = HLTDataset(data_source, variant,
+                                            'train', False,
+                                            'minmax', 'train_set_fit',
+                                            applied_augmentations=\
+                                                    args.augmentations,
+                                            augmented_dataset_size_relative=\
+                                                    args.augmented_dataset_size_relative,
+                                            augmented_data_ratio=\
+                                                    args.augmented_data_ratio)
 
             folder = f'./checkpoints/{args.model}_{args.dataset}_{augmentation_string}_seed_{int(args.seed)}/'
 
@@ -77,14 +120,15 @@ def load_dataset(dataset):
 
             loader.append(train_set.get_data())
 
-            test_set = HLTDataset('test', False,
-                                    'minmax', 'train_set_fit',
-                                    applied_augmentations=\
-                                            args.augmentations,
-                                    augmented_dataset_size_relative=\
-                                            args.augmented_dataset_size_relative,
-                                    augmented_data_ratio=\
-                                            args.augmented_data_ratio)
+            test_set = HLTDataset(data_source, variant,
+                                            'test', False,
+                                            'minmax', 'train_set_fit',
+                                            applied_augmentations=\
+                                                    args.augmentations,
+                                            augmented_dataset_size_relative=\
+                                                    args.augmented_dataset_size_relative,
+                                            augmented_data_ratio=\
+                                                    args.augmented_data_ratio)
 
             loader.append(test_set.get_data())
             loader.append(test_set.get_labels())
@@ -138,25 +182,41 @@ def load_model(modelname, dims):
         epoch = -1; accuracy_list = []
     return model, optimizer, scheduler, epoch, accuracy_list
 
+
 def backprop(epoch,
                 model,
                 data,
                 dataO,
                 optimizer,
                 scheduler,
-                training = True,
-                summary_writer = None):
+                training=True,
+                summary_writer=None,
+                dataset_name=None):
 
     l = nn.MSELoss(reduction = 'mean' if training else 'none')
     feats = dataO.shape[1]
 
+    data_train_list = []
+    preds_train_list = []
+    data_test_list = []
+    preds_test_list = []
+
+
     if 'DAGMM' in model.name:
         l = nn.MSELoss(reduction = 'none')
-        compute = ComputeLoss(model, 0.1, 0.005, 'cpu', model.n_gmm)
+        compute = ComputeLoss(model, 0.1, 0.005, device, model.n_gmm)
         n = epoch + 1; w_size = model.n_window
         l1s = []; l2s = []
+
+        data = data.to(device)
+
         if training:
             for d in data:
+                d = d.to(device)
+
+                _save_model_attributes(model, d, dataset_name)
+                exit()
+
                 _, x_hat, z, gamma = model(d)
                 l1, l2 = l(x_hat, d), l(gamma, d)
                 l1s.append(torch.mean(l1).item()); l2s.append(torch.mean(l2).item())
@@ -169,13 +229,16 @@ def backprop(epoch,
             return np.mean(l1s)+np.mean(l2s), optimizer.param_groups[0]['lr']
         else:
             ae1s = []
-            for d in data: 
+
+            for d in data:
+                # d = d.to(device)
                 _, x_hat, _, _ = model(d)
                 ae1s.append(x_hat)
             ae1s = torch.stack(ae1s)
             y_pred = ae1s[:, data.shape[1]-feats:data.shape[1]].view(-1, feats)
             loss = l(ae1s, data)[:, data.shape[1]-feats:data.shape[1]].view(-1, feats)
-            return loss.detach().numpy(), y_pred.detach().numpy()
+            return loss.detach().cpu().numpy(), y_pred.detach().cpu().numpy()
+
 
     if 'Attention' in model.name:
         l = nn.MSELoss(reduction = 'none')
@@ -205,10 +268,20 @@ def backprop(epoch,
             loss = torch.mean(l(ae1s, data), axis=1)
             return loss.detach().numpy(), y_pred.detach().numpy()
 
+
     elif 'OmniAnomaly' in model.name:
+
+        model.to(device)
+
         if training:
             mses, klds = [], []
             for i, d in enumerate(data):
+                d = d.to(device)
+
+                if i:
+                    _save_model_attributes(model, (d, hidden), dataset_name)
+                    exit()
+
                 y_pred, mu, logvar, hidden = model(d, hidden if i else None)
                 MSE = l(y_pred, d)
                 KLD = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp(), dim=0)
@@ -223,17 +296,27 @@ def backprop(epoch,
         else:
             y_preds = []
             for i, d in enumerate(data):
+                d = d.to(device)
                 y_pred, _, _, hidden = model(d, hidden if i else None)
                 y_preds.append(y_pred)
             y_pred = torch.stack(y_preds)
             MSE = l(y_pred, data)
-            return MSE.detach().numpy(), y_pred.detach().numpy()
+            return MSE.detach().cpu().numpy(), y_pred.detach().cpu().numpy()
+
+
     elif 'USAD' in model.name:
         l = nn.MSELoss(reduction = 'none')
         n = epoch + 1; w_size = model.n_window
         l1s, l2s = [], []
+
+        data = data.to(device)
+
         if training:
             for d in data:
+
+                _save_model_attributes(model, d, dataset_name)
+                exit()                
+
                 ae1s, ae2s, ae2ae1s = model(d)
                 l1 = (1 / n) * l(ae1s, d) + (1 - 1/n) * l(ae2ae1s, d)
                 l2 = (1 / n) * l(ae2s, d) - (1 - 1/n) * l(ae2ae1s, d)
@@ -247,45 +330,177 @@ def backprop(epoch,
             return np.mean(l1s)+np.mean(l2s), optimizer.param_groups[0]['lr']
         else:
             ae1s, ae2s, ae2ae1s = [], [], []
-            for d in data: 
+
+            data = data.to(device)
+
+            for d in data:
                 ae1, ae2, ae2ae1 = model(d)
                 ae1s.append(ae1); ae2s.append(ae2); ae2ae1s.append(ae2ae1)
             ae1s, ae2s, ae2ae1s = torch.stack(ae1s), torch.stack(ae2s), torch.stack(ae2ae1s)
-            y_pred = ae1s[:, data.shape[1]-feats:data.shape[1]].view(-1, feats)
+            y_pred = ae1s[:, data.shape[1] - feats:data.shape[1]].view(-1, feats)
             loss = 0.1 * l(ae1s, data) + 0.9 * l(ae2ae1s, data)
             loss = loss[:, data.shape[1]-feats:data.shape[1]].view(-1, feats)
-            return loss.detach().numpy(), y_pred.detach().numpy()
+            return loss.detach().cpu().numpy(), y_pred.detach().cpu().numpy()
+
 
     elif model.name in ['GDN', 'MTAD_GAT', 'MSCRED', 'CAE_M']:
         l = nn.MSELoss(reduction = 'none')
         n = epoch + 1; w_size = model.n_window
         l1s = []
+
+        data = data.to(device)
+
         if training:
-            for i, d in enumerate(data):
+            for i, d in enumerate(tqdm(data)):
+
+                d = d.to(device)
+
+                _save_model_attributes(model, d, dataset_name)
+                exit()
+
                 if 'MTAD_GAT' in model.name: 
                     x, h = model(d, h if i else None)
                 else:
                     x = model(d)
+
+                data_train_list.append(d.detach().cpu().numpy())
+                preds_train_list.append(x.detach().cpu().numpy())
+
+                # print(x.shape)
+
                 loss = torch.mean(l(x, d))
                 l1s.append(torch.mean(loss).item())
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
             tqdm.write(f'Epoch {epoch},\tMSE = {np.mean(l1s)}')
+
+            data_train = np.stack(data_train_list)
+            preds_train = np.stack(preds_train_list)
+
+            # _save_numpy_array(data_train, 
+            #                     f'data_train_mscred_epoch_{epoch}.npy')
+
+            # _save_numpy_array(preds_train, 
+            #                     f'preds_train_mscred_epoch_{epoch}.npy')
+
             return np.mean(l1s), optimizer.param_groups[0]['lr']
+
         else:
             xs = []
-            for d in data: 
+            for d in tqdm(data):
+                # d = d.to(device)
                 if 'MTAD_GAT' in model.name: 
                     x, h = model(d, None)
                 else:
                     x = model(d)
-                xs.append(x)
+
+                data_test_list.append(d.detach().cpu().numpy())
+                preds_test_list.append(x.detach().cpu().numpy())
+
+                xs.append(x.detach())
             xs = torch.stack(xs)
-            y_pred = xs[:, data.shape[1]-feats:data.shape[1]].view(-1, feats)
-            loss = l(xs, data)
+            y_pred = xs[:, data.shape[1]-feats:data.shape[1]].view(-1, feats)   
+
+            loss = l(xs, data.to(device))
             loss = loss[:, data.shape[1]-feats:data.shape[1]].view(-1, feats)
-            return loss.detach().numpy(), y_pred.detach().numpy()
+
+            data_test = np.stack(data_test_list)
+            preds_test = np.stack(preds_test_list)
+
+            # _save_numpy_array(data_test, 
+            #                     f'data_test_mscred.npy')
+
+            # _save_numpy_array(preds_test, 
+            #                     f'preds_test_mscred.npy')
+
+            return loss.detach().cpu().numpy(), y_pred.detach().cpu().numpy()
+
+
+    elif model.name == 'MSCREDFull':
+        l = nn.MSELoss(reduction = 'none')
+        n = epoch + 1
+
+        losses = []
+        
+        data = data.to(device)
+
+        dataset = TensorDataset(data, data)
+        
+        bs = model.batch
+        # bs = 1
+
+        dataloader = DataLoader(dataset, batch_size=bs, drop_last=True)
+
+        train_steps = len(dataloader)
+
+        if training:
+            for i, (d, _) in enumerate(tqdm(dataloader)):
+
+                # d = d.to(device)
+
+                # _save_model_attributes(model, d)
+                # exit()
+
+                x = model(d)
+
+                data_train_list.append(d.detach().cpu().numpy())
+                preds_train_list.append(x.detach().cpu().numpy())
+
+                loss = torch.mean(l(x, d))
+                losses.append(torch.mean(loss).item())
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
+
+                log_gradients_in_model(model,
+                                        summary_writer,
+                                        i + epoch*train_steps)
+
+                summary_writer.add_scalar("Train loss",
+                                            np.mean(losses),
+                                            i + epoch*train_steps)
+
+            tqdm.write(f'Epoch {epoch},\tMSE = {np.mean(losses)}')
+
+            data_train = np.stack(data_train_list)
+            preds_train = np.stack(preds_train_list)
+
+            _save_numpy_array(data_train, 
+                                f'data_train_mscred_full_epoch_{epoch}.npy')
+
+            _save_numpy_array(preds_train, 
+                                f'preds_train_mscred_full_epoch_{epoch}.npy')
+
+            return np.mean(losses), optimizer.param_groups[0]['lr']
+
+        else:
+            xs = []
+            for d, _ in tqdm(dataloader):
+
+                x = model(d)
+
+                data_test_list.append(d.detach().cpu().numpy())
+                preds_test_list.append(x.detach().cpu().numpy())
+
+                xs.append(x.detach())
+            xs = torch.stack(xs)
+            y_pred = xs[:, data.shape[1]-feats:data.shape[1]].view(-1, feats)   
+
+            loss = l(xs, data.to(device))
+            loss = loss[:, data.shape[1]-feats:data.shape[1]].view(-1, feats)
+
+            data_test = np.stack(data_test_list)
+            preds_test = np.stack(preds_test_list)
+
+            _save_numpy_array(data_test, 
+                                f'data_test_mscred_full.npy')
+
+            _save_numpy_array(preds_test, 
+                                f'preds_test_mscred_full.npy')
+
+            return loss.detach().cpu().numpy(), y_pred.detach().cpu().numpy()
+
 
     elif 'GAN' in model.name:
         l = nn.MSELoss(reduction = 'none')
@@ -327,15 +542,17 @@ def backprop(epoch,
             loss = loss[:, data.shape[1]-feats:data.shape[1]].view(-1, feats)
             return loss.detach().numpy(), y_pred.detach().numpy()
 
+
     elif 'TranAD' in model.name:
         l = nn.MSELoss(reduction = 'none')
         data_x = torch.DoubleTensor(data)
 
         dataset = TensorDataset(data_x, data_x)
         
-        bs = model.batch if training else len(data)
-        # bs = model.batch
-        
+        # bs = model.batch if training else len(data)
+        bs = model.batch
+        # bs = 1
+
         dataloader = DataLoader(dataset, batch_size=bs, drop_last=True)
         
         n = epoch + 1; w_size = model.n_window
@@ -353,6 +570,9 @@ def backprop(epoch,
                 window = d.permute(1, 0, 2)
 
                 elem = window[-1, :, :].view(1, local_bs, feats)
+
+                _save_model_attributes(model, (window, elem), dataset_name)
+                exit()
 
                 z = model(window, elem)
 
@@ -494,6 +714,9 @@ if __name__ == '__main__':
     trainO, testO = trainD, testD
     if model.name in ['Attention', 'DAGMM', 'USAD', 'MSCRED', 'CAE_M', 'GDN', 'MTAD_GAT', 'MAD_GAN'] or 'TranAD' in model.name: 
         trainD, testD = convert_to_windows(trainD, model), convert_to_windows(testD, model)
+    elif model.name == 'MSCREDFull':
+         trainD, testD = generate_mscred_signature_matrices(trainD),\
+                            generate_mscred_signature_matrices(testD)
 
     model.to(device)
 
@@ -501,9 +724,16 @@ if __name__ == '__main__':
 
     summary_writer = SummaryWriter()
 
+    testD = testD.to('cpu')
+    testO = testO.to('cpu')
+
     if not args.test:
         print(f'{color.HEADER}Training {args.model} on {args.dataset}{color.ENDC}')
-        num_epochs = 5; e = epoch + 1; start = time()
+        num_epochs = 5
+        # num_epochs = 10
+        # num_epochs = 1
+        e = epoch + 1
+        start = time()
 
         for e in list(range(epoch + 1, epoch + num_epochs + 1)):
             lossT, lr = backprop(e, model,
@@ -511,11 +741,16 @@ if __name__ == '__main__':
                                     trainO,
                                     optimizer,
                                     scheduler,
-                                    summary_writer)
+                                    True,
+                                    summary_writer,
+                                    args.dataset)
 
             torch.cuda.empty_cache()
 
             accuracy_list.append((lossT, lr))
+
+        trainD = trainD.cpu()
+        trainO = trainO.cpu()
 
         print(color.BOLD + 'Training time: ' + "{:10.4f}".format(time() - start) + ' s' + color.ENDC)
         save_model(model, optimizer, scheduler, e, accuracy_list)
@@ -526,9 +761,17 @@ if __name__ == '__main__':
     torch.zero_grad = True
     model.eval()
     print(f'{color.HEADER}Testing {args.model} on {args.dataset}{color.ENDC}')
+
+    testD = testD.to(device)
+    testO = testO.to(device)
+
     loss, y_pred = backprop(0, model, testD, testO, optimizer, scheduler, training=False)
 
     torch.cuda.empty_cache()
+
+    testD = testD.cpu()
+    testO = testO.cpu()
+    # labels = labels.cpu()
 
     ### Plot curves
 
@@ -540,8 +783,12 @@ if __name__ == '__main__':
 
     ### Scores
 
+    testD = testD.to(device)
+    testO = testO.to(device)
+    # labels = labels.to(device)
+
     df = pd.DataFrame()
-    lossT, _ = backprop(0, model, trainD, trainO, optimizer, scheduler, training=False)
+    lossT, _ = backprop(0, model, trainD.to(device), trainO.to(device), optimizer, scheduler, training=False)
 
     torch.cuda.empty_cache()
 
@@ -554,19 +801,33 @@ if __name__ == '__main__':
     labelsFinal = (np.sum(labels, axis=1) >= 1) + 0
     result, _, latencies = pot_eval(lossTfinal, lossFinal, labelsFinal)
 
-    if args.dataset == 'HLT':
+    if 'HLT' in args.dataset:
 
-        augment_label = '_no_augment_' if augmentation_string == 'no_augment' else '_'
+        variant = f'{args.dataset.split("_")[-2].lower()}_'\
+                                f'{args.dataset.split("_")[-1]}'
 
-        _save_numpy_array(lossTfinal, f'../../evaluation/reduced_detection/predictions/tranad_train{augment_label}seed_{int(args.seed)}.npy')
-        _save_numpy_array(lossTfinal, f'../../evaluation/combined_detection/predictions/tranad_train{augment_label}seed_{int(args.seed)}.npy')
-        _save_numpy_array(lossFinal, f'../../evaluation/reduced_detection/predictions/tranad{augment_label}seed_{int(args.seed)}.npy')
+        augment_label = 'no_augment_' if augmentation_string == 'no_augment' else ''
 
-        parameter_dict = {"window_size": 10}
+        _save_numpy_array(lossTfinal,
+                            f'../../evaluation/reduced_detection_{variant}/'\
+                                            f'predictions/{args.model.lower()}_'\
+                                            f'train_{augment_label}seed_{int(args.seed)}.npy')
 
-        with open(f'checkpoints/{args.model}_{args.dataset}_{augmentation_string}_seed_{int(args.seed)}/model_parameters.json', 'w') as parameter_dict_file:
-            json.dump(parameter_dict,
-                        parameter_dict_file)
+        _save_numpy_array(lossTfinal,
+                            f'../../evaluation/combined_detection_{variant}/'\
+                                            f'predictions/{args.model.lower()}_'\
+                                            f'train_{augment_label}seed_{int(args.seed)}.npy')
+
+        _save_numpy_array(lossFinal,
+                            f'../../evaluation/reduced_detection_{variant}/'\
+                                            f'predictions/{args.model.lower()}_'\
+                                            f'{augment_label}seed_{int(args.seed)}.npy')
+
+        # parameter_dict = {"window_size": model.n_window}
+
+        # with open(f'checkpoints/{args.model}_{args.dataset}_{augmentation_string}_seed_{int(args.seed)}/model_parameters.json', 'w') as parameter_dict_file:
+        #     json.dump(parameter_dict,
+        #                 parameter_dict_file)
 
     else:
         metrics_to_save = [int(args.seed),
@@ -579,9 +840,9 @@ if __name__ == '__main__':
         metrics_to_save = np.atleast_2d(metrics_to_save)
 
         metrics_to_save_pd = pd.DataFrame(data=metrics_to_save)
-        metrics_to_save_pd.to_csv(f'results_tranad_{args.dataset}.csv',
-                                                                mode='a+',
-                                                                header=False,
-                                                                index=False)
+        metrics_to_save_pd.to_csv(f'results_{args.model.lower()}_{args.dataset}.csv',
+                                                                            mode='a+',
+                                                                            header=False,
+                                                                            index=False)
 
 

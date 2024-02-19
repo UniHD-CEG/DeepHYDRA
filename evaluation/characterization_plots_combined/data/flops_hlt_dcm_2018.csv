@@ -1,0 +1,17 @@
+,FLOPs
+Informer-MSE (Reduced),318487169
+Informer-SMSE (Reduced),716630555
+TranAD (Reduced),6223500
+DAGMM (Reduced),25919
+USAD (Reduced),42480
+OmniAnomaly (Reduced),26456
+MERLIN-S (Reduced),139565623
+MERLIN-S (Unreduced),5044886795
+MERLIN-P (Reduced),139565623
+MERLIN-P (Unreduced),5044886795
+T-DBSCAN,52529854
+Reduction,60819194
+1L-Method 3 (Reduced),102
+1L-Method 4 (Reduced),1142
+1L-Method 3 (Unreduced),3687
+1L-Method 4 (Unreduced),24582.67

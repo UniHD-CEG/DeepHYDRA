@@ -1,0 +1,1 @@
+{"": 26456, "lstm": 19328, "encoder": 2560, "encoder.0": 1024, "encoder.1": 0, "encoder.2": 1024, "encoder.3": 0, "encoder.4": 0, "encoder.5": 512, "decoder": 4544, "decoder.0": 256, "decoder.1": 0, "decoder.2": 1024, "decoder.3": 0, "decoder.4": 3264, "decoder.5": 0}

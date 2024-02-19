@@ -1,0 +1,11 @@
+,AUC-ROC
+Informer-MSE,100
+Informer-SMSE,100
+TranAD,93
+DAGMM,94
+USAD,93
+OmniAnomaly,86
+MERLIN-S,100
+MERLIN-P,100
+1L-Method 3,100
+1L-Method 4,100

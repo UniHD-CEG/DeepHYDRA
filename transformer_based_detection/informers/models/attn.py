@@ -55,7 +55,8 @@ class ProbAttention(nn.Module):
         K_sample = K_expand[:, :, torch.arange(L_Q).unsqueeze(1), index_sample, :]
         Q_K_sample = torch.matmul(Q.unsqueeze(-2), K_sample.transpose(-2, -1)).squeeze()
 
-        # find the Top_k query with sparisty measurement
+        # Find the Top_k query with sparsity measurement
+        # Source of aten::sub and aten::div
         M = Q_K_sample.max(-1)[0] - torch.div(Q_K_sample.sum(-1), L_K)
         M_top = M.topk(n_top, sorted=False)[1]
 
@@ -75,6 +76,7 @@ class ProbAttention(nn.Module):
             contex = V_sum.unsqueeze(-2).expand(B, H, L_Q, V_sum.shape[-1]).clone()
         else: # use mask
             assert(L_Q == L_V) # requires that L_Q == L_V, i.e. for self-attention only
+            # Source of aten::cumsum
             contex = V.cumsum(dim=-2)
         return contex
 
@@ -105,8 +107,16 @@ class ProbAttention(nn.Module):
         keys = keys.transpose(2,1)
         values = values.transpose(2,1)
 
-        U_part = self.factor * np.ceil(np.log(L_K)).astype('int').item() # c*ln(L_k)
-        u = self.factor * np.ceil(np.log(L_Q)).astype('int').item() # c*ln(L_q) 
+        # print(type(self.factor))
+        # print(type(np.ceil(np.log(L_K)).detach().numpy().astype('int')))
+        # exit()
+
+        if torch.is_tensor(np.ceil(np.log(L_K))):
+            U_part = self.factor * np.ceil(np.log(L_K)).detach().numpy().astype('int') # c*ln(L_k)
+            u = self.factor * np.ceil(np.log(L_Q)).detach().numpy().astype('int') # c*ln(L_q) 
+        else:
+            U_part = self.factor * np.ceil(np.log(L_K)).astype('int').item() # c*ln(L_k)
+            u = self.factor * np.ceil(np.log(L_Q)).astype('int').item() # c*ln(L_q)
 
         U_part = U_part if U_part<L_K else L_K
         u = u if u<L_Q else L_Q
@@ -116,6 +126,7 @@ class ProbAttention(nn.Module):
         # add scale factor
         scale = self.scale or 1./sqrt(D)
         if scale is not None:
+            # Source of aten::mul
             scores_top = scores_top * scale
         # get the context
         context = self._get_initial_context(values, L_Q)

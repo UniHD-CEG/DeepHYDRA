@@ -13,9 +13,9 @@ from sklearn.metrics import roc_auc_score,\
                                 recall_score,\
                                 matthews_corrcoef
 
-import plotext as plt
+# import plotext as plt
 from tqdm.auto import trange
-
+import pylikwid
 
 def get_anomalous_runs(x):
     '''
@@ -294,70 +294,74 @@ def parameter_exploration(data: np.array,
 
     # Method 3: abs(diff(TS)) > b
 
-    print('Method 3:')
+    # print('Method 3:')
     
-    for channel in trange(channel_count,
-                            desc='Absdiff: Per-channel '
-                                        'AUROC computation'):
+    # for channel in trange(channel_count,
+    #                         desc='Absdiff: Per-channel '
+    #                                     'AUROC computation'):
         
-        try:
-            auroc_method_3 = roc_auc_score(labels[:, channel],
-                                            abs_diff_normalized[:, channel])
-        except ValueError:
-            auroc_per_channel[channel] = 0.5
+    #     try:
+    #         auroc_method_3 = roc_auc_score(labels[:, channel],
+    #                                         abs_diff_normalized[:, channel])
+    #     except ValueError:
+    #         auroc_per_channel[channel] = 0.5
 
-        auroc_per_channel[channel] = auroc_method_3
+    #     auroc_per_channel[channel] = auroc_method_3
 
-    auroc_min = np.min(auroc_per_channel)
-    auroc_max = np.max(auroc_per_channel)
-    auroc_mean = np.mean(auroc_per_channel)
-    auroc_median = np.median(auroc_per_channel)
+    # auroc_min = np.min(auroc_per_channel)
+    # auroc_max = np.max(auroc_per_channel)
+    # auroc_mean = np.mean(auroc_per_channel)
+    # auroc_median = np.median(auroc_per_channel)
 
-    print(f'AUROC: min: {auroc_min:.3f}\t'
-                    f'max: {auroc_max:.3f}\t'
-                    f'mean: {auroc_mean:.3f}\t'
-                    f'median {auroc_median:.3f}')
+    # print(f'AUROC: min: {auroc_min:.3f}\t'
+    #                 f'max: {auroc_max:.3f}\t'
+    #                 f'mean: {auroc_mean:.3f}\t'
+    #                 f'median {auroc_median:.3f}')
 
-    mcc_best_per_channel = np.full(channel_count, -1.)
-    b_best_per_channel = np.full(channel_count, 0.)
+    # mcc_best_per_channel = np.full(channel_count, -1.)
+    # b_best_per_channel = np.full(channel_count, 0.)
 
-    for b in b_array:
+    # for b in b_array:
 
-        for channel in range(channel_count):
+    #     for channel in range(channel_count):
 
-            data_channel = abs_diff_normalized[:, channel]
-            labels_channel = labels[:, channel]
+    #         data_channel = abs_diff_normalized[:, channel]
+    #         labels_channel = labels[:, channel]
 
-            preds_channel =\
-                adjust_predicts(data_channel,
-                                    labels_channel, b)
+    #         preds_channel =\
+    #             adjust_predicts(data_channel,
+    #                                 labels_channel, b)
             
-            mcc = matthews_corrcoef(labels_channel,
-                                        preds_channel)
+    #         mcc = matthews_corrcoef(labels_channel,
+    #                                     preds_channel)
 
-            if mcc_best_per_channel[channel] < mcc:
+    #         if mcc_best_per_channel[channel] < mcc:
 
-                mcc_best_per_channel[channel] = mcc
-                b_best_per_channel[channel] = b
+    #             mcc_best_per_channel[channel] = mcc
+    #             b_best_per_channel[channel] = b
 
-    results_best = pd.DataFrame(index=np.arange(mcc_best_per_channel.shape[-1]),
-                                                                columns=['mcc', 'b'])
+    # results_best = pd.DataFrame(index=np.arange(mcc_best_per_channel.shape[-1]),
+    #                                                             columns=['mcc', 'b'])
 
-    for channel, (mcc, b) in enumerate(zip(mcc_best_per_channel,
-                                                b_best_per_channel)):
+    # for channel, (mcc, b) in enumerate(zip(mcc_best_per_channel,
+    #                                             b_best_per_channel)):
 
-        print(f'Best MCC channel {channel}: {mcc:.3f} for {b=:.3f}')
+    #     print(f'Best MCC channel {channel}: {mcc:.3f} for {b=:.3f}')
 
-        results_best.iloc[channel, :] = (mcc, b,)
+    #     results_best.iloc[channel, :] = (mcc, b,)
 
-    results_best.to_csv('parameters_best_method_3_smd.csv', sep='\t')
+    # results_best.to_csv('parameters_best_method_3_smd.csv', sep='\t')
 
     # Method 4: abs(diff(TS)) > movmean(abs(diff(TS)), k) + c*movstd(diff(TS), k) + b
 
     print('Method 4:')
 
     usable_processors = len(os.sched_getaffinity(0))
+
+    print(usable_processors)
+
     process_pool = Pool(usable_processors//2)
+    # process_pool = Pool(usable_processors)
 
     method_4_fixed_k_with_args =\
             partial(method_4_fixed_k,
@@ -434,7 +438,7 @@ def parameter_exploration(data: np.array,
 
         results_best.iloc[index_col, :] = (mcc, b, c, k)
 
-    results_best.to_csv('parameters_best_method_4_snd.csv', sep='\t')
+    results_best.to_csv('parameters_best_method_4_smd.csv', sep='\t')
 
 
 def test_thresholds_method_3(data: np.array,
@@ -557,7 +561,7 @@ def run_with_best_parameters_method_3(data: np.array,
                                         labels: np.array,
                                         threshold: np.float64):
 
-    results_best_method_4 =\
+    results_best_method_3 =\
         pd.read_csv('parameters_best_method_3_smd.csv', sep='\t')
 
     diff = np.diff(data, axis=0)
@@ -568,8 +572,8 @@ def run_with_best_parameters_method_3(data: np.array,
 
     abs_diff_normalized = MinMaxScaler().fit_transform(abs_diff)
     
-    bs = results_best_method_4.iloc[:, 2].to_numpy()
-    mccs = results_best_method_4.iloc[:, 1].to_numpy()
+    bs = results_best_method_3.iloc[:, 2].to_numpy()
+    mccs = results_best_method_3.iloc[:, 1].to_numpy()
 
     print('Method 3:')
 
@@ -596,14 +600,35 @@ def run_with_best_parameters_method_4(data: np.array,
                                         labels: np.array,
                                         threshold: np.float64):
 
+    pylikwid.markerinit()
+    pylikwid.markerthreadinit()
+
     results_best_method_4 =\
         pd.read_csv('parameters_best_method_4_smd.csv', sep='\t')
 
+    pylikwid.markerstartregion("1lm4_0")
     diff = np.diff(data, axis=0)
+    pylikwid.markerstopregion("1lm4_0")
+
+    nr_events, eventlist, time, count = pylikwid.markergetregion("1lm4_0")
+
+    for i, e in enumerate(eventlist):
+        print(i, e)
+    pylikwid.markerclose()
 
     labels = labels[1:, :]
 
+    pylikwid.markerinit()
+    pylikwid.markerthreadinit()
+    pylikwid.markerstartregion("1lm4_1")
     abs_diff = np.abs(diff)
+    pylikwid.markerstopregion("1lm4_1")
+
+    nr_events, eventlist, time, count = pylikwid.markergetregion("1lm4_1")
+
+    for i, e in enumerate(eventlist):
+        print(i, e)
+    pylikwid.markerclose()
 
     abs_diff_normalized = MinMaxScaler().fit_transform(abs_diff)
     
@@ -617,10 +642,24 @@ def run_with_best_parameters_method_4(data: np.array,
 
     included_indices = np.where(mccs > threshold)[0]
 
+    pylikwid.markerinit()
+    pylikwid.markerthreadinit()
+    pylikwid.markerstartregion("1lm4_2")
+
     preds_all[:, included_indices] =\
                 method_4_combined(abs_diff_normalized[:, included_indices],
                                                 labels[:, included_indices],
                                                 parameters[included_indices, :])
+    
+    pylikwid.markerstopregion("1lm4_2")
+
+    nr_events, eventlist, time, count = pylikwid.markergetregion("1lm4_2")
+
+    for i, e in enumerate(eventlist):
+        print(i, e)
+    pylikwid.markerclose()
+
+    exit()
 
     save_numpy_array(preds_all, 'preds_method_4_smd.npy')
 
@@ -636,7 +675,6 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     data_np = load_numpy_array(f'{args.data_dir}/machine-1-1_test.npy')
-
     labels_np = load_numpy_array(f'{args.data_dir}/machine-1-1_labels.npy')
 
     labels_np = np.greater_equal(labels_np, 1)
@@ -649,13 +687,13 @@ if __name__ == '__main__':
     # test_thresholds_method_3(data_np,
     #                             labels_np)
 
-    test_thresholds_method_4(data_np,
-                                labels_np)
+    # test_thresholds_method_4(data_np,
+    #                             labels_np)
 
-#     run_with_best_parameters_method_3(data_np,
-#                                         labels_np,
-#                                         0.5)
-# 
-#     run_with_best_parameters_method_4(data_np,
-#                                         labels_np,
-#                                         0.475)
+    # run_with_best_parameters_method_3(data_np,
+    #                                     labels_np,
+    #                                     0.5)
+
+    run_with_best_parameters_method_4(data_np,
+                                        labels_np,
+                                        0.475)

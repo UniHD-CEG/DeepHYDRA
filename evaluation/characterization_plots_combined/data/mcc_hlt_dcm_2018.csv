@@ -1,0 +1,28 @@
+,MCC
+Informer-MSE (Reduced),91
+Informer-MSE (Unreduced),84
+STRADA-MSE,90
+Informer-SMSE (Reduced),93
+Informer-SMSE (Unreduced),86
+STRADA-SMSE,91
+TranAD (Reduced),92
+TranAD (Unreduced),79
+STRADA-TranAD,88
+DAGMM (Reduced),94
+DAGMM (Unreduced),80
+T-DBSCAN/DAGMM,92
+USAD (Reduced),84
+USAD (Unreduced),84
+T-DBSCAN/USAD,92
+OmniAnomaly (Reduced),82
+OmniAnomaly (Unreduced),77
+T-DBSCAN/OmniAnomaly,82
+MERLIN-S (Reduced),78
+MERLIN-P (Reduced),78
+MERLIN-S (Unreduced),72
+MERLIN-P (Unreduced),72
+T-DBSCAN,79
+1L-Method 3 (Reduced),86
+1L-Method 4 (Reduced),85
+1L-Method 3 (Unreduced),82
+1L-Method 4 (Unreduced),84

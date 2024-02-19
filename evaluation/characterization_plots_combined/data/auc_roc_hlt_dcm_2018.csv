@@ -1,0 +1,28 @@
+,AUC-ROC
+Informer-MSE (Reduced),97
+Informer-MSE (Unreduced),92
+STRADA-MSE,97
+Informer-SMSE (Reduced),97
+Informer-SMSE (Unreduced),92
+STRADA-SMSE,97
+TranAD (Reduced),96
+TranAD (Unreduced),90
+STRADA-TranAD,95
+DAGMM (Reduced),96
+DAGMM (Unreduced),85
+T-DBSCAN/DAGMM,95
+USAD (Reduced),93
+USAD (Unreduced),90
+T-DBSCAN/USAD,96
+OmniAnomaly (Reduced),92
+OmniAnomaly (Unreduced),91
+T-DBSCAN/OmniAnomaly,95
+MERLIN-S (Reduced),90
+MERLIN-P (Reduced),90
+MERLIN-S (Unreduced),86
+MERLIN-P (Unreduced),86
+T-DBSCAN,83
+1L-Method 3 (Reduced),94
+1L-Method 4 (Reduced),94
+1L-Method 3 (Unreduced),92
+1L-Method 4 (Unreduced),93

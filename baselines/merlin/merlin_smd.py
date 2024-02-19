@@ -15,7 +15,7 @@ from sklearn.metrics import roc_auc_score,\
 from tqdm import trange
 
 from merlin import merlin
-
+import pylikwid
 
 def save_numpy_array(array: np.array,
                         filename: str):    
@@ -230,14 +230,50 @@ def run_merlin(data: np.ndarray,
     distances_all = []
     lengths_all = []
 
-    for channel in trange(columns):
-        discords, distances, lengths = merlin(data[:, channel],
-                                                    l_min, l_max,
-                                                    sanitize=near_constant_fix)
+    parameters_all = []
 
-        discords_all.append(discords)
-        distances_all.append(distances)
-        lengths_all.append(lengths)
+    # pylikwid.markerinit()
+    # pylikwid.markerthreadinit()
+    # pylikwid.markerstartregion("MERLIN")
+
+    flops_all = []
+
+    for channel in trange(columns):
+
+        pylikwid.markerinit()
+        pylikwid.markerthreadinit()
+        pylikwid.markerstartregion("MERLIN")
+
+        discords, distances, lengths, parameters =\
+                                merlin(data[:, channel],
+                                            l_min, l_max,
+                                            sanitize=near_constant_fix)
+        
+        pylikwid.markerstopregion("MERLIN")
+
+        nr_events, eventlist, time, count = pylikwid.markergetregion("MERLIN")
+
+        flops_all.append(eventlist[4])
+
+        # for i, e in enumerate(eventlist):
+            #print(i, e)
+        
+        pylikwid.markerclose()
+
+        # exit()
+
+        # parameters_all.append(parameters)
+
+        # discords_all.append(discords)
+        # distances_all.append(distances)
+        # lengths_all.append(lengths)
+
+    # print(f'Size MERLIN sequential: {np.max(parameters_all)}')
+    # print(f'Size MERLIN parallel: {np.sum(parameters_all)}')
+
+    print(flops_all)
+    
+    exit()
 
     discords_all = np.column_stack(discords_all)
     distances_all = np.column_stack(distances_all)
@@ -372,7 +408,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='MERLIN SMD')
 
-    parser.add_argument('--data-dir', type=str, default='../../../datasets/smd')
+    parser.add_argument('--data-dir', type=str, default='../../datasets/smd')
     parser.add_argument('--l-min', type=int, default=8)
     parser.add_argument('--l-max', type=int, default=96)
     parser.add_argument('--k', type=int, default=1)
@@ -401,6 +437,6 @@ if __name__ == '__main__':
                 args.l_max,
                 not args.no_near_constant_fix)
 
-    get_preds_best_threshold(data_np,
-                                labels_np,
-                                0.75)
+    # get_preds_best_threshold(data_np,
+    #                             labels_np,
+    #                             0.75)

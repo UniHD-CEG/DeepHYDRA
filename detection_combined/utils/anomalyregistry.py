@@ -18,7 +18,8 @@ base_data_anomaly_ends = [264,
                             465,
                             4277]
 
-output_dir = '../../../evaluation/combined_detection/predictions/'
+# output_dir = '../../../evaluation/combined_detection_2023/predictions/'
+output_dir = '../../../evaluation/combined_detection_dcm_2018/predictions/'
 
 def _save_numpy_array(array: np.array,
                         filename: str):
@@ -52,6 +53,52 @@ def _remove_timestamp_jumps(index: pd.DatetimeIndex) -> pd.DatetimeIndex:
 
 class AnomalyRegistry(ABC):
     pass
+
+
+class JSONAnomalyRegistry(AnomalyRegistry):
+
+    def __init__(self,
+                    log_dir: str) -> None:
+ 
+        self.log_dir = log_dir
+
+        self.anomaly_registry_persistent =\
+                defaultdict(lambda: defaultdict(RunAnomaly))
+
+
+    def clustering_detection(self,
+                                origin_code: int,
+                                anomaly_type: AnomalyType,
+                                anomaly_start,
+                                anomaly_duration: int) -> None:
+        
+        self.anomaly_registry_persistent[origin_code][anomaly_start].update(anomaly_duration,
+                                                                                    anomaly_type)
+
+    def transformer_detection(self,
+                                origin_code: int,
+                                anomaly_type: AnomalyType,
+                                anomaly_start,
+                                anomaly_duration: int) -> None:
+        
+        self.anomaly_registry_persistent[origin_code][anomaly_start].update(anomaly_duration,
+                                                                                    anomaly_type)
+         
+
+    def dump(self, log_name: str):
+        
+        self.write_log_file(log_name)
+        self.anomaly_registry_persistent =\
+            defaultdict(lambda: defaultdict(RunAnomaly))
+
+
+    def write_log_file(self, log_name: str):
+        if len(self.anomaly_registry_persistent) > 0:
+            with open(f'{self.log_dir}/{log_name}.json', mode='w') as anomaly_log_file:
+                json.dump(self.anomaly_registry_persistent,
+                                        anomaly_log_file,
+                                        indent=4,
+                                        default=RunAnomaly.to_json)
 
 
 class BenchmarkAnomalyRegistry(AnomalyRegistry):
@@ -93,10 +140,11 @@ class BenchmarkAnomalyRegistry(AnomalyRegistry):
     def evaluate(self,
                     pred_transformer_np: np.array,
                     model_name: str,
+                    variant: str,
                     seed: int) -> None:
 
         true_pd = pd.read_hdf(self.label_dir +\
-                                    '/unreduced_hlt_test_set_y.h5')
+                                    f'/unreduced_hlt_dcm_test_set_{variant}_y.h5')
 
         true_pd.index = _remove_timestamp_jumps(
                             pd.DatetimeIndex(true_pd.index)).strftime('%Y-%m-%d %H:%M:%S')
@@ -124,7 +172,8 @@ class BenchmarkAnomalyRegistry(AnomalyRegistry):
                         pred_pd.iloc[row] = 1
                 
         pred_clustering_np = pred_pd.to_numpy().astype(np.uint8).flatten()
-        _save_numpy_array(pred_clustering_np, f'{output_dir}/clustering.npy')
+        
+        # _save_numpy_array(pred_clustering_np, f'{output_dir}/clustering.npy')
 
         if model_name == 'Informer-MSE':
             pred_transformer_np = np.pad(pred_transformer_np, (16, 1))
@@ -134,4 +183,8 @@ class BenchmarkAnomalyRegistry(AnomalyRegistry):
             _save_numpy_array(pred_transformer_np, f'{output_dir}/l2_dist_smse_seed_{seed}.npy')
         elif model_name == 'TranAD':
             pred_transformer_np = np.pad(pred_transformer_np, (9, 0))
-            _save_numpy_array(pred_transformer_np, f'{output_dir}/tranad_seed_{seed}.npy')
+            _save_numpy_array(pred_transformer_np, f'{output_dir}/{model_name.lower()}_seed_{seed}.npy')
+        elif model_name in ['USAD', 'DAGMM', 'OmniAnomaly']:
+            pred_transformer_np = np.pad(pred_transformer_np, (4, 0))
+            _save_numpy_array(pred_transformer_np, f'{output_dir}/{model_name.lower()}_seed_{seed}.npy')
+            

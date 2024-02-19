@@ -1,0 +1,28 @@
+,Parameters
+Informer-MSE (Reduced),29378726
+Informer-MSE (Unreduced),29378726
+STRADA-MSE,29392063
+Informer-SMSE (Reduced),19817062
+Informer-SMSE (Unreduced),19817062
+STRADA-SMSE,19830399
+TranAD (Reduced),936450
+TranAD (Unreduced),936450
+STRADA-TranAD,949787
+USAD (Reduced),26609
+USAD (Unreduced),26609
+T-DBSCAN/USAD,39946
+DAGMM (Reduced),26516
+DAGMM (Unreduced),26516
+T-DBSCAN/DAGMM,39853
+OmniAnomaly (Reduced),26746
+OmniAnomaly (Unreduced),26746
+T-DBSCAN/OmniAnomaly,40083
+T-DBSCAN,13337
+MERLIN-S (Reduced),5405378
+MERLIN-S (Unreduced),5405321
+MERLIN-P (Reduced),551341101
+MERLIN-P (Unreduced),19929359210
+1L-Method 3 (Reduced),102
+1L-Method 4 (Reduced),306
+1L-Method 3 (Unreduced),3687
+1L-Method 4 (Unreduced),11061

@@ -1,24 +1,41 @@
 import os
 import time
 import warnings
-from functools import partialmethod
+import json
+from collections import defaultdict
+from functools import partial, partialmethod
 
 warnings.filterwarnings('ignore')
 
 import numpy as np
+import pandas as pd
 import torch
 import torch.nn as nn
 from torch import optim
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
+from fvcore.nn import FlopCountAnalysis, ActivationCountAnalysis
+from torchinfo import summary
+from bigtree import Node, tree_to_dataframe, tree_to_dot
+from bigtree.tree.search import find_child_by_name
 from tqdm import tqdm
 
 from dataset_loaders.omni_anomaly_dataset import OmniAnomalyDataset
 from dataset_loaders.hlt_datasets import HLTDataset
+from dataset_loaders.eclipse_datasets import EclipseDataset
 from exp.exp_basic import ExpBasic
 from models.model import Informer
 from models.sad_like_loss import *
 from utils.tools import EarlyStopping, adjust_learning_rate
+# from utils.torch_profiling import add_sub_mul_div_op_handler,\
+#                                                 sum_op_handler,\
+#                                                 mean_op_handler,\
+#                                                 cumsum_op_handler
+# from utils.fvcorewriter import FVCoreWriter
+# from utils.torchinfowriter import TorchinfoWriter
+
+from torch_profiling_utils.torchinfowriter import TorchinfoWriter
+from torch_profiling_utils.fvcorewriter import FVCoreWriter
 
 
 def log_gradients_in_model(model, summary_writer, step):
@@ -65,7 +82,13 @@ class ExpInformer(ExpBasic):
 
         data_dict = {
             'machine-1-1': OmniAnomalyDataset,
-            'HLT': HLTDataset,}
+            'HLT_DCM_2018': HLTDataset,
+            'HLT_PPD_2018': HLTDataset,
+            'HLT_DCM_2022': HLTDataset,
+            'HLT_PPD_2022': HLTDataset,
+            'HLT_DCM_2023': HLTDataset,
+            'HLT_PPD_2023': HLTDataset,
+            'ECLIPSE': EclipseDataset,}
 
         Data = data_dict[self.args.data]
 
@@ -105,7 +128,13 @@ class ExpInformer(ExpBasic):
                             scaling_source='train_set_fit')
 
         elif Data == HLTDataset:
-            dataset = Data(mode=flag,
+
+            source = self.args.data.split('_')[1].lower()
+            variant = int(self.args.data.split('_')[-1])
+
+            dataset = Data(source=source,
+                            variant=variant,
+                            mode=flag,
                             size=[args.seq_len,
                                     args.label_len,
                                     args.pred_len],
@@ -123,7 +152,25 @@ class ExpInformer(ExpBasic):
                             augmented_data_ratio=\
                                     self.args.augmented_data_ratio)
 
-        print(f'{flag} size: {len(dataset)}')
+        elif Data == EclipseDataset:
+
+            dataset = Data(mode=flag,
+                            size=[args.seq_len,
+                                    args.label_len,
+                                    args.pred_len],
+                            features=args.features,
+                            target=args.target,
+                            inverse=args.inverse,
+                            timeenc=timeenc,
+                            freq=freq,
+                            scaling_type='minmax',
+                            scaling_source='train_set_fit',
+                            applied_augmentations=\
+                                    self.args.augmentations,
+                            augmented_dataset_size_relative=\
+                                    self.args.augmented_dataset_size_relative,
+                            augmented_data_ratio=\
+                                    self.args.augmented_data_ratio)
 
         data_loader = DataLoader(dataset,
                                     batch_size=batch_size,
@@ -410,7 +457,7 @@ class ExpInformer(ExpBasic):
 
     def test(self, setting):
 
-        tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
+        # tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
 
         test_data, test_loader = self._get_data(flag='test')
         
@@ -427,13 +474,14 @@ class ExpInformer(ExpBasic):
             for count, (batch_x, batch_y, batch_x_mark, batch_y_mark) in enumerate(test_loader):
 
                 if self.args.output_attention:
-
+                
                     pred, true, attention =\
                             self._process_one_batch(test_data,
                                                         batch_x,
                                                         batch_y,
                                                         batch_x_mark,
-                                                        batch_y_mark)
+                                                        batch_y_mark,
+                                                        batch_x)
 
                 else:
                     pred, true = self._process_one_batch(test_data,
@@ -463,7 +511,7 @@ class ExpInformer(ExpBasic):
         np.save(folder_path + 'labels_all_test.npy', test_data.get_labels())
 
 
-    def _process_one_batch(self, dataset_object, batch_x, batch_y, batch_x_mark, batch_y_mark):
+    def _process_one_batch(self, dataset_object, batch_x, batch_y, batch_x_mark, batch_y_mark, viz_data=None):
         batch_x = batch_x.float().to(self.device)
         batch_y = batch_y.float()
 
@@ -482,6 +530,68 @@ class ExpInformer(ExpBasic):
 
         # Encoder - decoder
 
+        # FLOP and activation count retrieval
+
+        output_filename = f'informer_{self.args.data}_'\
+                                f'{self.args.loss.lower()}_'\
+                                f'sl_{self.args.seq_len}_'\
+                                f'll_{self.args.label_len}_'\
+                                f'pl_{self.args.pred_len}_'\
+                                f'ein_{self.args.enc_in}_'\
+                                f'din_{self.args.dec_in}_'\
+                                f'cout_{self.args.c_out}_'\
+                                f'dm_{self.args.d_model}_'\
+                                f'nh_{self.args.n_heads}_'\
+                                f'el_{self.args.e_layers}_'\
+                                f'dl_{self.args.d_layers}_'\
+                                f'dff_{self.args.d_ff}_'\
+                                f'f_{self.args.factor}_'\
+                                f'attn_{self.args.attn}_'\
+                                f'emb_{self.args.embed}_'\
+                                f'act_{self.args.activation.lower()}'
+
+        fvcore_writer = FVCoreWriter(self.model, (batch_x,
+                                                    batch_x_mark,
+                                                    dec_inp,
+                                                    batch_y_mark))
+
+        print(fvcore_writer.get_flop_dict('by_module'))
+        print(fvcore_writer.get_flop_dict('by_operator'))
+        print(fvcore_writer.get_activation_dict('by_module'))
+        print(fvcore_writer.get_activation_dict('by_operator'))
+
+        fvcore_writer.write_flops_to_json('../../evaluation/computational_intensity_analysis/'
+                                                        f'data/by_module/{output_filename}.json',
+                                            'by_module')
+
+        fvcore_writer.write_flops_to_json('../../evaluation/computational_intensity_analysis/'
+                                                        f'data/by_operator/{output_filename}.json',
+                                            'by_operator')
+
+        fvcore_writer.write_activations_to_json('../../evaluation/activation_analysis/'
+                                                        f'data/by_module/{output_filename}.json',
+                                                    'by_module')
+
+        fvcore_writer.write_activations_to_json('../../evaluation/activation_analysis/'
+                                                        f'data/by_operator/{output_filename}.json',
+                                                    'by_operator')
+
+        torchinfo_writer = TorchinfoWriter(self.model,
+                                            input_data=(batch_x,
+                                                            batch_x_mark,
+                                                            dec_inp,
+                                                            batch_y_mark),
+                                            verbose=0)
+
+        torchinfo_writer.construct_model_tree()
+
+        torchinfo_writer.show_model_tree(attr_list=['Parameters', 'MACs'])
+
+        torchinfo_writer.get_dataframe().to_pickle(
+            f'../../evaluation/parameter_analysis/{output_filename}.pkl')
+
+        exit()
+
         if self.args.use_amp:
             with torch.cuda.amp.autocast():
 
@@ -493,7 +603,7 @@ class ExpInformer(ExpBasic):
         else:
 
             if self.args.output_attention:
-                outputs, attention = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)
+                outputs, attention = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark, viz_data=viz_data)
 
             else:
                 outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)
@@ -503,7 +613,6 @@ class ExpInformer(ExpBasic):
 
         f_dim = -1 if self.args.features == 'MS' else 0
         batch_y = batch_y[:, -self.args.pred_len:, f_dim:].to(self.device)
-
 
         if self.args.output_attention:
             return outputs, batch_y, attention

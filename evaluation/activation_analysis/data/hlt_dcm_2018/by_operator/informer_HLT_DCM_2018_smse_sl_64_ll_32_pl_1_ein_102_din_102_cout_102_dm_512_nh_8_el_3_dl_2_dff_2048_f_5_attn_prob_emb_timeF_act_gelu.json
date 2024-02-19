@@ -1,0 +1,1 @@
+{"conv": 463987712, "linear": 240048128, "matmul": 5836800, "layer_norm": 1205760, "batch_norm": 245760, "einsum": 1081400.0}

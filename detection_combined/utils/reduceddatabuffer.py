@@ -1,8 +1,11 @@
 
+import logging
 from collections.abc import Callable
 from collections import deque
 
+import numpy as np
 import pandas as pd
+
 
 class ReducedDataBuffer():
     def __init__(self,
@@ -15,9 +18,22 @@ class ReducedDataBuffer():
 
         self._buffer = deque([], maxlen=self._size)
 
+        self._logger = logging.getLogger(__name__)
+        self._buffer_filled_feedback_given = False
+
 
     def push(self, data: pd.DataFrame):
-        self._buffer.append(data)
+        
+        data_size = len(data)
+
+        if data_size > 1:
+            for data_row in np.vsplit(data, data_size):
+                self._buffer.append(data_row)
+
+        elif data_size == 1:
+            self._buffer.append(data)
+        else:
+            return
 
         # print(self._buffer)
 
@@ -29,6 +45,10 @@ class ReducedDataBuffer():
 
             if not isinstance(self._buffer_filled_callback, type(None)):
                 return self._buffer_filled_callback(buffer_pd)
+
+            if not self._buffer_filled_feedback_given:
+                self._logger.info('Buffer filled')
+                self._buffer_filled_feedback_given = True
 
 
     def set_buffer_filled_callback(self,

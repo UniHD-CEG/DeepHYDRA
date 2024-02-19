@@ -10,10 +10,11 @@ import pandas as pd
 from .basereducer import BaseReducer
 from utils.tqdmloggingdecorator import tqdmloggingdecorator
 
+
 class MedianStdReducer(BaseReducer):
 
-    def __init__(self) -> None:
-        super(MedianStdReducer, self).__init__()
+    def __init__(self, configuration_version: str) -> None:
+        super(MedianStdReducer, self).__init__(configuration_version)
 
         self._columns_reduced = None
         self._keys_last = None
@@ -21,7 +22,7 @@ class MedianStdReducer(BaseReducer):
 
     def _parse_channel_name(self, channel_name):
         parameters = [int(substring) for substring in re.findall(r'\d+', channel_name)]
-        return parameters[1]
+        return parameters[-1]//1000
 
 
     def _create_channel_names(self,
@@ -131,10 +132,10 @@ class MedianStdReducer(BaseReducer):
         slice_reduced_np = np.stack(slice_reduced_list)
         slice_reduced_np = np.nan_to_num(slice_reduced_np, nan=-1)
 
-        nan_amount_reduced = 100*pd.isna(slice_reduced_np.flatten()).sum()/\
-                                                                slice_reduced_np.size
+        # nan_amount_reduced = 100*pd.isna(slice_reduced_np.flatten()).sum()/\
+        #                                                         slice_reduced_np.size
 
-        self._logger.debug('NaN amount reduced slice: {:.2f} %'.format(nan_amount_reduced))
+        # self._logger.debug('NaN amount reduced slice: {:.2f} %'.format(nan_amount_reduced))
 
         timestamps = np.atleast_1d(np.asanyarray(timestamps))
 
