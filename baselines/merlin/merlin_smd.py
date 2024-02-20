@@ -216,6 +216,59 @@ def adjust_predicts(score: np.ndarray,
         return predict, latency/(anomaly_count + 1e-4)
     else:
         return predict
+    
+
+def get_merlin_param_counts(data: np.ndarray,
+                                    l_min: int,
+                                    l_max: int,
+                                    near_constant_fix: bool):
+
+    columns = data.shape[-1]
+
+    parameters_all = []
+
+    for channel in trange(columns):
+
+        _, _, _, parameters = merlin(data[:, channel],
+                                            l_min, l_max,
+                                            sanitize=near_constant_fix,
+                                            get_params=True)
+
+        parameters_all.append(parameters)
+
+    print(f'Size MERLIN sequential: {np.max(parameters_all)}')
+    print(f'Size MERLIN parallel: {np.sum(parameters_all)}')
+
+
+def get_merlin_flops(data: np.ndarray,
+                            l_min: int,
+                            l_max: int,
+                            near_constant_fix: bool):
+
+    columns = data.shape[-1]
+
+    flops_all = []
+
+    for channel in trange(columns):
+        pylikwid.markerinit()
+        pylikwid.markerthreadinit()
+        pylikwid.markerstartregion("MERLIN")
+
+        merlin(data[:, channel], l_min, l_max,
+                        sanitize=near_constant_fix)
+        
+        pylikwid.markerstopregion("MERLIN")
+
+        _, eventlist, _, _ = pylikwid.markergetregion("MERLIN")
+
+        flops_all.append(eventlist[4])
+        
+        pylikwid.markerclose()
+
+        for channel, flops in enumerate(flops_all):
+            print(f'FLOPs channel {channel}: {flops}')
+
+        print(f'FLOPs MERLIN total: {np.sum(flops_all)}')
 
 
 def run_merlin(data: np.ndarray,
@@ -230,50 +283,16 @@ def run_merlin(data: np.ndarray,
     distances_all = []
     lengths_all = []
 
-    parameters_all = []
-
-    # pylikwid.markerinit()
-    # pylikwid.markerthreadinit()
-    # pylikwid.markerstartregion("MERLIN")
-
-    flops_all = []
-
     for channel in trange(columns):
 
-        pylikwid.markerinit()
-        pylikwid.markerthreadinit()
-        pylikwid.markerstartregion("MERLIN")
+        discords, distances, lengths =\
+                    merlin(data[:, channel],
+                                l_min, l_max,
+                                sanitize=near_constant_fix)
 
-        discords, distances, lengths, parameters =\
-                                merlin(data[:, channel],
-                                            l_min, l_max,
-                                            sanitize=near_constant_fix)
-        
-        pylikwid.markerstopregion("MERLIN")
-
-        nr_events, eventlist, time, count = pylikwid.markergetregion("MERLIN")
-
-        flops_all.append(eventlist[4])
-
-        # for i, e in enumerate(eventlist):
-            #print(i, e)
-        
-        pylikwid.markerclose()
-
-        # exit()
-
-        # parameters_all.append(parameters)
-
-        # discords_all.append(discords)
-        # distances_all.append(distances)
-        # lengths_all.append(lengths)
-
-    # print(f'Size MERLIN sequential: {np.max(parameters_all)}')
-    # print(f'Size MERLIN parallel: {np.sum(parameters_all)}')
-
-    print(flops_all)
-    
-    exit()
+        discords_all.append(discords)
+        distances_all.append(distances)
+        lengths_all.append(lengths)
 
     discords_all = np.column_stack(discords_all)
     distances_all = np.column_stack(distances_all)
@@ -414,17 +433,8 @@ if __name__ == '__main__':
     parser.add_argument('--k', type=int, default=1)
     parser.add_argument('--normalize', action='store_true', default=False)
     parser.add_argument('--no-near-constant-fix', action='store_true', default=False)
-    parser.add_argument('--log-level', type=str, default='INFO')
   
     args = parser.parse_args()
-
-    logging_format = '[%(asctime)s] %(message)s'
-
-    logger = logging.getLogger(__name__)
-
-    logging.basicConfig(level=args.log_level.upper(),
-                                    format=logging_format,
-                                    datefmt='%Y-%m-%d %H:%M:%S')
 
     data_np = load_numpy_array(f'{args.data_dir}/machine-1-1_test.npy')
 
@@ -437,6 +447,6 @@ if __name__ == '__main__':
                 args.l_max,
                 not args.no_near_constant_fix)
 
-    # get_preds_best_threshold(data_np,
-    #                             labels_np,
-    #                             0.75)
+    get_preds_best_threshold(data_np,
+                                labels_np,
+                                0.75)
