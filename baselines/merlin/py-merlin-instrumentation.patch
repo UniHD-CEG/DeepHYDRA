@@ -1,0 +1,961 @@
+diff -ruN py-merlin/.git/HEAD py-merlin-ext/.git/HEAD
+--- py-merlin/.git/HEAD	2024-02-21 00:59:58.118737255 +0100
++++ py-merlin-ext/.git/HEAD	1970-01-01 01:00:00.000000000 +0100
+@@ -1 +0,0 @@
+-ref: refs/heads/main
+diff -ruN py-merlin/.git/config py-merlin-ext/.git/config
+--- py-merlin/.git/config	2024-02-21 00:59:58.229719946 +0100
++++ py-merlin-ext/.git/config	1970-01-01 01:00:00.000000000 +0100
+@@ -1,11 +0,0 @@
+-[core]
+-	repositoryformatversion = 0
+-	filemode = true
+-	bare = false
+-	logallrefupdates = true
+-[remote "origin"]
+-	url = https://gitlab.com/dlr-dw/py-merlin.git
+-	fetch = +refs/heads/*:refs/remotes/origin/*
+-[branch "main"]
+-	remote = origin
+-	merge = refs/heads/main
+diff -ruN py-merlin/.git/description py-merlin-ext/.git/description
+--- py-merlin/.git/description	2024-02-21 00:59:56.632969982 +0100
++++ py-merlin-ext/.git/description	1970-01-01 01:00:00.000000000 +0100
+@@ -1 +0,0 @@
+-Unnamed repository; edit this file 'description' to name the repository.
+diff -ruN py-merlin/.git/hooks/applypatch-msg.sample py-merlin-ext/.git/hooks/applypatch-msg.sample
+--- py-merlin/.git/hooks/applypatch-msg.sample	2024-02-21 00:59:56.660965616 +0100
++++ py-merlin-ext/.git/hooks/applypatch-msg.sample	1970-01-01 01:00:00.000000000 +0100
+@@ -1,15 +0,0 @@
+-#!/bin/sh
+-#
+-# An example hook script to check the commit log message taken by
+-# applypatch from an e-mail message.
+-#
+-# The hook should exit with non-zero status after issuing an
+-# appropriate message if it wants to stop the commit.  The hook is
+-# allowed to edit the commit message file.
+-#
+-# To enable this hook, rename this file to "applypatch-msg".
+-
+-. git-sh-setup
+-test -x "$GIT_DIR/hooks/commit-msg" &&
+-	exec "$GIT_DIR/hooks/commit-msg" ${1+"$@"}
+-:
+diff -ruN py-merlin/.git/hooks/commit-msg.sample py-merlin-ext/.git/hooks/commit-msg.sample
+--- py-merlin/.git/hooks/commit-msg.sample	2024-02-21 00:59:56.679962653 +0100
++++ py-merlin-ext/.git/hooks/commit-msg.sample	1970-01-01 01:00:00.000000000 +0100
+@@ -1,24 +0,0 @@
+-#!/bin/sh
+-#
+-# An example hook script to check the commit log message.
+-# Called by "git commit" with one argument, the name of the file
+-# that has the commit message.  The hook should exit with non-zero
+-# status after issuing an appropriate message if it wants to stop the
+-# commit.  The hook is allowed to edit the commit message file.
+-#
+-# To enable this hook, rename this file to "commit-msg".
+-
+-# Uncomment the below to add a Signed-off-by line to the message.
+-# Doing this in a hook is a bad idea in general, but the prepare-commit-msg
+-# hook is more suited to it.
+-#
+-# SOB=$(git var GIT_AUTHOR_IDENT | sed -n 's/^\(.*>\).*$/Signed-off-by: \1/p')
+-# grep -qs "^$SOB" "$1" || echo "$SOB" >> "$1"
+-
+-# This example catches duplicate Signed-off-by lines.
+-
+-test "" = "$(grep '^Signed-off-by: ' "$1" |
+-	 sort | uniq -c | sed -e '/^[ 	]*1[ 	]/d')" || {
+-	echo >&2 Duplicate Signed-off-by lines.
+-	exit 1
+-}
+diff -ruN py-merlin/.git/hooks/post-update.sample py-merlin-ext/.git/hooks/post-update.sample
+--- py-merlin/.git/hooks/post-update.sample	2024-02-21 00:59:56.694960314 +0100
++++ py-merlin-ext/.git/hooks/post-update.sample	1970-01-01 01:00:00.000000000 +0100
+@@ -1,8 +0,0 @@
+-#!/bin/sh
+-#
+-# An example hook script to prepare a packed repository for use over
+-# dumb transports.
+-#
+-# To enable this hook, rename this file to "post-update".
+-
+-exec git update-server-info
+diff -ruN py-merlin/.git/hooks/pre-applypatch.sample py-merlin-ext/.git/hooks/pre-applypatch.sample
+--- py-merlin/.git/hooks/pre-applypatch.sample	2024-02-21 00:59:56.709957975 +0100
++++ py-merlin-ext/.git/hooks/pre-applypatch.sample	1970-01-01 01:00:00.000000000 +0100
+@@ -1,14 +0,0 @@
+-#!/bin/sh
+-#
+-# An example hook script to verify what is about to be committed
+-# by applypatch from an e-mail message.
+-#
+-# The hook should exit with non-zero status after issuing an
+-# appropriate message if it wants to stop the commit.
+-#
+-# To enable this hook, rename this file to "pre-applypatch".
+-
+-. git-sh-setup
+-test -x "$GIT_DIR/hooks/pre-commit" &&
+-	exec "$GIT_DIR/hooks/pre-commit" ${1+"$@"}
+-:
+diff -ruN py-merlin/.git/hooks/pre-commit.sample py-merlin-ext/.git/hooks/pre-commit.sample
+--- py-merlin/.git/hooks/pre-commit.sample	2024-02-21 00:59:56.724955635 +0100
++++ py-merlin-ext/.git/hooks/pre-commit.sample	1970-01-01 01:00:00.000000000 +0100
+@@ -1,50 +0,0 @@
+-#!/bin/sh
+-#
+-# An example hook script to verify what is about to be committed.
+-# Called by "git commit" with no arguments.  The hook should
+-# exit with non-zero status after issuing an appropriate message if
+-# it wants to stop the commit.
+-#
+-# To enable this hook, rename this file to "pre-commit".
+-
+-if git rev-parse --verify HEAD >/dev/null 2>&1
+-then
+-	against=HEAD
+-else
+-	# Initial commit: diff against an empty tree object
+-	against=4b825dc642cb6eb9a060e54bf8d69288fbee4904
+-fi
+-
+-# If you want to allow non-ascii filenames set this variable to true.
+-allownonascii=$(git config hooks.allownonascii)
+-
+-# Redirect output to stderr.
+-exec 1>&2
+-
+-# Cross platform projects tend to avoid non-ascii filenames; prevent
+-# them from being added to the repository. We exploit the fact that the
+-# printable range starts at the space character and ends with tilde.
+-if [ "$allownonascii" != "true" ] &&
+-	# Note that the use of brackets around a tr range is ok here, (it's
+-	# even required, for portability to Solaris 10's /usr/bin/tr), since
+-	# the square bracket bytes happen to fall in the designated range.
+-	test $(git diff --cached --name-only --diff-filter=A -z $against |
+-	  LC_ALL=C tr -d '[ -~]\0' | wc -c) != 0
+-then
+-	echo "Error: Attempt to add a non-ascii file name."
+-	echo
+-	echo "This can cause problems if you want to work"
+-	echo "with people on other platforms."
+-	echo
+-	echo "To be portable it is advisable to rename the file ..."
+-	echo
+-	echo "If you know what you are doing you can disable this"
+-	echo "check using:"
+-	echo
+-	echo "  git config hooks.allownonascii true"
+-	echo
+-	exit 1
+-fi
+-
+-# If there are whitespace errors, print the offending file names and fail.
+-exec git diff-index --check --cached $against --
+diff -ruN py-merlin/.git/hooks/pre-push.sample py-merlin-ext/.git/hooks/pre-push.sample
+--- py-merlin/.git/hooks/pre-push.sample	2024-02-21 00:59:56.740953141 +0100
++++ py-merlin-ext/.git/hooks/pre-push.sample	1970-01-01 01:00:00.000000000 +0100
+@@ -1,53 +0,0 @@
+-#!/bin/sh
+-
+-# An example hook script to verify what is about to be pushed.  Called by "git
+-# push" after it has checked the remote status, but before anything has been
+-# pushed.  If this script exits with a non-zero status nothing will be pushed.
+-#
+-# This hook is called with the following parameters:
+-#
+-# $1 -- Name of the remote to which the push is being done
+-# $2 -- URL to which the push is being done
+-#
+-# If pushing without using a named remote those arguments will be equal.
+-#
+-# Information about the commits which are being pushed is supplied as lines to
+-# the standard input in the form:
+-#
+-#   <local ref> <local sha1> <remote ref> <remote sha1>
+-#
+-# This sample shows how to prevent push of commits where the log message starts
+-# with "WIP" (work in progress).
+-
+-remote="$1"
+-url="$2"
+-
+-z40=0000000000000000000000000000000000000000
+-
+-IFS=' '
+-while read local_ref local_sha remote_ref remote_sha
+-do
+-	if [ "$local_sha" = $z40 ]
+-	then
+-		# Handle delete
+-	else
+-		if [ "$remote_sha" = $z40 ]
+-		then
+-			# New branch, examine all commits
+-			range="$local_sha"
+-		else
+-			# Update to existing branch, examine new commits
+-			range="$remote_sha..$local_sha"
+-		fi
+-
+-		# Check for WIP commit
+-		commit=`git rev-list -n 1 --grep '^WIP' "$range"`
+-		if [ -n "$commit" ]
+-		then
+-			echo "Found WIP commit in $local_ref, not pushing"
+-			exit 1
+-		fi
+-	fi
+-done
+-
+-exit 0
+diff -ruN py-merlin/.git/hooks/pre-rebase.sample py-merlin-ext/.git/hooks/pre-rebase.sample
+--- py-merlin/.git/hooks/pre-rebase.sample	2024-02-21 00:59:56.760950022 +0100
++++ py-merlin-ext/.git/hooks/pre-rebase.sample	1970-01-01 01:00:00.000000000 +0100
+@@ -1,169 +0,0 @@
+-#!/bin/sh
+-#
+-# Copyright (c) 2006, 2008 Junio C Hamano
+-#
+-# The "pre-rebase" hook is run just before "git rebase" starts doing
+-# its job, and can prevent the command from running by exiting with
+-# non-zero status.
+-#
+-# The hook is called with the following parameters:
+-#
+-# $1 -- the upstream the series was forked from.
+-# $2 -- the branch being rebased (or empty when rebasing the current branch).
+-#
+-# This sample shows how to prevent topic branches that are already
+-# merged to 'next' branch from getting rebased, because allowing it
+-# would result in rebasing already published history.
+-
+-publish=next
+-basebranch="$1"
+-if test "$#" = 2
+-then
+-	topic="refs/heads/$2"
+-else
+-	topic=`git symbolic-ref HEAD` ||
+-	exit 0 ;# we do not interrupt rebasing detached HEAD
+-fi
+-
+-case "$topic" in
+-refs/heads/??/*)
+-	;;
+-*)
+-	exit 0 ;# we do not interrupt others.
+-	;;
+-esac
+-
+-# Now we are dealing with a topic branch being rebased
+-# on top of master.  Is it OK to rebase it?
+-
+-# Does the topic really exist?
+-git show-ref -q "$topic" || {
+-	echo >&2 "No such branch $topic"
+-	exit 1
+-}
+-
+-# Is topic fully merged to master?
+-not_in_master=`git rev-list --pretty=oneline ^master "$topic"`
+-if test -z "$not_in_master"
+-then
+-	echo >&2 "$topic is fully merged to master; better remove it."
+-	exit 1 ;# we could allow it, but there is no point.
+-fi
+-
+-# Is topic ever merged to next?  If so you should not be rebasing it.
+-only_next_1=`git rev-list ^master "^$topic" ${publish} | sort`
+-only_next_2=`git rev-list ^master           ${publish} | sort`
+-if test "$only_next_1" = "$only_next_2"
+-then
+-	not_in_topic=`git rev-list "^$topic" master`
+-	if test -z "$not_in_topic"
+-	then
+-		echo >&2 "$topic is already up-to-date with master"
+-		exit 1 ;# we could allow it, but there is no point.
+-	else
+-		exit 0
+-	fi
+-else
+-	not_in_next=`git rev-list --pretty=oneline ^${publish} "$topic"`
+-	/usr/bin/perl -e '
+-		my $topic = $ARGV[0];
+-		my $msg = "* $topic has commits already merged to public branch:\n";
+-		my (%not_in_next) = map {
+-			/^([0-9a-f]+) /;
+-			($1 => 1);
+-		} split(/\n/, $ARGV[1]);
+-		for my $elem (map {
+-				/^([0-9a-f]+) (.*)$/;
+-				[$1 => $2];
+-			} split(/\n/, $ARGV[2])) {
+-			if (!exists $not_in_next{$elem->[0]}) {
+-				if ($msg) {
+-					print STDERR $msg;
+-					undef $msg;
+-				}
+-				print STDERR " $elem->[1]\n";
+-			}
+-		}
+-	' "$topic" "$not_in_next" "$not_in_master"
+-	exit 1
+-fi
+-
+-exit 0
+-
+-################################################################
+-
+-This sample hook safeguards topic branches that have been
+-published from being rewound.
+-
+-The workflow assumed here is:
+-
+- * Once a topic branch forks from "master", "master" is never
+-   merged into it again (either directly or indirectly).
+-
+- * Once a topic branch is fully cooked and merged into "master",
+-   it is deleted.  If you need to build on top of it to correct
+-   earlier mistakes, a new topic branch is created by forking at
+-   the tip of the "master".  This is not strictly necessary, but
+-   it makes it easier to keep your history simple.
+-
+- * Whenever you need to test or publish your changes to topic
+-   branches, merge them into "next" branch.
+-
+-The script, being an example, hardcodes the publish branch name
+-to be "next", but it is trivial to make it configurable via
+-$GIT_DIR/config mechanism.
+-
+-With this workflow, you would want to know:
+-
+-(1) ... if a topic branch has ever been merged to "next".  Young
+-    topic branches can have stupid mistakes you would rather
+-    clean up before publishing, and things that have not been
+-    merged into other branches can be easily rebased without
+-    affecting other people.  But once it is published, you would
+-    not want to rewind it.
+-
+-(2) ... if a topic branch has been fully merged to "master".
+-    Then you can delete it.  More importantly, you should not
+-    build on top of it -- other people may already want to
+-    change things related to the topic as patches against your
+-    "master", so if you need further changes, it is better to
+-    fork the topic (perhaps with the same name) afresh from the
+-    tip of "master".
+-
+-Let's look at this example:
+-
+-		   o---o---o---o---o---o---o---o---o---o "next"
+-		  /       /           /           /
+-		 /   a---a---b A     /           /
+-		/   /               /           /
+-	       /   /   c---c---c---c B         /
+-	      /   /   /             \         /
+-	     /   /   /   b---b C     \       /
+-	    /   /   /   /             \     /
+-    ---o---o---o---o---o---o---o---o---o---o---o "master"
+-
+-
+-A, B and C are topic branches.
+-
+- * A has one fix since it was merged up to "next".
+-
+- * B has finished.  It has been fully merged up to "master" and "next",
+-   and is ready to be deleted.
+-
+- * C has not merged to "next" at all.
+-
+-We would want to allow C to be rebased, refuse A, and encourage
+-B to be deleted.
+-
+-To compute (1):
+-
+-	git rev-list ^master ^topic next
+-	git rev-list ^master        next
+-
+-	if these match, topic has not merged in next at all.
+-
+-To compute (2):
+-
+-	git rev-list master..topic
+-
+-	if this is empty, it is fully merged to "master".
+diff -ruN py-merlin/.git/hooks/prepare-commit-msg.sample py-merlin-ext/.git/hooks/prepare-commit-msg.sample
+--- py-merlin/.git/hooks/prepare-commit-msg.sample	2024-02-21 00:59:56.776947527 +0100
++++ py-merlin-ext/.git/hooks/prepare-commit-msg.sample	1970-01-01 01:00:00.000000000 +0100
+@@ -1,36 +0,0 @@
+-#!/bin/sh
+-#
+-# An example hook script to prepare the commit log message.
+-# Called by "git commit" with the name of the file that has the
+-# commit message, followed by the description of the commit
+-# message's source.  The hook's purpose is to edit the commit
+-# message file.  If the hook fails with a non-zero status,
+-# the commit is aborted.
+-#
+-# To enable this hook, rename this file to "prepare-commit-msg".
+-
+-# This hook includes three examples.  The first comments out the
+-# "Conflicts:" part of a merge commit.
+-#
+-# The second includes the output of "git diff --name-status -r"
+-# into the message, just before the "git status" output.  It is
+-# commented because it doesn't cope with --amend or with squashed
+-# commits.
+-#
+-# The third example adds a Signed-off-by line to the message, that can
+-# still be edited.  This is rarely a good idea.
+-
+-case "$2,$3" in
+-  merge,)
+-    /usr/bin/perl -i.bak -ne 's/^/# /, s/^# #/#/ if /^Conflicts/ .. /#/; print' "$1" ;;
+-
+-# ,|template,)
+-#   /usr/bin/perl -i.bak -pe '
+-#      print "\n" . `git diff --cached --name-status -r`
+-#	 if /^#/ && $first++ == 0' "$1" ;;
+-
+-  *) ;;
+-esac
+-
+-# SOB=$(git var GIT_AUTHOR_IDENT | sed -n 's/^\(.*>\).*$/Signed-off-by: \1/p')
+-# grep -qs "^$SOB" "$1" || echo "$SOB" >> "$1"
+diff -ruN py-merlin/.git/hooks/update.sample py-merlin-ext/.git/hooks/update.sample
+--- py-merlin/.git/hooks/update.sample	2024-02-21 00:59:56.793944876 +0100
++++ py-merlin-ext/.git/hooks/update.sample	1970-01-01 01:00:00.000000000 +0100
+@@ -1,128 +0,0 @@
+-#!/bin/sh
+-#
+-# An example hook script to blocks unannotated tags from entering.
+-# Called by "git receive-pack" with arguments: refname sha1-old sha1-new
+-#
+-# To enable this hook, rename this file to "update".
+-#
+-# Config
+-# ------
+-# hooks.allowunannotated
+-#   This boolean sets whether unannotated tags will be allowed into the
+-#   repository.  By default they won't be.
+-# hooks.allowdeletetag
+-#   This boolean sets whether deleting tags will be allowed in the
+-#   repository.  By default they won't be.
+-# hooks.allowmodifytag
+-#   This boolean sets whether a tag may be modified after creation. By default
+-#   it won't be.
+-# hooks.allowdeletebranch
+-#   This boolean sets whether deleting branches will be allowed in the
+-#   repository.  By default they won't be.
+-# hooks.denycreatebranch
+-#   This boolean sets whether remotely creating branches will be denied
+-#   in the repository.  By default this is allowed.
+-#
+-
+-# --- Command line
+-refname="$1"
+-oldrev="$2"
+-newrev="$3"
+-
+-# --- Safety check
+-if [ -z "$GIT_DIR" ]; then
+-	echo "Don't run this script from the command line." >&2
+-	echo " (if you want, you could supply GIT_DIR then run" >&2
+-	echo "  $0 <ref> <oldrev> <newrev>)" >&2
+-	exit 1
+-fi
+-
+-if [ -z "$refname" -o -z "$oldrev" -o -z "$newrev" ]; then
+-	echo "usage: $0 <ref> <oldrev> <newrev>" >&2
+-	exit 1
+-fi
+-
+-# --- Config
+-allowunannotated=$(git config --bool hooks.allowunannotated)
+-allowdeletebranch=$(git config --bool hooks.allowdeletebranch)
+-denycreatebranch=$(git config --bool hooks.denycreatebranch)
+-allowdeletetag=$(git config --bool hooks.allowdeletetag)
+-allowmodifytag=$(git config --bool hooks.allowmodifytag)
+-
+-# check for no description
+-projectdesc=$(sed -e '1q' "$GIT_DIR/description")
+-case "$projectdesc" in
+-"Unnamed repository"* | "")
+-	echo "*** Project description file hasn't been set" >&2
+-	exit 1
+-	;;
+-esac
+-
+-# --- Check types
+-# if $newrev is 0000...0000, it's a commit to delete a ref.
+-zero="0000000000000000000000000000000000000000"
+-if [ "$newrev" = "$zero" ]; then
+-	newrev_type=delete
+-else
+-	newrev_type=$(git cat-file -t $newrev)
+-fi
+-
+-case "$refname","$newrev_type" in
+-	refs/tags/*,commit)
+-		# un-annotated tag
+-		short_refname=${refname##refs/tags/}
+-		if [ "$allowunannotated" != "true" ]; then
+-			echo "*** The un-annotated tag, $short_refname, is not allowed in this repository" >&2
+-			echo "*** Use 'git tag [ -a | -s ]' for tags you want to propagate." >&2
+-			exit 1
+-		fi
+-		;;
+-	refs/tags/*,delete)
+-		# delete tag
+-		if [ "$allowdeletetag" != "true" ]; then
+-			echo "*** Deleting a tag is not allowed in this repository" >&2
+-			exit 1
+-		fi
+-		;;
+-	refs/tags/*,tag)
+-		# annotated tag
+-		if [ "$allowmodifytag" != "true" ] && git rev-parse $refname > /dev/null 2>&1
+-		then
+-			echo "*** Tag '$refname' already exists." >&2
+-			echo "*** Modifying a tag is not allowed in this repository." >&2
+-			exit 1
+-		fi
+-		;;
+-	refs/heads/*,commit)
+-		# branch
+-		if [ "$oldrev" = "$zero" -a "$denycreatebranch" = "true" ]; then
+-			echo "*** Creating a branch is not allowed in this repository" >&2
+-			exit 1
+-		fi
+-		;;
+-	refs/heads/*,delete)
+-		# delete branch
+-		if [ "$allowdeletebranch" != "true" ]; then
+-			echo "*** Deleting a branch is not allowed in this repository" >&2
+-			exit 1
+-		fi
+-		;;
+-	refs/remotes/*,commit)
+-		# tracking branch
+-		;;
+-	refs/remotes/*,delete)
+-		# delete tracking branch
+-		if [ "$allowdeletebranch" != "true" ]; then
+-			echo "*** Deleting a tracking branch is not allowed in this repository" >&2
+-			exit 1
+-		fi
+-		;;
+-	*)
+-		# Anything else (is there anything else?)
+-		echo "*** Update hook: unknown type of update to ref $refname of type $newrev_type" >&2
+-		exit 1
+-		;;
+-esac
+-
+-# --- Finished
+-exit 0
+Binary files py-merlin/.git/index and py-merlin-ext/.git/index differ
+diff -ruN py-merlin/.git/info/exclude py-merlin-ext/.git/info/exclude
+--- py-merlin/.git/info/exclude	2024-02-21 00:59:56.815941445 +0100
++++ py-merlin-ext/.git/info/exclude	1970-01-01 01:00:00.000000000 +0100
+@@ -1,6 +0,0 @@
+-# git ls-files --others --exclude-from=.git/info/exclude
+-# Lines that start with '#' are comments.
+-# For a project mostly in C, the following would be a good set of
+-# exclude patterns (uncomment them if you want to use them):
+-# *.[oa]
+-# *~
+diff -ruN py-merlin/.git/logs/HEAD py-merlin-ext/.git/logs/HEAD
+--- py-merlin/.git/logs/HEAD	2024-02-21 00:59:58.181727431 +0100
++++ py-merlin-ext/.git/logs/HEAD	1970-01-01 01:00:00.000000000 +0100
+@@ -1 +0,0 @@
+-0000000000000000000000000000000000000000 e322ee09fffc52310c91d4bfd6b014220ee378eb Kevin Stehle <stehle@stud.uni-heidelberg.de> 1708473598 +0100	clone: from https://gitlab.com/dlr-dw/py-merlin.git
+diff -ruN py-merlin/.git/logs/refs/heads/main py-merlin-ext/.git/logs/refs/heads/main
+--- py-merlin/.git/logs/refs/heads/main	2024-02-21 00:59:58.165729926 +0100
++++ py-merlin-ext/.git/logs/refs/heads/main	1970-01-01 01:00:00.000000000 +0100
+@@ -1 +0,0 @@
+-0000000000000000000000000000000000000000 e322ee09fffc52310c91d4bfd6b014220ee378eb Kevin Stehle <stehle@stud.uni-heidelberg.de> 1708473598 +0100	clone: from https://gitlab.com/dlr-dw/py-merlin.git
+diff -ruN py-merlin/.git/logs/refs/remotes/origin/HEAD py-merlin-ext/.git/logs/refs/remotes/origin/HEAD
+--- py-merlin/.git/logs/refs/remotes/origin/HEAD	2024-02-21 00:59:58.098740374 +0100
++++ py-merlin-ext/.git/logs/refs/remotes/origin/HEAD	1970-01-01 01:00:00.000000000 +0100
+@@ -1 +0,0 @@
+-0000000000000000000000000000000000000000 e322ee09fffc52310c91d4bfd6b014220ee378eb Kevin Stehle <stehle@stud.uni-heidelberg.de> 1708473598 +0100	clone: from https://gitlab.com/dlr-dw/py-merlin.git
+diff -ruN py-merlin/.git/packed-refs py-merlin-ext/.git/packed-refs
+--- py-merlin/.git/packed-refs	2024-02-21 00:59:58.016753161 +0100
++++ py-merlin-ext/.git/packed-refs	1970-01-01 01:00:00.000000000 +0100
+@@ -1,8 +0,0 @@
+-# pack-refs with: peeled fully-peeled 
+-e322ee09fffc52310c91d4bfd6b014220ee378eb refs/remotes/origin/main
+-0d44f2212cc4624cdcef97dd50672615b8d4ac4f refs/tags/v1.0.0
+-^b4a9e03dfbc5b1b91fc2949b9f06f0c70ee300e4
+-1c2884a2c00939e883fdba1325141e56a3755cf1 refs/tags/v1.0.1
+-^4827f41eb653a97a2ac0ba22c866b5f90ac7a7f2
+-f3a62f1b79ec4a9131ea232e043f67473ff03a39 refs/tags/v1.0.2
+-^e322ee09fffc52310c91d4bfd6b014220ee378eb
+diff -ruN py-merlin/.git/refs/heads/main py-merlin-ext/.git/refs/heads/main
+--- py-merlin/.git/refs/heads/main	2024-02-21 00:59:58.141733669 +0100
++++ py-merlin-ext/.git/refs/heads/main	1970-01-01 01:00:00.000000000 +0100
+@@ -1 +0,0 @@
+-e322ee09fffc52310c91d4bfd6b014220ee378eb
+diff -ruN py-merlin/.git/refs/remotes/origin/HEAD py-merlin-ext/.git/refs/remotes/origin/HEAD
+--- py-merlin/.git/refs/remotes/origin/HEAD	2024-02-21 00:59:58.052747547 +0100
++++ py-merlin-ext/.git/refs/remotes/origin/HEAD	1970-01-01 01:00:00.000000000 +0100
+@@ -1 +0,0 @@
+-ref: refs/remotes/origin/main
+diff -ruN py-merlin/.gitignore py-merlin-ext/.gitignore
+--- py-merlin/.gitignore	2024-02-21 00:59:58.278712305 +0100
++++ py-merlin-ext/.gitignore	1970-01-01 01:00:00.000000000 +0100
+@@ -1,81 +0,0 @@
+-# SPDX-FileCopyrightText: 2022 German Aerospace Center (DLR e.V.), Ferdinand Rewicki
+-#
+-# SPDX-License-Identifier: CC0-1.0
+-
+-# Byte-compiled / optimized / DLL files
+-__pycache__/
+-*.py[cod]
+-*$py.class
+-
+-.idea
+-.reuse
+-wrappers/
+-octave
+-examples/ucr.py
+-
+-
+-# Distribution / packaging
+-.Python
+-build/
+-develop-eggs/
+-dist/
+-downloads/
+-eggs/
+-.eggs/
+-lib/
+-lib64/
+-parts/
+-sdist/
+-var/
+-wheels/
+-*.egg-info/
+-.installed.cfg
+-*.egg
+-
+-# PyInstaller
+-#  Usually these files are written by a python script from a template
+-#  before PyInstaller builds the exe, so as to inject date/other infos into it.
+-*.manifest
+-*.spec
+-
+-# Installer logs
+-pip-log.txt
+-pip-delete-this-directory.txt
+-
+-# Unit test / coverage reports
+-out/
+-htmlcov/
+-.tox/
+-.coverage
+-.coverage.*
+-.cache
+-nosetests.xml
+-coverage.xml
+-*.cover
+-.hypothesis/
+-.pytest_cache
+-
+-# Jupyter Notebook
+-.ipynb_checkpoints
+-
+-# pyenv
+-.python-version
+-
+-# celery beat schedule file
+-celerybeat-schedule
+-
+-# Environments
+-.env
+-.venv
+-env/
+-venv/
+-ENV/
+-
+-# mkdocs documentation
+-/site
+-
+-# mypy
+-.mypy_cache/
+-
+-# VS Code
+-.vscode/
+diff -ruN py-merlin/.gitlab-ci.yml py-merlin-ext/.gitlab-ci.yml
+--- py-merlin/.gitlab-ci.yml	2024-02-21 00:59:58.299709030 +0100
++++ py-merlin-ext/.gitlab-ci.yml	1970-01-01 01:00:00.000000000 +0100
+@@ -1,53 +0,0 @@
+-# SPDX-FileCopyrightText: 2022 German Aerospace Center (DLR e.V.), Ferdinand Rewicki
+-#
+-# SPDX-License-Identifier: CC0-1.0
+-
+-default:
+-  image: python:3.9-slim-bullseye
+-
+-stages:
+-  - test
+-  - deploy
+-
+-.startup: &startup
+-  - python -m pip install --upgrade pip
+-  - apt update
+-  - apt install -y make git
+-
+-unittests:
+-  stage: test
+-  before_script:
+-    - *startup
+-    - make dev
+-  script:
+-    # Run unittests with easier access to the results
+-    - pytest --junitxml=report.xml
+-    # Run for visualization of the test results
+-    - coverage run -m pytest
+-    # In case of a failure this allows for manuall checking
+-    - coverage report
+-    # Generate a xml report which is used for the visualization
+-    - coverage xml
+-  coverage: '/TOTAL.*\s([.\d]+)%/'
+-  artifacts:
+-    when: always
+-    reports:
+-      junit: report.xml
+-      coverage_report:
+-        coverage_format: cobertura
+-        path: coverage.xml
+-
+-pages:
+-  stage: deploy
+-  before_script:
+-    - *startup
+-  script:
+-  - pip install .[docs] --upgrade
+-  - sphinx-apidoc -o docs/source merlin
+-  - sphinx-build -b html docs/source public
+-  artifacts:
+-    paths:
+-    - public
+-  only:
+-  - main
+-
+diff -ruN py-merlin/CITATION.cff py-merlin-ext/CITATION.cff
+--- py-merlin/CITATION.cff	2024-02-21 00:59:58.357699986 +0100
++++ py-merlin-ext/CITATION.cff	2024-02-20 22:38:07.371391120 +0100
+@@ -16,8 +16,8 @@
+ identifiers:
+   - type: url
+     value: >-
+-      https://gitlab.com/dlr-dw/py-merlin/-/tree/v1.0.2
+-    description: Version 1.0.2 of the package
++      https://gitlab.com/dlr-dw/py-merlin/-/tree/v1.0.1
++    description: Version 1.0.1 of the package
+ repository-code: 'https://gitlab.com/dlr-dw/py-merlin'
+ keywords:
+   - Machine Learning
+@@ -26,5 +26,5 @@
+   - Multi Scale
+ license: Apache-2.0
+ commit: 4827f41eb653a97a2ac0ba22c866b5f90ac7a7f2
+-version: 1.0.2
++version: 1.0.1
+ date-released: '2022-12-20'
+diff -ruN py-merlin/merlin/_version.py py-merlin-ext/merlin/_version.py
+--- py-merlin/merlin/_version.py	2024-02-21 00:59:58.625658194 +0100
++++ py-merlin-ext/merlin/_version.py	2024-02-20 22:38:07.405385784 +0100
+@@ -2,4 +2,4 @@
+ #
+ # SPDX-License-Identifier: Apache-2.0
+ 
+-__version__: str = "1.0.2"
++__version__: str = "1.0.1"
+diff -ruN py-merlin/merlin/discord_discovery_gemm3.py py-merlin-ext/merlin/discord_discovery_gemm3.py
+--- py-merlin/merlin/discord_discovery_gemm3.py	2024-02-21 00:59:58.642655543 +0100
++++ py-merlin-ext/merlin/discord_discovery_gemm3.py	2024-02-21 00:26:30.402585169 +0100
+@@ -16,6 +16,7 @@
+     r: float,
+     validate: bool = True,
+     timeit: bool = False,
++    get_params: bool = False
+ ) -> Tuple[npt.NDArray[int], npt.NDArray[float], npt.NDArray[int], float]:
+     """Implementation of the discord_discovery_gemm algorithm
+ 
+@@ -58,7 +59,7 @@
+     nn_dist, nn_pos = dd.nn_dist_and_loc()
+     times["nn"] = time.time() - times["nn"]
+ 
+-    dd.print_result()
++    parameters = dd.get_parameters() if get_params else -1
+ 
+     if timeit:
+         totaltime = sum(times.values())
+@@ -73,7 +74,7 @@
+     else:
+         totaltime = -1.0
+ 
+-    return discords.flatten(), nn_dist, nn_pos.astype(int), totaltime
++    return discords.flatten(), nn_dist, nn_pos.astype(int), totaltime, parameters
+ 
+ 
+ class DiscordDiscoveryGemm3:
+@@ -110,6 +111,7 @@
+         self.cands_nn_dist: npt.NDArray
+         self.cands_nn_pos: npt.NDArray
+ 
++
+     def _validate_subseqlen(self, subseqlen: int):
+         if subseqlen <= 4 or math.floor(self.ts.shape[1] / 2) < subseqlen:
+             raise ValueError(
+@@ -411,3 +413,12 @@
+                 f"with a discord distance of {self.cands_nn_dist[max_index]:.3f}. "
+                 f"Its nearest neighbor is at {int(self.cands_nn_pos[max_index])}"
+             )
++
++    def get_parameters(self):
++        return self.ts.size +\
++                self.ss.size +\
++                self.cands.size +\
++                self.cands_idx.size +\
++                self.disc_loc.size +\
++                self.cands_nn_dist.size +\
++                self.cands_nn_pos.size
+diff -ruN py-merlin/merlin/merlin.py py-merlin-ext/merlin/merlin.py
+--- py-merlin/merlin/merlin.py	2024-02-21 00:59:58.659652892 +0100
++++ py-merlin-ext/merlin/merlin.py	2024-02-21 00:34:40.150027165 +0100
+@@ -16,7 +16,8 @@
+     lmin: int,
+     lmax: int,
+     sanitize: bool = False,
+-    timeit: bool = False
++    timeit: bool = False,
++    get_params: bool = False
+ ) -> Tuple[List[int], List[float], List[int]]:
+     """Implementation of the MERLIN anomaly detection algorithm
+ 
+@@ -64,13 +65,27 @@
+     discords_idx = np.zeros_like(distances, dtype=int)
+     nn_indices = np.zeros_like(distances, dtype=int)
+     times = np.zeros(num_lengths, dtype=float)
++    parameters = np.zeros(num_lengths, dtype=float)
++
++    if get_params:
++        size_merlin = distances.size +\
++                        discords_idx.size +\
++                        nn_indices.size +\
++                        times.size
++        
++        print(f'Size MERLIN: {size_merlin}')
+ 
+     r_start = 2 * np.sqrt(lmin)
+     i = 0
++
+     while distances[0, 0] < 0:
+-        tmp_index, tmp_dist, tmp_nn, times[i] = dd.discord_discovery_gemm3(
+-            _t, lengths[i], r_start, timeit=timeit, validate=False
+-        )
++        tmp_index, tmp_dist, tmp_nn, times[i], parameters[i] =\
++                                        dd.discord_discovery_gemm3(
++                                                         _t, lengths[i],
++                                                         r_start,
++                                                         timeit=timeit,
++                                                         validate=False,
++                                                         get_params=get_params)
+ 
+         if len(tmp_index) > 0:
+             distances[0, 0] = np.max(tmp_dist)
+@@ -86,9 +101,12 @@
+             break
+         r = distances[i - 1, 0] * 0.99
+         while distances[i, 0] < 0:
+-            tmp_index, tmp_dist, tmp_nn, times[i] = dd.discord_discovery_gemm3(
+-                _t, lengths[i], r, timeit=timeit, validate=False
+-            )
++            tmp_index, tmp_dist, tmp_nn, times[i], parameters[i] =\
++                                            dd.discord_discovery_gemm3(
++                                                            _t, lengths[i], r,
++                                                            timeit=timeit,
++                                                            validate=False,
++                                                            get_params=get_params)
+             if len(tmp_index) > 0:
+                 distances[i, 0] = np.max(tmp_dist)
+                 max_index = np.argmax(tmp_dist)
+@@ -105,9 +123,13 @@
+         s = np.std(distances[i - 5 : i, 0], ddof=1)
+         r = m - 2 * s
+         while distances[i, 0] < 0:
+-            tmp_index, tmp_dist, tmp_nn, times[i] = dd.discord_discovery_gemm3(
+-                _t, lengths[i], r, timeit=timeit, validate=False
+-            )
++            tmp_index, tmp_dist, tmp_nn, times[i], parameters[i] =\
++                                            dd.discord_discovery_gemm3(
++                                                         _t, lengths[i], r,
++                                                         timeit=timeit,
++                                                         validate=False,
++                                                         get_params=get_params)
++            
+             if len(tmp_index) > 0:
+                 distances[i, 0] = np.max(tmp_dist)
+                 max_index = np.argmax(tmp_dist)
+@@ -118,7 +140,17 @@
+             r = r * 0.99
+             r = r * 0.99
+ 
++    if get_params:
++        size_dd_max = int(parameters.max())
++
++        print(f'Size DD: {size_dd_max}')
++
++        size_total = size_merlin + size_dd_max
++
+     if timeit:
+         print(f"Total Exec Time: {times.sum():.2f} sec.")
+ 
+-    return discords_idx.flatten(), distances.flatten(), lengths
++    if get_params:
++        return discords_idx.flatten(), distances.flatten(), lengths, size_total
++    else:
++        return discords_idx.flatten(), distances.flatten(), lengths
+diff -ruN py-merlin/setup.py py-merlin-ext/setup.py
+--- py-merlin/setup.py	2024-02-21 00:59:58.707645407 +0100
++++ py-merlin-ext/setup.py	2024-02-20 22:38:07.497371346 +0100
+@@ -19,7 +19,7 @@
+     'Archives,"'
+ )
+ license = "Apache 2.0"
+-install_requires: list[str] = ["numpy~=1.21", " matplotlib~=3.4"]
++install_requires: list[str] = ["numpy==1.*", " matplotlib==3.*"]
+ 
+ ##############################################
+ main_ns: dict[str, Any] = {}
+@@ -38,16 +38,16 @@
+     install_requires=install_requires,
+     extras_require={
+         "dev": [
+-            "pre-commit~=2.15",
+-            "pytest~=6.2",
+-            "pytest_mock~=3.7",
+-            "pytest-cov~=3.0",
+-            "mypy~=0.910",
++            "pre-commit==2.15.0",
++            "pytest==6.2.5",
++            "pytest_mock==3.*",
++            "pytest-cov==3.0.0",
++            "mypy==0.910",
+         ],
+         "docs": [
+-            "sphinx~=4.2",
+-            "sphinx-rtd-theme~=1.0",
+-            "sphinx-autodoc-typehints~=1.12",
++            "sphinx==4.2.0",
++            "sphinx-rtd-theme==1.0.0",
++            "sphinx-autodoc-typehints==1.12.0",
+         ],
+     },
+     author=author,
