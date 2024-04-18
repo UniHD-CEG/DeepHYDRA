@@ -1,10 +1,3 @@
-# DOUBLE-BLIND PEER REVIEW VERSION
-Please note that this is an anonymized version of the code presented in the paper "DeepHYDRA: Resource-Efficient Time-Series Anomaly Detection in Dynamically-Configured Systems".
-The method was formerly dubbed "Synergising Transformer/DBSCAN Anomaly Detection", or "STRADA" in short.
-We did our best to update the name where possible, and apologize if some remnants of the legacy name remain in this repository.
-Any copyright notices identifying the authors or their organization have been redacted for the double-blind peer review.
-We are kindly asking the reviewers receiving this code to refrain from sharing it with non-reviewers.
-
 # DeepHYDRA
 This is the official implementation of the DeepHYDRA algorithm presented in the paper "DeepHYDRA: Resource-Efficient Time-Series Anomaly Detection in Dynamically-Configured Systems".
 
