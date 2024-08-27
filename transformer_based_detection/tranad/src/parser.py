@@ -9,8 +9,8 @@ parser.add_argument('--dataset',
 					metavar='-d', 
 					type=str, 
 					required=False,
-					default='synthetic',
-                    help="dataset from ['synthetic', 'SMD']")
+					default='HLT_DCM_2018',
+                    help="dataset from ['HLT_DCM_2018', 'HLT_DCM_2022', 'HLT_DCM_ECLIPSE', 'SMD']")
 parser.add_argument('--model', 
 					metavar='-m', 
 					type=str, 

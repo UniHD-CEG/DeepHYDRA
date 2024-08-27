@@ -139,7 +139,7 @@ if __name__ == '__main__':
     ax.set_xscale('log')
     ax.set_xlim(1, 1e14)
 
-    ax.set_title('FLOPs per Sample by Layer on HLT Dataset')
+    ax.set_title('FLOPs per Sample by Layer on HLT_DCM_2018 Dataset')
     ax.set_xlabel('FLOPs')
     ax.set_ylabel('Model')
 

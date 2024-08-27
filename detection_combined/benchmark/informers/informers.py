@@ -62,6 +62,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='T-DBSCAN/Informer Offline HLT Anomaly Detection')
 
     parser.add_argument('--model', type=str, choices=['Informer-MSE', 'Informer-SMSE'])
+    parser.add_argument('--device', type=str, default='cuda:0')
     parser.add_argument('--checkpoint-dir', type=str, default='../../../transformer_based_detection')
     parser.add_argument('--data-dir', type=str, default='../../../datasets/hlt/')
     parser.add_argument('--output-dir', type=str, default='./results/')
@@ -81,7 +82,7 @@ if __name__ == '__main__':
 
     log_model_name = args.model.lower().replace('-', '_')
 
-    log_filename = f'{args.log_dir}/strada_{log_model_name}'\
+    log_filename = f'{args.log_dir}/strada_{log_model_name}_'\
                             f'benchmark_log_{time_now_string}.log'
 
     logging_format = '[%(asctime)s] %(levelname)s: %(name)s: %(message)s'
@@ -114,6 +115,8 @@ if __name__ == '__main__':
     rack_config = '2018' if args.variant in ['2018', '2022'] else '2023'
 
     median_std_reducer = MedianStdReducer(rack_config)
+
+    loss_type = args.model.split('-')[-1].lower()
     
     informer_runner = InformerRunner(args.checkpoint_dir)
 

@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-# 
 # Modifications copyright (C) 2023 [ANONYMIZED]
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -546,15 +545,16 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Unreduced HLT Test Set Generator')
 
     parser.add_argument('--dataset-dir', type=str, default='../datasets/hlt')
-
+    parser.add_argument('--variant', type=str, default='2018')
+    
     args = parser.parse_args()
 
     # Load datasets
 
     train_set_x_df = pd.read_csv(f'{args.dataset_dir}/'\
-                                    f'hlt_train_set.csv', index_col=0)
+                                    f'hlt_train_set_{args.variant}.csv', index_col=0)
     test_set_x_df = pd.read_csv(f'{args.dataset_dir}/'\
-                                    f'hlt_test_set.csv', index_col=0)
+                                    f'hlt_test_set_{args.variant}.csv', index_col=0)
 
     nan_amount_train_unlabeled = 100*pd.isna(train_set_x_df.to_numpy().flatten()).sum()/train_set_x_df.size
     nan_amount_test = 100*pd.isna(test_set_x_df.to_numpy().flatten()).sum()/test_set_x_df.size
@@ -698,10 +698,10 @@ if __name__ == '__main__':
                                     anomaly_generator_test.get_timestamps_pd(),
                                     test_set_x_df.columns)
 
-    test_set_x_df.to_hdf(f'{args.dataset_dir}/unreduced_hlt_test_set_x.h5',
+    test_set_x_df.to_hdf(f'{args.dataset_dir}/unreduced_hlt_test_set_{args.variant}_x.h5',
                             key='unreduced_hlt_test_set_x',
                             mode='w')
 
-    test_set_y_df.to_hdf(f'{args.dataset_dir}/unreduced_hlt_test_set_y.h5',
+    test_set_y_df.to_hdf(f'{args.dataset_dir}/unreduced_hlt_test_set_{args.variant}_y.h5',
                             key='unreduced_hlt_test_set_y',
                             mode='w')

@@ -409,7 +409,7 @@ def get_preds_best_threshold(data: np.ndarray,
     pred_reduced[:, included_indices] =\
                     pred[:, included_indices]
 
-    save_numpy_array(pred_reduced, '../../evaluation/combined_detection/predictions/merlin.npy')
+    save_numpy_array(pred_reduced, '../../evaluation/combined_detection_hlt_dcm_2018/predictions/merlin.npy')
 
 
 if __name__ == '__main__':
@@ -417,9 +417,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='MERLIN HLT Test')
 
     parser.add_argument('--dataset', type=str, default=\
-                            '../../datasets/hlt/unreduced_hlt_test_set_x.h5')
+                            '../../datasets/hlt/unreduced_hlt_dcm_test_set_2018_x.h5')
     parser.add_argument('--labels', type=str, default=\
-                            '../../datasets/hlt/unreduced_hlt_test_set_y.h5')
+                            '../../datasets/hlt/unreduced_hlt_dcm_test_set_2018_y.h5')
                                 
     parser.add_argument('--l-min', type=int, default=8)
     parser.add_argument('--l-max', type=int, default=96)

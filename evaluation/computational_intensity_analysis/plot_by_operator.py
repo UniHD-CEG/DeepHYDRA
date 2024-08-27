@@ -14,7 +14,6 @@ data_dir = 'data/smd/by_operator/'
 
 flop_display_lower_threshold_percent = 0.001
 
-
 def group_small_flop_counts(results: dict,
                                 flops_sum):
 
@@ -104,8 +103,10 @@ if __name__ == '__main__':
         #     f'{model_params[2].upper()}_'\
         #     f'{model_params[3]}'
 
-        if len(model_params) > 2:
-            model_name = f'{model_name}-{model_params[2].upper()}'
+        # if len(model_params) > 2:
+            # model_name = f'{model_name}-{model_params[2].upper()}'
+        if len(model_params) > 3:
+            model_name = f'{model_name}-{model_params[3].upper()}'
 
         results_all[model_name] = results
 
@@ -123,17 +124,20 @@ if __name__ == '__main__':
     # print(results_all_pd)
 
     # results_all_pd.to_csv(
-    #     '../characterization_plots_combined/data/flops_hlt_dcm.csv')
+    #     '../characterization_plots_combined/data/flops_hlt_dcm_2018.csv')
 
+    # results_all_pd.to_csv(
+    #     '../characterization_plots_combined/data/flops_smd.csv')
+    
     results_all_pd.to_csv(
-        '../characterization_plots_combined/data/flops_smd.csv')
+        '../characterization_plots_combined/data/flops_eclipse.csv')
     
     # fig, ax = plt.subplots(figsize=(8, 5), dpi=300)
 
     # ax.set_xscale('log')
     # ax.set_xlim(1, 5e16)
 
-    # ax.set_title('FLOPs per Sample by Operator on HLT Dataset')
+    # ax.set_title('FLOPs per Sample by Operator on HLT_DCM_2018 Dataset')
     # ax.set_xlabel('FLOPs')
     # ax.set_ylabel('Model')
 

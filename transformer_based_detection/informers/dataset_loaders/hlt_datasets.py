@@ -67,16 +67,17 @@ class HLTDataset(Dataset):
                         self._remove_timestamp_jumps(
                                 pd.DatetimeIndex(data_train_set_x_pd.index))
 
-            if len(applied_augmentations):
+            if applied_augmentations:
+                if len(applied_augmentations):
 
-                timeseries_augmentor =\
-                    HLTDataTimeseriesAugmentor(applied_augmentations)
+                    timeseries_augmentor =\
+                        HLTDataTimeseriesAugmentor(applied_augmentations)
 
-                data_train_set_x_pd =\
-                    timeseries_augmentor.fit_transform(data_train_set_x_pd,
-                                                        augmented_dataset_size_relative*\
-                                                                    len(data_train_set_x_pd),
-                                                        augmented_data_ratio)
+                    data_train_set_x_pd =\
+                        timeseries_augmentor.fit_transform(data_train_set_x_pd,
+                                                            augmented_dataset_size_relative*\
+                                                                        len(data_train_set_x_pd),
+                                                            augmented_data_ratio)
 
             data_train_set_x_np = data_train_set_x_pd.to_numpy()
 
@@ -105,21 +106,22 @@ class HLTDataset(Dataset):
             labels_pd.index = self._remove_timestamp_jumps(
                                         pd.DatetimeIndex(labels_pd.index))
 
-            if len(applied_augmentations):
-                timeseries_augmentor =\
-                        HLTDataTimeseriesAugmentor(applied_augmentations)
+            if applied_augmentations:
+                if len(applied_augmentations):
+                    timeseries_augmentor =\
+                            HLTDataTimeseriesAugmentor(applied_augmentations)
 
-                target_size = int(len(data_labeled_train_set_x_pd)*\
-                                        augmented_dataset_size_relative)
+                    target_size = int(len(data_labeled_train_set_x_pd)*\
+                                            augmented_dataset_size_relative)
 
-                data_labeled_train_set_x_pd,\
-                                    labels_pd =\
-                                        timeseries_augmentor.fit_transform_labeled(
-                                                                data_labeled_train_set_x_pd,
-                                                                labels_pd,
-                                                                augmented_dataset_size_relative*\
-                                                                    len(data_labeled_train_set_x_pd),
-                                                                augmented_data_ratio)
+                    data_labeled_train_set_x_pd,\
+                                        labels_pd =\
+                                            timeseries_augmentor.fit_transform_labeled(
+                                                                    data_labeled_train_set_x_pd,
+                                                                    labels_pd,
+                                                                    augmented_dataset_size_relative*\
+                                                                        len(data_labeled_train_set_x_pd),
+                                                                    augmented_data_ratio)
 
                 data_labeled_train_set_x_pd =\
                     data_labeled_train_set_x_pd.iloc[:target_size, :]

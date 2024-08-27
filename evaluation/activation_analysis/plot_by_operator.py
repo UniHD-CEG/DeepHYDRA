@@ -10,7 +10,8 @@ import matplotlib.dates as mdates
 
 plt.rcParams['figure.constrained_layout.use'] = True
 
-data_dir = 'data/smd/by_operator/'
+# data_dir = 'data/smd/by_operator/'
+data_dir = 'data/eclipse/by_operator/'
 
 activation_display_lower_threshold = 2*8
 
@@ -40,7 +41,6 @@ def legend_without_duplicate_labels(ax, loc):
 
 
 if __name__ == '__main__':
-
 
     colors = {  'einsum': '#D81B60',
                 'linear': '#1E88E5',
@@ -75,13 +75,17 @@ if __name__ == '__main__':
         else:
             model_name = model_name.capitalize()
 
-        if len(model_params) > 2:
-            model_name = f'{model_name}-{model_params[2].upper()}'
+        # if len(model_params) > 2:
+            # model_name = f'{model_name}-{model_params[2].upper()}'
+        if len(model_params) > 3:
+            model_name = f'{model_name}-{model_params[3].upper()}'
 
         results_all[model_name] = group_small_activation_counts(results)
 
     results_all_pd = pd.DataFrame(index=results_all.keys(),
                                     columns=['Activations'])
+
+    print(results_all)
 
     for model_name, results in results_all.items():
 
@@ -91,18 +95,22 @@ if __name__ == '__main__':
 
         results_all_pd.loc[model_name, 'Activations'] = activations_summed
 
+
     # results_all_pd.to_csv(
-    #     '../characterization_plots_combined/data/activations_hlt.csv')
+    #     '../characterization_plots_combined/data/activations_hlt_dcm_2018.csv')
+    
+    # results_all_pd.to_csv(
+    #     '../characterization_plots_combined/data/activations_smd.csv')
     
     results_all_pd.to_csv(
-        '../characterization_plots_combined/data/activations_smd.csv')
+        '../characterization_plots_combined/data/activations_eclipse.csv')
 
     # fig, ax = plt.subplots(figsize=(8, 5), dpi=300)
 
     # ax.set_xscale('log')
     # ax.set_xlim(1, 1e12)
 
-    # ax.set_title('Activations per Sample by Operator for HLT Dataset')
+    # ax.set_title('Activations per Sample by Operator for HLT_DCM_2018 Dataset')
     # ax.set_xlabel('Activations')
     # ax.set_ylabel('Model')
 

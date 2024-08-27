@@ -20,11 +20,11 @@ def legend_without_duplicate_labels(ax, loc):
 
 if __name__ == '__main__':
 
-    parameters_hlt = pd.read_csv('data/parameters_hlt.csv', index_col=0)
-    activations_hlt = pd.read_csv('data/activations_hlt.csv', index_col=0)
-    flops_hlt = pd.read_csv('data/flops_hlt.csv', index_col=0)
-    auc_roc_hlt = pd.read_csv('data/auc_roc_hlt.csv', index_col=0)
-    mcc_hlt = pd.read_csv('data/mcc_hlt_dcm.csv', index_col=0)
+    parameters_hlt = pd.read_csv('data/parameters_hlt_dcm_2018.csv', index_col=0)
+    activations_hlt = pd.read_csv('data/activations_hlt_dcm_2018.csv', index_col=0)
+    flops_hlt = pd.read_csv('data/flops_hlt_dcm_2018.csv', index_col=0)
+    auc_roc_hlt = pd.read_csv('data/auc_roc_hlt_dcm_2018.csv', index_col=0)
+    mcc_hlt = pd.read_csv('data/mcc_hlt_dcm_2018.csv', index_col=0)
 
     unreduced_data_regex = r'\(Un|STRADA|T-DBSCAN'
 

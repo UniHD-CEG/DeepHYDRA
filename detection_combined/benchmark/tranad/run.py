@@ -14,7 +14,7 @@ from tqdm.contrib.logging import logging_redirect_tqdm
 
 sys.path.append('../../')
 
-from clustering.dbscananomalydetector import DBScanAnomalyDetector
+from clustering.dbscananomalydetector import HLTDBSCANAnomalyDetector
 from reduction.medianstdreducer import MedianStdReducer
 from transformer_based_detection.tranad.tranadrunner import TranADRunner
 from utils.anomalyregistry import BenchmarkAnomalyRegistry
@@ -120,7 +120,7 @@ if __name__ == '__main__':
     tpu_labels = list(hlt_data_pd.columns.values)
 
     dbscan_anomaly_detector =\
-        DBScanAnomalyDetector(tpu_labels,
+        HLTDBSCANAnomalyDetector(tpu_labels,
                                 args.dbscan_eps,
                                 args.dbscan_min_samples,
                                 args.dbscan_duration_threshold)

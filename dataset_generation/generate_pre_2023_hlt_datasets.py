@@ -19,13 +19,16 @@
 # the accompanying repository for the paper "TODS: An Automated Time Series Outlier Detection System".
 
 
+import math
 import re
 import argparse
 from collections import defaultdict
 
 import numpy as np
 import pandas as pd
+from sklearn.metrics import mean_squared_error
 from tqdm import tqdm
+
 
 anomaly_duration = 20
 
@@ -478,14 +481,15 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Reduced HLT Dataset Generator')
 
     parser.add_argument('--dataset-dir', type=str, default='../datasets/hlt')
+    parser.add_argument('--variant', type=str, default='2018')
     
     args = parser.parse_args()
 
     # Load datasets
 
-    train_set_x_df = pd.read_csv(f'{args.dataset_dir}/hlt_train_set.csv', index_col=0)
-    test_set_x_df = pd.read_csv(f'{args.dataset_dir}/hlt_test_set.csv', index_col=0)
-    val_set_x_df = pd.read_csv(f'{args.dataset_dir}/hlt_val_set.csv', index_col=0)
+    train_set_x_df = pd.read_csv(f'{args.dataset_dir}/hlt_dcm_train_set_{args.variant}.csv', index_col=0)
+    test_set_x_df = pd.read_csv(f'{args.dataset_dir}/hlt_dcm_test_set_{args.variant}.csv', index_col=0)
+    val_set_x_df = pd.read_csv(f'{args.dataset_dir}/hlt_dcm_val_set_{args.variant}.csv', index_col=0)
     
     column_names_train = list((train_set_x_df).columns.values)
     column_names_test = list((test_set_x_df).columns.values)
@@ -612,9 +616,9 @@ if __name__ == '__main__':
                                                         train_set_unlabeled_x_df.index,
                                                         columns_reduced_train_unlabeled)
 
-    train_set_unlabeled_x_df.to_hdf(f'{args.dataset_dir}/reduced_hlt_train_set_x.h5',
-                                        key='reduced_hlt_train_set_x',
-                                        mode='w')
+    # train_set_unlabeled_x_df.to_hdf(f'{args.dataset_dir}/reduced_hlt_train_set_{args.variant}_x.h5',
+    #                                     key='reduced_hlt_train_set_x',
+    #                                     mode='w')
 
 
     # Inject anomalies into labeled train set for semi-supervised training and reduce
@@ -657,106 +661,106 @@ if __name__ == '__main__':
                                                                     ratio=0.025,
                                                                     factor=0.5)
 
-    rack_data_train_labeled_all = []
-    rack_labels_train_labeled_all = []
+    # rack_data_train_labeled_all = []
+    # rack_labels_train_labeled_all = []
 
-    columns_reduced_train_labeled = None
-    keys_last = None
+    # columns_reduced_train_labeled = None
+    # keys_last = None
 
-    for count, (row_x_data, row_x_labels)\
-            in enumerate(tqdm(zip(anomaly_generator_train_labeled.get_dataset_np(),
-                                    anomaly_generator_train_labeled.get_labels_np()),
-                                total=len(anomaly_generator_train_labeled.get_dataset_np()),
-                                desc='Generating labeled train set')):
+    # for count, (row_x_data, row_x_labels)\
+    #         in enumerate(tqdm(zip(anomaly_generator_train_labeled.get_dataset_np(),
+    #                                 anomaly_generator_train_labeled.get_labels_np()),
+    #                             total=len(anomaly_generator_train_labeled.get_dataset_np()),
+    #                             desc='Generating labeled train set')):
 
-        rack_buckets_data = defaultdict(list)
-        rack_buckets_labels = defaultdict(list)
+    #     rack_buckets_data = defaultdict(list)
+    #     rack_buckets_labels = defaultdict(list)
 
-        for index, datapoint in enumerate(row_x_data):
-            rack_buckets_data[rack_numbers_train[index]].append(datapoint)
+    #     for index, datapoint in enumerate(row_x_data):
+    #         rack_buckets_data[rack_numbers_train[index]].append(datapoint)
 
-        for index, label in enumerate(row_x_labels):
-            rack_buckets_labels[rack_numbers_train[index]].append(label)
+    #     for index, label in enumerate(row_x_labels):
+    #         rack_buckets_labels[rack_numbers_train[index]].append(label)
 
-        rack_median_hlt = {}
-        rack_hlt_stdevs = {}
-        rack_labels = {}
+    #     rack_median_hlt = {}
+    #     rack_hlt_stdevs = {}
+    #     rack_labels = {}
 
-        for rack, rack_bucket in rack_buckets_data.items():
-            rack_median_hlt[rack] = np.nanmedian(rack_bucket)
-            rack_hlt_stdevs[rack] = np.nanstd(rack_bucket)
+    #     for rack, rack_bucket in rack_buckets_data.items():
+    #         rack_median_hlt[rack] = np.nanmedian(rack_bucket)
+    #         rack_hlt_stdevs[rack] = np.nanstd(rack_bucket)
 
-        for rack, rack_bucket in rack_buckets_labels.items():
+    #     for rack, rack_bucket in rack_buckets_labels.items():
 
-            rack_label = 0
+    #         rack_label = 0
 
-            for label in rack_bucket:
-                rack_label = rack_label | label
+    #         for label in rack_bucket:
+    #             rack_label = rack_label | label
                 
-            rack_labels[rack] = rack_label
+    #         rack_labels[rack] = rack_label
 
-        rack_median_hlt = dict(sorted(rack_median_hlt.items()))
-        rack_hlt_stdevs = dict(sorted(rack_hlt_stdevs.items()))
+    #     rack_median_hlt = dict(sorted(rack_median_hlt.items()))
+    #     rack_hlt_stdevs = dict(sorted(rack_hlt_stdevs.items()))
 
-        rack_labels = dict(sorted(rack_labels.items()))
+    #     rack_labels = dict(sorted(rack_labels.items()))
 
-        if keys_last != None:
-            assert rack_median_hlt.keys() == keys_last,\
-                                                    'Rack bucket keys changed between slices'
+    #     if keys_last != None:
+    #         assert rack_median_hlt.keys() == keys_last,\
+    #                                                 'Rack bucket keys changed between slices'
 
-            assert (rack_median_hlt.keys() == rack_hlt_stdevs.keys()) and\
-                                (rack_median_hlt.keys() == rack_labels.keys()),\
-                                                        'Rack bucket keys not identical'
+    #         assert (rack_median_hlt.keys() == rack_hlt_stdevs.keys()) and\
+    #                             (rack_median_hlt.keys() == rack_labels.keys()),\
+    #                                                     'Rack bucket keys not identical'
 
-        keys_last = rack_median_hlt.keys()
+    #     keys_last = rack_median_hlt.keys()
 
-        if type(columns_reduced_train_labeled) == type(None):
-            columns_reduced_train_labeled = create_channel_names(rack_median_hlt.keys(),
-                                                            rack_hlt_stdevs.keys())
+    #     if type(columns_reduced_train_labeled) == type(None):
+    #         columns_reduced_train_labeled = create_channel_names(rack_median_hlt.keys(),
+    #                                                         rack_hlt_stdevs.keys())
             
-            assert np.array_equal(columns_reduced_train_labeled, columns_reduced_train_unlabeled),\
-                                            "Labeled train columns don't match unlabeled train columns" 
+    #         assert np.array_equal(columns_reduced_train_labeled, columns_reduced_train_unlabeled),\
+    #                                         "Labeled train columns don't match unlabeled train columns" 
 
-        rack_data_np = np.concatenate((np.array(list(rack_median_hlt.values())),
-                                            np.array(list(rack_hlt_stdevs.values()))))
+    #     rack_data_np = np.concatenate((np.array(list(rack_median_hlt.values())),
+    #                                         np.array(list(rack_hlt_stdevs.values()))))
 
-        rack_data_train_labeled_all.append(rack_data_np)
+    #     rack_data_train_labeled_all.append(rack_data_np)
 
-        rack_labels_train_labeled_all.append(np.array(list(rack_labels.values())))
+    #     rack_labels_train_labeled_all.append(np.array(list(rack_labels.values())))
 
-    rack_data_train_labeled_all_np = np.stack(rack_data_train_labeled_all)
-    rack_data_train_labeled_all_np = np.nan_to_num(rack_data_train_labeled_all_np, nan=-1)
+    # rack_data_train_labeled_all_np = np.stack(rack_data_train_labeled_all)
+    # rack_data_train_labeled_all_np = np.nan_to_num(rack_data_train_labeled_all_np, nan=-1)
 
-    nan_amount_train_labeled = 100*pd.isna(rack_data_train_labeled_all_np.flatten()).sum()/\
-                                                            rack_data_train_labeled_all_np.size
+    # nan_amount_train_labeled = 100*pd.isna(rack_data_train_labeled_all_np.flatten()).sum()/\
+    #                                                         rack_data_train_labeled_all_np.size
 
-    print('NaN amount reduced labeled train set: {:.3f} %'.format(nan_amount_train_labeled))
+    # print('NaN amount reduced labeled train set: {:.3f} %'.format(nan_amount_train_labeled))
 
-    rack_labels_train_labeled_all_np = np.stack(rack_labels_train_labeled_all)
+    # rack_labels_train_labeled_all_np = np.stack(rack_labels_train_labeled_all)
 
-    rack_labels_train_labeled_all_np = np.concatenate([rack_labels_train_labeled_all_np,\
-                                                        rack_labels_train_labeled_all_np],
-                                                        axis=1)
+    # rack_labels_train_labeled_all_np = np.concatenate([rack_labels_train_labeled_all_np,\
+    #                                                     rack_labels_train_labeled_all_np],
+    #                                                     axis=1)
 
-    rack_labels_train_labeled_all_np =\
-                remove_undetectable_anomalies(rack_data_train_labeled_all_np,
-                                                rack_labels_train_labeled_all_np)
+    # rack_labels_train_labeled_all_np =\
+    #             remove_undetectable_anomalies(rack_data_train_labeled_all_np,
+    #                                             rack_labels_train_labeled_all_np)
 
-    train_set_labeled_x_df = pd.DataFrame(rack_data_train_labeled_all_np,
-                                            anomaly_generator_train_labeled.get_timestamps_pd(),
-                                            columns_reduced_train_labeled)
+    # train_set_labeled_x_df = pd.DataFrame(rack_data_train_labeled_all_np,
+    #                                         anomaly_generator_train_labeled.get_timestamps_pd(),
+    #                                         columns_reduced_train_labeled)
 
-    train_set_labeled_y_df = pd.DataFrame(rack_labels_train_labeled_all_np,
-                                            anomaly_generator_train_labeled.get_timestamps_pd(),
-                                            columns_reduced_train_labeled)
+    # train_set_labeled_y_df = pd.DataFrame(rack_labels_train_labeled_all_np,
+    #                                         anomaly_generator_train_labeled.get_timestamps_pd(),
+    #                                         columns_reduced_train_labeled)
 
-    train_set_labeled_x_df.to_hdf(f'{args.dataset_dir}/reduced_hlt_labeled_train_set_x.h5',
-                                    key='reduced_hlt_labeled_train_set_x',
-                                    mode='w')
+    # train_set_labeled_x_df.to_hdf(f'{args.dataset_dir}/reduced_hlt_labeled_train_set_{args.variant}_x.h5',
+    #                                 key='reduced_hlt_labeled_train_set_x',
+    #                                 mode='w')
 
-    train_set_labeled_y_df.to_hdf(f'{args.dataset_dir}/reduced_hlt_labeled_train_set_y.h5',
-                                    key='reduced_hlt_labeled_train_set_y',
-                                    mode='w')
+    # train_set_labeled_y_df.to_hdf(f'{args.dataset_dir}/reduced_hlt_labeled_train_set_{args.variant}_y.h5',
+    #                                 key='reduced_hlt_labeled_train_set_y',
+    #                                 mode='w')
 
     # Inject anomalies into test set and reduce
 
@@ -797,6 +801,8 @@ if __name__ == '__main__':
                                                             factor=0.5)
 
     rack_data_test_all = []
+    medians_all = []
+    means_all = []
     rack_labels_test_all = []
 
     columns_reduced_test = None
@@ -818,11 +824,13 @@ if __name__ == '__main__':
             rack_buckets_labels[rack_numbers_test[index]].append(label)
 
         rack_median_hlt = {}
+        rack_mean_hlt = {}
         rack_hlt_stdevs = {}
         rack_labels = {}
 
         for rack, rack_bucket in rack_buckets_data.items():
             rack_median_hlt[rack] = np.nanmedian(rack_bucket)
+            rack_mean_hlt[rack] = np.nanmean(rack_bucket)
             rack_hlt_stdevs[rack] = np.nanstd(rack_bucket)
 
         for rack, rack_bucket in rack_buckets_labels.items():
@@ -835,6 +843,7 @@ if __name__ == '__main__':
             rack_labels[rack] = rack_label
 
         rack_median_hlt = dict(sorted(rack_median_hlt.items()))
+        rack_mean_hlt = dict(sorted(rack_mean_hlt.items()))
         rack_hlt_stdevs = dict(sorted(rack_hlt_stdevs.items()))
 
         rack_labels = dict(sorted(rack_labels.items()))
@@ -856,15 +865,41 @@ if __name__ == '__main__':
             assert np.array_equal(columns_reduced_test, columns_reduced_train_unlabeled),\
                                                     "Test columns don't match train columns" 
 
+        means = np.array(list(rack_mean_hlt.values()))
+        medians = np.array(list(rack_median_hlt.values()))
+
         rack_data_np = np.concatenate((np.array(list(rack_median_hlt.values())),
                                             np.array(list(rack_hlt_stdevs.values()))))
 
         rack_data_test_all.append(rack_data_np)
 
+        means_all.append(means)
+        medians_all.append(medians)
+
         rack_labels_test_all.append(np.array(list(rack_labels.values())))
 
     rack_data_test_all_np = np.stack(rack_data_test_all)
     rack_data_test_all_np = np.nan_to_num(rack_data_test_all_np, nan=-1)
+
+    means_all = np.nan_to_num(np.stack(means_all), nan=-1)
+    medians_all = np.nan_to_num(np.stack(medians_all), nan=-1)
+
+    rmse = mean_squared_error(medians_all,
+                                means_all,
+                                multioutput='raw_values',
+                                squared=False)
+
+    print(rmse)
+
+    medians_all_mean = np.mean(medians_all, axis=0)
+
+    cv = rmse/medians_all_mean
+
+    cv_mean = np.mean(cv)
+
+    print(f'{cv_mean:.5f}')
+
+    exit()
 
     nan_amount_test = 100*pd.isna(rack_data_test_all_np.flatten()).sum()/\
                                                     rack_data_test_all_np.size
@@ -890,11 +925,11 @@ if __name__ == '__main__':
                                     anomaly_generator_test.get_timestamps_pd(),
                                     columns_reduced_test)
 
-    test_set_x_df.to_hdf(f'{args.dataset_dir}/reduced_hlt_test_set_x.h5',
+    test_set_x_df.to_hdf(f'{args.dataset_dir}/reduced_hlt_test_set_{args.variant}_x.h5',
                             key='reduced_hlt_test_set_x',
                             mode='w')
 
-    test_set_y_df.to_hdf(f'{args.dataset_dir}/reduced_hlt_test_set_y.h5',
+    test_set_y_df.to_hdf(f'{args.dataset_dir}/reduced_hlt_test_set_{args.variant}_y.h5',
                             key='reduced_hlt_test_set_x',
                             mode='w')
 
@@ -954,7 +989,7 @@ if __name__ == '__main__':
                                                 val_set_x_df.index,
                                                 columns_reduced_clean_val)
 
-    clean_val_set_x_df.to_hdf(f'{args.dataset_dir}/reduced_hlt_clean_val_set_x.h5',
+    clean_val_set_x_df.to_hdf(f'{args.dataset_dir}/reduced_hlt_clean_val_set_{args.variant}_x.h5',
                                 key='reduced_hlt_clean_val_set_x',
                                 mode='w')
 
@@ -1041,7 +1076,7 @@ if __name__ == '__main__':
 
         if keys_last != None:
             assert rack_median_hlt.keys() == keys_last,\
-                                                    'Rack bucket keys changed between slices'
+                            'Rack bucket keys changed between slices'
 
             assert (rack_median_hlt.keys() == rack_hlt_stdevs.keys()) and\
                                 (rack_median_hlt.keys() == rack_labels.keys()),\
@@ -1089,11 +1124,11 @@ if __name__ == '__main__':
                                     anomaly_generator_val.get_timestamps_pd(),
                                     columns_reduced_val)
 
-    val_set_x_df.to_hdf(f'{args.dataset_dir}/reduced_hlt_val_set_x.h5',
+    val_set_x_df.to_hdf(f'{args.dataset_dir}/reduced_hlt_val_set_{args.variant}_x.h5',
                             key='reduced_hlt_val_set_x',
                             mode='w')
 
-    val_set_y_df.to_hdf(f'{args.dataset_dir}/reduced_hlt_val_set_y.h5',
+    val_set_y_df.to_hdf(f'{args.dataset_dir}/reduced_hlt_val_set_{args.variant}_y.h5',
                             key='reduced_hlt_val_set_y',
                             mode='w')
 

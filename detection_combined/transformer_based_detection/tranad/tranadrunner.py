@@ -16,7 +16,6 @@ from .src.datapreprocessor import DataPreprocessor
 from utils.anomalyclassification import AnomalyType
 from utils.tqdmloggingdecorator import tqdmloggingdecorator
 
-
 device='cuda:0'
 
 

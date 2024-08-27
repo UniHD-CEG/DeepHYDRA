@@ -19,10 +19,21 @@ class MedianStdReducer(BaseReducer):
         self._columns_reduced = None
         self._keys_last = None
 
+        if configuration_version == 'ECLIPSE':
+            self._parse_channel_name =\
+                self._parse_channel_name_eclipse
+        else:
+            self._parse_channel_name =\
+                self._parse_channel_name_hlt_dcm
 
-    def _parse_channel_name(self, channel_name):
+    def _parse_channel_name_hlt_dcm(self, channel_name):
         parameters = [int(substring) for substring in re.findall(r'\d+', channel_name)]
         return parameters[-1]//1000
+
+
+    def _parse_channel_name_eclipse(self, channel_name):
+        cluster_name = channel_name.rsplit('_', maxsplit=1)[0]
+        return cluster_name
 
 
     def _create_channel_names(self,

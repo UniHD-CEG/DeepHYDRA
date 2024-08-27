@@ -934,7 +934,14 @@ class EclipseDataTimeseriesAugmentor():
             label.loc[:, columns_individual_labels]\
                 .agg(lambda row: np.any(row).astype(np.uint8), axis=1)
         
-        label = label.drop(label.columns[columns_individual_labels], axis=1)
+        label = label[['label']]
+
+        anomaly_count =\
+            np.count_nonzero(label.to_numpy().flatten()>=1)
+        
+        label_size = label.size
+
+        print(f'Anomalous data ratio: {100*anomaly_count/label_size:.3f} %')
 
         return label
 
@@ -1244,8 +1251,7 @@ class EclipseDataTimeseriesAugmentor():
                 # expected in the augmentations to apply 
                 # afterwards
 
-                elif augmentation.startswith('Roll') and not\
-                                        augmentation == 'Roll':
+                elif augmentation.startswith('Roll'):
                     data_rolled_pd, label_rolled_pd =\
                         self._roll_data_labeled(data_unmodified,
                                                     label_unmodified,
@@ -1366,6 +1372,6 @@ class EclipseDataTimeseriesAugmentor():
 
                     ax.axvspan(index[start], index[end], color='red', alpha=0.5)
             
-        plt.savefig('eclipse_augmentation_test_labeled.png')
+        # plt.savefig('eclipse_augmentation_test_labeled.png')
 
         return dataset_augmented, labels_augmented

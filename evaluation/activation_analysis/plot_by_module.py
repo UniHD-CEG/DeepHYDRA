@@ -140,7 +140,7 @@ if __name__ == '__main__':
     ax.set_xscale('log')
     ax.set_xlim(1, 1e12)
 
-    ax.set_title('Activations per Sample by Layer for HLT Dataset')
+    ax.set_title('Activations per Sample by Layer for HLT_DCM_2018 Dataset')
     ax.set_xlabel('Activations')
     ax.set_ylabel('Model')
 

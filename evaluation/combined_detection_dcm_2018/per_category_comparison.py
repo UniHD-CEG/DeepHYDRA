@@ -103,7 +103,7 @@ if __name__ == '__main__':
             ["Persistent Contextual", 0.998, 0.927, 0.928, 0.864, 1.000],
             ["Collective Global", 0.832, 0.726, 0.724, 0.795, 0.668],
             ["Collective Trend", 0.901, 0.830, 0.826, 0.857, 0.805],
-            ["Intra Rack", 0.554, 0.172, 0.197, 0.375, 0.112],
+            ["Intra-Subgroup", 0.554, 0.172, 0.197, 0.375, 0.112],
         ],
         "DeepHYDRA-DAGMM": [
             ["Anomaly Type", "AUC-ROC", "F1", "MCC", "Prec", "Recall"],
@@ -113,7 +113,7 @@ if __name__ == '__main__':
             ["Persistent Contextual", 0.998, 0.918, 0.919, 0.848, 1.000],
             ["Collective Global", 0.981, 0.893, 0.893, 0.831, 0.966],
             ["Collective Trend", 0.901, 0.822, 0.817, 0.839, 0.805],
-            ["Intra Rack", 0.996, 0.902, 0.904, 0.824, 0.996],
+            ["Intra-Subgroup", 0.996, 0.902, 0.904, 0.824, 0.996],
         ],
         "OmniAnomaly": [
             ["Anomaly Type", "AUC-ROC", "F1", "MCC", "Prec", "Recall"],
@@ -123,7 +123,7 @@ if __name__ == '__main__':
             ["Persistent Contextual", 0.980, 0.542, 0.597, 0.372, 1.000],
             ["Collective Global", 0.980, 0.519, 0.580, 0.351, 1.000],
             ["Collective Trend", 0.980, 0.579, 0.626, 0.408, 1.000],
-            ["Intra Rack", 0.678, 0.232, 0.233, 0.164, 0.395],
+            ["Intra-Subgroup", 0.678, 0.232, 0.233, 0.164, 0.395],
         ],
         "DeepHYDRA-OmniAnomaly": [
             ["Anomaly Type", "AUC-ROC", "F1", "MCC", "Prec", "Recall"],
@@ -133,7 +133,7 @@ if __name__ == '__main__':
             ["Persistent Contextual", 0.981, 0.545, 0.600, 0.375, 1.000],
             ["Collective Global", 0.981, 0.523, 0.583, 0.354, 1.000],
             ["Collective Trend", 0.981, 0.583, 0.629, 0.411, 1.000],
-            ["Intra Rack", 0.979, 0.501, 0.566, 0.335, 0.996]
+            ["Intra-Subgroup", 0.979, 0.501, 0.566, 0.335, 0.996]
         ],
         "USAD": [
             ["Anomaly Type", "AUC-ROC", "F1", "MCC", "Prec", "Recall"],
@@ -143,7 +143,7 @@ if __name__ == '__main__':
             ["Persistent Contextual", 0.995, 0.837, 0.844, 0.719, 1.000],
             ["Collective Global", 0.995, 0.824, 0.833, 0.701, 1.000],
             ["Collective Trend", 0.995, 0.856, 0.861, 0.749, 1.000],
-            ["Intra Rack", 0.553, 0.147, 0.140, 0.200, 0.116],
+            ["Intra-Subgroup", 0.553, 0.147, 0.140, 0.200, 0.116],
         ],
         "DeepHYDRA-USAD": [
             ["Anomaly Type", "AUC-ROC", "F1", "MCC", "Prec", "Recall"],
@@ -153,7 +153,7 @@ if __name__ == '__main__':
             ["Persistent Contextual", 0.995, 0.829, 0.837, 0.708, 1.000],
             ["Collective Global", 0.995, 0.816, 0.826, 0.689, 1.000],
             ["Collective Trend", 0.995, 0.849, 0.855, 0.738, 1.000],
-            ["Intra Rack", 0.995, 0.803, 0.815, 0.671, 1.000],
+            ["Intra-Subgroup", 0.995, 0.803, 0.815, 0.671, 1.000],
         ],
     }
 
